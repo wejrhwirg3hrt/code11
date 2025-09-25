@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传视频 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <style>
+        /* 导航栏优化样式 */
+        .nav-link-sm {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.6rem !important;
+            white-space: nowrap;
+        }
+
+        .btn-nav-sm {
+            font-size: 0.8rem !important;
+            padding: 0.3rem 0.6rem !important;
+        }
+
+        .navbar-text-sm {
+            font-size: 0.85rem !important;
+        }
+
+        .navbar-nav .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            transform: translateY(-1px);
+            color: #fff !important;
+        }
+
+        /* 导航栏三分布局 */
+        .navbar-left {
+            flex: 0 0 auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 1rem;
+            margin-right: 1rem;
+        }
+
+        .navbar-center {
+            flex: 0 0 auto;
+            padding: 0 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-right {
+            flex: 0 0 auto;
+            padding-left: 1rem;
+            margin-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 聊天未读消息计数样式 */
+        .chat-unread-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.6rem;
+            padding: 2px 5px;
+            min-width: 16px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .upload-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-area:hover {
+            border-color: #0056b3;
+            background: #e3f2fd;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .tag-input {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 0.5rem;
+            min-height: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .tag {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .tag-input input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .content-block {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+
+        .content-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .quill-editor {
+            background: white;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center w-100">
+                <!-- 登录状态下显示 -->
+                <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center w-100 justify-content-between">
+                    <!-- 左侧功能区 -->
+                    <div class="d-flex flex-row align-items-center navbar-left">
+                        <a class="nav-link me-2 nav-link-sm" href="/chat">
+                            <i class="fas fa-comments me-1"></i>聊天
+                            <span class="badge bg-danger ms-1" id="chatUnreadBadgeLeft" style="display: none;">0</span>
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/upload">
+                            <i class="fas fa-upload me-1"></i>上传
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/music">
+                            <i class="fas fa-music me-1"></i>音乐
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/posts">
+                            <i class="fas fa-heart me-1"></i>动态
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/private-album">
+                            <i class="fas fa-lock me-1"></i>私密相册
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/voice-clone">
+                            <i class="fas fa-microphone me-1"></i>语音克隆
+                        </a>
+                    </div>
+
+                    <!-- 中间签到区 -->
+                    <div class="navbar-center">
+                        <button class="btn btn-outline-light btn-sm btn-nav-sm" id="checkinBtn" onclick="dailyCheckin()">
+                            <i class="fas fa-calendar-check me-1"></i>签到
+                        </button>
+                    </div>
+
+                    <!-- 右侧用户区 -->
+                    <div class="d-flex flex-row align-items-center navbar-right">
+                        <a class="nav-link me-2 nav-link-sm notification-bell" href="/notifications">
+                            <i class="fas fa-bell me-1"></i>通知
+                            <span class="badge bg-danger notification-badge" style="display: none;">0</span>
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/chat" style="position: relative;">
+                            <i class="fas fa-comments me-1"></i>聊天
+                            <span class="chat-unread-badge badge bg-danger" style="display: none; position: absolute; top: -5px; right: 5px; font-size: 0.6rem;">0</span>
+                        </a>
+                        <a class="nav-link me-2 nav-link-sm" href="/profile" id="userProfileLink">
+                            <i class="fas fa-user me-1"></i>我的主页
+                            <span id="userLevelBadge" class="badge bg-primary ms-1" style="display: none;"></span>
+                        </a>
+                        <span class="navbar-text me-2 navbar-text-sm">
+                            <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                        </span>
+                        <form th:action="@{/logout}" method="post" style="display: inline;">
+                            <button class="btn btn-outline-light btn-sm btn-nav-sm" type="submit">退出</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 未登录状态下显示 -->
+                <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                    <a class="nav-link me-2 nav-link-sm" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>登录
+                    </a>
+                    <a class="nav-link nav-link-sm" href="/register">
+                        <i class="fas fa-user-plus me-1"></i>注册
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="upload-container">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-upload me-2"></i>上传视频
+            </h2>
+
+            <!-- 成功消息 -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- 错误消息 -->
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            
+            <form id="uploadForm" th:action="@{/upload}" method="post" enctype="multipart/form-data">
+                <!-- 1. 用户个人信息区域 -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h5><i class="fas fa-user me-2"></i>发布者信息</h5>
+                    <div class="d-flex align-items-center">
+                        <img src="/uploads/avatars/default.svg" alt="头像" class="rounded-circle me-3" style="width: 50px; height: 50px;">
+                        <div>
+                            <h6 class="mb-0" sec:authentication="name">用户名</h6>
+                            <small class="text-muted">正在发布新视频</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 大标题 -->
+                <div class="mb-4">
+                    <label for="title" class="form-label"><i class="fas fa-heading me-2"></i>视频标题 *</label>
+                    <input type="text" class="form-control form-control-lg" id="title" name="title" required maxlength="100" placeholder="输入吸引人的视频标题">
+                </div>
+
+                <!-- 3. 视频描述文本信息 -->
+                <div class="mb-4">
+                    <label for="description" class="form-label"><i class="fas fa-align-left me-2"></i>视频描述</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" maxlength="500" placeholder="简单描述视频内容，让观众了解视频的主要内容"></textarea>
+                </div>
+
+                <!-- 4. 富文本内容 (文字、图片、音频) -->
+                <div class="mb-4">
+                    <label class="form-label"><i class="fas fa-edit me-2"></i>详细内容 (支持文字、图片、音频)</label>
+                    <div class="border rounded p-3">
+                        <!-- 内容块管理 -->
+                        <div class="mb-3">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('TEXT')">
+                                    <i class="fas fa-font"></i> 添加文字
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('IMAGE')">
+                                    <i class="fas fa-image"></i> 添加图片
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('AUDIO')">
+                                    <i class="fas fa-music"></i> 添加音频
+                                </button>
+                            </div>
+                        </div>
+                        <div id="contentBlocks">
+                            <div class="text-muted text-center py-3">
+                                <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                <p>点击上方按钮添加内容块</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. 视频文件 (必不可少) -->
+                <div class="mb-4">
+                    <label class="form-label"><i class="fas fa-video me-2"></i>主视频文件 * (必不可少)</label>
+                    <input type="file" class="form-control" id="videoFile" name="videoFile" accept="video/*" required>
+                    <div class="form-text">支持 MP4, AVI, MOV 格式，最大 100MB</div>
+                </div>
+
+                <!-- 缩略图上传 -->
+                <div class="mb-4">
+                    <label class="form-label"><i class="fas fa-image me-2"></i>视频缩略图 (可选)</label>
+                    <input type="file" class="form-control" id="thumbnailFile" name="thumbnailFile" accept="image/*">
+                    <div class="form-text">支持 JPG, PNG 格式，如不上传将自动生成</div>
+                </div>
+
+                <!-- 6. 标签 -->
+                <div class="mb-4">
+                    <label class="form-label"><i class="fas fa-tags me-2"></i>标签</label>
+                    <input type="text" class="form-control" id="selectedTags" name="selectedTags" placeholder="用逗号分隔多个标签，如：搞笑,娱乐,生活">
+                    <div class="form-text">用逗号分隔多个标签，帮助其他用户发现你的视频</div>
+                </div>
+
+                <!-- 分类 -->
+                <div class="mb-4">
+                    <label for="category" class="form-label"><i class="fas fa-folder me-2"></i>分类 *</label>
+                    <select class="form-select" id="category" name="category" required>
+                        <option value="">请选择分类</option>
+                        <option value="娱乐">娱乐</option>
+                        <option value="教育">教育</option>
+                        <option value="科技">科技</option>
+                        <option value="音乐">音乐</option>
+                        <option value="体育">体育</option>
+                        <option value="游戏">游戏</option>
+                        <option value="生活">生活</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+
+                <!-- 提交按钮 -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        <i class="fas fa-upload me-2"></i>发布视频
+                    </button>
+                    <div class="progress-container mt-3" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">上传进度</small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script>
+        // 全局变量
+        const tags = [];
+        const maxTags = 5;
+        let contentBlockCounter = 0;
+        let quill;
+
+        // 初始化富文本编辑器
+        document.addEventListener('DOMContentLoaded', function() {
+            quill = new Quill('#contentEditor', {
+                theme: 'snow',
+                placeholder: '在这里编写详细的视频内容介绍...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        ['blockquote', 'code-block'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link', 'image'],
+                        ['clean']
+                    ]
+                }
+            });
+        });
+
+        // 标签管理
+        const tagInput = document.getElementById('tagInput');
+        const tagInputField = document.getElementById('tagInputField');
+        const selectedTagsHidden = document.getElementById('selectedTagsHidden');
+
+        function updateTagsDisplay() {
+            const existingTags = tagInput.querySelectorAll('.tag');
+            existingTags.forEach(tag => tag.remove());
+
+            tags.forEach((tag, index) => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'tag';
+                tagElement.innerHTML = `${tag} <span class="remove" onclick="removeTag(${index})">×</span>`;
+                tagInput.insertBefore(tagElement, tagInputField);
+            });
+
+            selectedTagsHidden.value = tags.join(',');
+        }
+
+        function addTag(tagText) {
+            const trimmedTag = tagText.trim();
+            if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
+                tags.push(trimmedTag);
+                updateTagsDisplay();
+                tagInputField.value = '';
+            }
+        }
+
+        function removeTag(index) {
+            tags.splice(index, 1);
+            updateTagsDisplay();
+        }
+
+        tagInputField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(this.value);
+            }
+        });
+
+        // 视频文件上传处理
+        const videoUploadArea = document.getElementById('videoUploadArea');
+        const videoFile = document.getElementById('videoFile');
+
+        videoUploadArea.addEventListener('click', () => videoFile.click());
+        setupFileUpload(videoUploadArea, videoFile, 'video');
+
+        // 缩略图上传处理
+        const thumbnailUploadArea = document.getElementById('thumbnailUploadArea');
+        const thumbnailFile = document.getElementById('thumbnailFile');
+
+        thumbnailUploadArea.addEventListener('click', () => thumbnailFile.click());
+        setupFileUpload(thumbnailUploadArea, thumbnailFile, 'image');
+
+        function setupFileUpload(uploadArea, fileInput, type) {
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    // 直接设置文件到input
+                    try {
+                        const dt = new DataTransfer();
+                        dt.items.add(files[0]);
+                        fileInput.files = dt.files;
+                    } catch (error) {
+                        // 如果DataTransfer不支持，使用其他方法
+                        console.log('DataTransfer不支持，使用备用方法');
+                        // 存储文件引用，在表单提交时处理
+                        fileInput._droppedFile = files[0];
+                    }
+                    updateFileDisplay(uploadArea, files[0], type);
+                    console.log(`${type} 文件已选择:`, files[0].name);
+                }
+            });
+
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    updateFileDisplay(uploadArea, this.files[0], type);
+                    console.log(`${type} 文件已选择:`, this.files[0].name);
+                }
+            });
+        }
+
+        function updateFileDisplay(uploadArea, file, type) {
+            const icon = type === 'video' ? 'fa-file-video' : 'fa-image';
+            const color = type === 'video' ? 'text-success' : 'text-info';
+
+            uploadArea.innerHTML = `
+                <i class="fas ${icon} fa-2x ${color} mb-2"></i>
+                <h6>已选择: ${file.name}</h6>
+                <p class="text-muted small">大小: ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFileUpload('${uploadArea.id}', '${type}')">重新选择</button>
+            `;
+        }
+
+        function clearFileUpload(areaId, type) {
+            const uploadArea = document.getElementById(areaId);
+            const fileInput = type === 'video' ? videoFile : thumbnailFile;
+            fileInput.value = '';
+
+            if (type === 'video') {
+                uploadArea.innerHTML = `
+                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                    <h5>拖拽视频文件到这里或点击选择</h5>
+                    <p class="text-muted">支持 MP4, AVI, MOV 格式，最大 100MB</p>
+                `;
+            } else {
+                uploadArea.innerHTML = `
+                    <i class="fas fa-image fa-2x text-secondary mb-2"></i>
+                    <h6>选择缩略图</h6>
+                    <p class="text-muted small">支持 JPG, PNG 格式</p>
+                `;
+            }
+        }
+
+        // 内容块管理
+        function addContentBlock(type) {
+            contentBlockCounter++;
+            const contentBlocks = document.getElementById('contentBlocks');
+            const blockId = `contentBlock_${contentBlockCounter}`;
+
+            let blockContent = '';
+            if (type === 'TEXT') {
+                blockContent = `
+                    <textarea class="form-control" name="contentText" placeholder="输入文字内容" rows="3"></textarea>
+                    <input type="hidden" name="contentTypes" value="TEXT">
+                `;
+            } else if (type === 'IMAGE') {
+                blockContent = `
+                    <input type="file" class="form-control" name="contentFile" accept="image/*">
+                    <input type="hidden" name="contentTypes" value="IMAGE">
+                `;
+            } else if (type === 'AUDIO') {
+                blockContent = `
+                    <input type="file" class="form-control" name="contentFile" accept="audio/*">
+                    <input type="hidden" name="contentTypes" value="AUDIO">
+                `;
+            }
+
+            const blockHtml = `
+                <div class="content-block" id="${blockId}">
+                    <div class="content-block-header">
+                        <h6><i class="fas fa-${type === 'TEXT' ? 'font' : type === 'IMAGE' ? 'image' : 'music'}"></i> ${type === 'TEXT' ? '文字' : type === 'IMAGE' ? '图片' : '音频'}内容</h6>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeContentBlock('${blockId}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    ${blockContent}
+                </div>
+            `;
+
+            contentBlocks.insertAdjacentHTML('beforeend', blockHtml);
+        }
+
+        function removeContentBlock(blockId) {
+            document.getElementById(blockId).remove();
+        }
+
+        // 表单提交处理
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            console.log('=== 表单提交开始 ===');
+
+            // 检查视频文件
+            const videoFileInput = document.getElementById('videoFile');
+
+            // 处理拖拽文件
+            if (videoFileInput._droppedFile && (!videoFileInput.files || videoFileInput.files.length === 0)) {
+                console.log('处理拖拽文件...');
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(videoFileInput._droppedFile);
+                    videoFileInput.files = dt.files;
+                    console.log('✅ 拖拽文件设置成功');
+                } catch (error) {
+                    console.log('❌ 无法设置拖拽文件，使用FormData方式');
+                }
+            }
+
+            if ((!videoFileInput.files || videoFileInput.files.length === 0) && !videoFileInput._droppedFile) {
+                e.preventDefault();
+                alert('请选择视频文件！');
+                console.log('❌ 没有选择视频文件');
+                return false;
+            }
+
+            if (videoFileInput.files && videoFileInput.files.length > 0) {
+                console.log('✅ 视频文件:', videoFileInput.files[0].name);
+            } else if (videoFileInput._droppedFile) {
+                console.log('✅ 拖拽视频文件:', videoFileInput._droppedFile.name);
+            }
+
+            // 检查缩略图文件
+            const thumbnailFileInput = document.getElementById('thumbnailFile');
+            if (thumbnailFileInput._droppedFile && (!thumbnailFileInput.files || thumbnailFileInput.files.length === 0)) {
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(thumbnailFileInput._droppedFile);
+                    thumbnailFileInput.files = dt.files;
+                } catch (error) {
+                    console.log('缩略图拖拽文件设置失败');
+                }
+            }
+
+            if (thumbnailFileInput.files && thumbnailFileInput.files.length > 0) {
+                console.log('✅ 缩略图文件:', thumbnailFileInput.files[0].name);
+            } else if (thumbnailFileInput._droppedFile) {
+                console.log('✅ 拖拽缩略图文件:', thumbnailFileInput._droppedFile.name);
+            } else {
+                console.log('⚠️ 没有选择缩略图文件');
+            }
+
+            // 更新标签数据
+            selectedTagsHidden.value = tags.join(',');
+            console.log('✅ 标签数据:', selectedTagsHidden.value);
+
+            // 更新富文本内容
+            if (quill) {
+                document.getElementById('contentData').value = quill.root.innerHTML;
+                console.log('✅ 富文本内容长度:', quill.root.innerHTML.length);
+            }
+
+            // 显示上传进度
+            const progressContainer = document.querySelector('.progress-container');
+            progressContainer.style.display = 'block';
+
+            // 禁用提交按钮
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>上传中...';
+
+            console.log('=== 表单提交继续 ===');
+        });
+
+        // 签到功能
+        function dailyCheckin() {
+            const checkinBtn = document.getElementById('checkinBtn');
+            if (!checkinBtn) return;
+
+            checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>签到中...';
+            checkinBtn.disabled = true;
+
+            fetch('/api/checkin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    checkinBtn.innerHTML = '<i class="fas fa-check me-1"></i>已签到';
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                    alert(`签到成功！获得 ${data.points} 积分`);
+                } else {
+                    checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+                    checkinBtn.disabled = false;
+                    alert(data.message || '签到失败');
+                }
+            })
+            .catch(error => {
+                console.error('签到失败:', error);
+                checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+                checkinBtn.disabled = false;
+                alert('签到失败，请稍后重试');
+            });
+        }
+
+        // 更新聊天未读消息计数
+        function updateChatUnreadCount() {
+            fetch('/api/chat/unread-count', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const totalCount = data.count || 0;
+                const chatBadgeRight = document.querySelector('.chat-unread-badge');
+                const chatBadgeLeft = document.getElementById('chatUnreadBadgeLeft');
+
+                // 更新右侧聊天徽章
+                if (chatBadgeRight) {
+                    if (totalCount > 0) {
+                        chatBadgeRight.textContent = totalCount > 99 ? '99+' : totalCount;
+                        chatBadgeRight.style.display = 'inline-block';
+                    } else {
+                        chatBadgeRight.style.display = 'none';
+                    }
+                }
+
+                // 更新左侧聊天徽章
+                if (chatBadgeLeft) {
+                    if (totalCount > 0) {
+                        chatBadgeLeft.textContent = totalCount > 99 ? '99+' : totalCount;
+                        chatBadgeLeft.style.display = 'inline';
+                    } else {
+                        chatBadgeLeft.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('获取聊天未读消息计数失败:', error);
+            });
+        }
+
+        // 检查签到状态
+        function checkCheckinStatus() {
+            fetch('/api/checkin/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const checkinBtn = document.getElementById('checkinBtn');
+                    if (data.hasCheckedInToday) {
+                        checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                        checkinBtn.classList.remove('btn-outline-light');
+                        checkinBtn.classList.add('btn-success');
+                        checkinBtn.disabled = true;
+                    } else {
+                        // 如果还没签到，显示总签到天数
+                        if (data.totalDays > 0) {
+                            checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('检查签到状态失败:', error);
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化聊天未读消息计数
+            updateChatUnreadCount();
+
+            // 检查签到状态
+            checkCheckinStatus();
+
+            // 定期更新聊天未读消息计数（每30秒）
+            setInterval(updateChatUnreadCount, 30000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${album.albumName} + ' - 私密相册'">私密相册</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .album-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .photo-item {
+            position: relative;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .photo-item:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        .photo-img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .photo-item:hover .photo-img {
+            filter: brightness(1.15) contrast(1.08) saturate(1.1);
+            transform: scale(1.05);
+        }
+        .photo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.8));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(2px);
+        }
+        .photo-item:hover .photo-overlay {
+            opacity: 1;
+        }
+        .photo-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-photo-action {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+        .btn-photo-action:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .photo-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            color: white;
+            padding: 20px 16px 16px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .photo-item:hover .photo-info {
+            transform: translateY(0);
+        }
+        .photo-filename {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .photo-meta {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .empty-album {
+            text-align: center;
+            padding: 4rem 0;
+            color: #6c757d;
+        }
+        .empty-album i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 相册头部 -->
+    <div class="album-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-images me-3"></i>
+                        <span th:text="${album.albumName}">相册名称</span>
+                    </h1>
+                    <p class="mb-0" th:if="${album.description}" th:text="${album.description}">相册描述</p>
+                    <small class="opacity-75">
+                        创建时间：<span th:text="${#temporals.format(album.createdTime, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</span>
+                        <span th:if="${photos != null}">
+                            | 共 <span th:text="${photos.size()}">0</span> 张照片
+                        </span>
+                    </small>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a th:href="@{'/private-album/' + ${album.id} + '/upload'}" class="btn btn-light me-2">
+                        <i class="fas fa-plus me-2"></i>上传照片
+                    </a>
+                    <a href="/private-album" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 相册内容 -->
+    <div class="container">
+        <!-- 成功/错误提示 -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}">操作成功</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}">操作失败</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- 照片网格 -->
+        <div th:if="${photos != null and !photos.isEmpty()}" class="photo-grid">
+            <div th:each="photo : ${photos}" class="photo-item">
+                <img th:src="@{'/' + ${photo.thumbnailPath}}"
+                     th:alt="${photo.description}"
+                     class="photo-img"
+                     th:data-photo-id="${photo.id}"
+                     th:data-photo-path="${photo.filePath}"
+                     th:data-photo-description="${photo.description}"
+                     onclick="showPhotoModalFromData(this)">
+
+                <div class="photo-overlay">
+                    <div class="photo-actions">
+                        <button class="btn btn-photo-action"
+                                th:data-photo-id="${photo.id}"
+                                th:data-photo-path="${photo.filePath}"
+                                th:data-photo-description="${photo.description}"
+                                onclick="showPhotoModalFromData(this)">
+                            <i class="fas fa-eye me-1"></i>查看
+                        </button>
+                        <button class="btn btn-photo-action"
+                                th:data-photo-id="${photo.id}"
+                                onclick="deletePhotoFromData(this)">
+                            <i class="fas fa-trash me-1"></i>删除
+                        </button>
+                    </div>
+                </div>
+
+                <div class="photo-info">
+                    <div class="photo-filename" th:text="${photo.fileName}">文件名</div>
+                    <div class="photo-meta">
+                        <span th:if="${photo.width != null and photo.height != null}"
+                              th:text="${photo.width} + ' × ' + ${photo.height}">尺寸</span>
+                        <span th:if="${photo.fileSize != null}"
+                              th:text="' • ' + ${#numbers.formatDecimal(photo.fileSize / 1024.0, 1, 1)} + ' KB'">大小</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空相册提示 -->
+        <div th:if="${photos == null or photos.isEmpty()}" class="empty-album">
+            <i class="fas fa-images"></i>
+            <h3>相册还没有照片</h3>
+            <p class="text-muted">点击上方"上传照片"按钮开始添加照片</p>
+            <a th:href="@{'/private-album/' + ${album.id} + '/upload'}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>立即上传
+            </a>
+        </div>
+    </div>
+
+    <!-- 照片查看模态框 -->
+    <div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="photoModalTitle">照片详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="photoModalImg" src="" alt="" class="img-fluid rounded">
+                    <p id="photoModalDesc" class="mt-3 text-muted"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showPhotoModal(photoId, filePath, description) {
+            document.getElementById('photoModalImg').src = '/' + filePath;
+            document.getElementById('photoModalDesc').textContent = description || '无描述';
+
+            const modal = new bootstrap.Modal(document.getElementById('photoModal'));
+            modal.show();
+        }
+
+        function showPhotoModalFromData(element) {
+            const photoId = element.getAttribute('data-photo-id');
+            const filePath = element.getAttribute('data-photo-path');
+            const description = element.getAttribute('data-photo-description');
+            showPhotoModal(photoId, filePath, description);
+        }
+
+        function deletePhotoFromData(element) {
+            const photoId = element.getAttribute('data-photo-id');
+            deletePhoto(photoId);
+        }
+
+        function deletePhoto(photoId) {
+            if (confirm('确定要删除这张照片吗？此操作不可恢复。')) {
+                fetch('/private-album/photo/delete/' + photoId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.text())
+                .then(data => {
+                    try {
+                        const result = JSON.parse(data);
+                        if (result.success) {
+                            location.reload();
+                        } else {
+                            alert('删除失败：' + result.message);
+                        }
+                    } catch (e) {
+                        console.error('Response parsing error:', e);
+                        alert('删除失败，请重试');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超级管理员仪表板 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .stat-card-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stat-card-warning {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        .stat-card-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #667eea !important;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4">
+                    <h4 class="text-white">
+                        <i class="fas fa-crown me-2"></i>
+                        超级管理员
+                    </h4>
+                </div>
+
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/super-admin/dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            仪表板
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/super-admin/admin-management">
+                            <i class="fas fa-users-cog me-2"></i>
+                            管理员管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/super-admin/user-management">
+                            <i class="fas fa-users me-2"></i>
+                            用户管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/super-admin/video-management">
+                            <i class="fas fa-video me-2"></i>
+                            视频管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/super-admin/comment-management">
+                            <i class="fas fa-comments me-2"></i>
+                            评论管理
+                        </a>
+                    </li>
+                                            <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/cdn-management">
+                                <i class="fas fa-server me-2"></i>
+                                CDN管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/data-management">
+                                <i class="fas fa-database me-2"></i>
+                                数据管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/logs">
+                                <i class="fas fa-journal-text me-2"></i>
+                                文件日志管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/user-logs">
+                                <i class="fas fa-activity me-2"></i>
+                                用户活动日志
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                        <a class="nav-link" href="/admin/logout">
+                            <i class="fas fa-sign-out-alt me-2"></i>
+                            退出登录
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            <!-- 顶部导航栏 -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    超级管理员仪表板
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-download me-1"></i>
+                            导出报告
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="row mb-4">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                        总用户数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold" th:text="${totalUsers}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card-success">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                        总视频数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold" th:text="${totalVideos}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-video fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card-warning">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                        总评论数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold" th:text="${totalComments}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-comments fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card stat-card-danger">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                        管理员数
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold" th:text="${totalAdmins}">0</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users-cog fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 待处理项目 -->
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-warning text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-clock me-2"></i>
+                                待审核视频
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <div class="h2 mb-2" th:text="${pendingVideos}">0</div>
+                                <p class="text-muted">个视频等待审核</p>
+                                <a href="/super-admin/video-management" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-eye me-1"></i>
+                                    查看详情
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-clock me-2"></i>
+                                待审核评论
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <div class="h2 mb-2" th:text="${pendingComments}">0</div>
+                                <p class="text-muted">条评论等待审核</p>
+                                <a href="/super-admin/comment-management" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye me-1"></i>
+                                    查看详情
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 今日统计 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-calendar-day me-2"></i>
+                                今日统计
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="border-end">
+                                        <div class="h4 text-primary" th:text="${todayStats.todayVideos}">0</div>
+                                        <small class="text-muted">今日新增视频</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="border-end">
+                                        <div class="h4 text-success" th:text="${todayStats.todayUsers}">0</div>
+                                        <small class="text-muted">今日新增用户</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="h4 text-info" th:text="${todayStats.todayComments}">0</div>
+                                    <small class="text-muted">今日新增评论</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 热门视频和活跃用户 -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-gradient-success text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-fire me-2"></i>
+                                热门视频 TOP5
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${popularVideos != null and !popularVideos.isEmpty()}">
+                                <div th:each="video, iterStat : ${popularVideos}" class="d-flex align-items-center mb-3">
+                                    <div class="badge bg-primary me-3" th:text="${iterStat.index + 1}">1</div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold" th:text="${video.title}">视频标题</div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-eye me-1"></i>
+                                            <span th:text="${video.views}">0</span> 次观看
+                                            <span class="ms-2">
+                                                    <i class="fas fa-user me-1"></i>
+                                                    <span th:text="${video.username}">用户名</span>
+                                                </span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${popularVideos == null or popularVideos.isEmpty()}" class="text-center text-muted">
+                                <i class="fas fa-video fa-3x mb-3"></i>
+                                <p>暂无热门视频</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-gradient-info text-white">
+                            <h6 class="m-0 font-weight-bold">
+                                <i class="fas fa-star me-2"></i>
+                                活跃用户 TOP5
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${activeUsers != null and !activeUsers.isEmpty()}">
+                                <div th:each="user, iterStat : ${activeUsers}" class="d-flex align-items-center mb-3">
+                                    <div class="badge bg-info me-3" th:text="${iterStat.index + 1}">1</div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold" th:text="${user.username}">用户名</div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-video me-1"></i>
+                                            <span th:text="${user.videoCount}">0</span> 个视频
+                                            <span class="ms-2">
+                                                    <i class="fas fa-eye me-1"></i>
+                                                    <span th:text="${user.totalViews}">0</span> 次观看
+                                                </span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${activeUsers == null or activeUsers.isEmpty()}" class="text-center text-muted">
+                                <i class="fas fa-users fa-3x mb-3"></i>
+                                <p>暂无活跃用户</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-bolt me-2"></i>
+                                快速操作
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/create-admin" class="btn btn-primary w-100">
+                                        <i class="fas fa-user-plus me-2"></i>
+                                        创建管理员
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/admin-management" class="btn btn-success w-100">
+                                        <i class="fas fa-users-cog me-2"></i>
+                                        管理员列表
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/video-management" class="btn btn-warning w-100">
+                                        <i class="fas fa-video me-2"></i>
+                                        视频审核
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/cdn-management" class="btn btn-info w-100">
+                                        <i class="fas fa-cloud me-2"></i>
+                                        CDN设置
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/user-management" class="btn btn-secondary w-100">
+                                        <i class="fas fa-users me-2"></i>
+                                        用户管理
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/comment-management" class="btn btn-dark w-100">
+                                        <i class="fas fa-comments me-2"></i>
+                                        评论管理
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/announcement-management" class="btn btn-warning w-100">
+                                        <i class="fas fa-megaphone me-2"></i>
+                                        公告管理
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="row">
+                                                                    <div class="col-md-3 mb-3">
+                                        <a href="/admin/logs" class="btn btn-info w-100">
+                                            <i class="fas fa-journal-text me-2"></i>
+                                            文件日志管理
+                                        </a>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <a href="/admin/user-logs" class="btn btn-secondary w-100">
+                                            <i class="fas fa-activity me-2"></i>
+                                            用户活动日志
+                                        </a>
+                                    </div>
+                            </div>
+
+                            <!-- 导出报告 -->
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-3">
+                                        <i class="fas fa-download me-2"></i>
+                                        导出报告
+                                    </h6>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/export/users" class="btn btn-outline-primary w-100">
+                                        <i class="fas fa-users me-2"></i>
+                                        导出用户
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/export/videos" class="btn btn-outline-success w-100">
+                                        <i class="fas fa-video me-2"></i>
+                                        导出视频
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <a href="/super-admin/export/comments" class="btn btn-outline-info w-100">
+                                        <i class="fas fa-comments me-2"></i>
+                                        导出评论
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

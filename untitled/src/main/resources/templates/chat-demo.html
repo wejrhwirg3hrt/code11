@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天系统功能演示</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/chat.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-10 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4><i class="fas fa-rocket me-2"></i>聊天系统新功能演示</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- 功能介绍 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h5><i class="fas fa-search me-2"></i>用户搜索功能</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            <li><i class="fas fa-check text-success me-2"></i>从注册用户中搜索</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>支持用户名、昵称、邮箱搜索</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>实时搜索结果</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>排除当前用户</li>
+                                        </ul>
+                                        
+                                        <div class="mt-3">
+                                            <label class="form-label">搜索用户:</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" id="userSearchDemo" placeholder="输入用户名或邮箱...">
+                                                <button class="btn btn-success" onclick="demoSearchUsers()">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                            <div id="searchResults" class="mt-2" style="max-height: 200px; overflow-y: auto;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h5><i class="fas fa-images me-2"></i>多文件上传功能</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            <li><i class="fas fa-check text-info me-2"></i>最多同时上传9个文件</li>
+                                            <li><i class="fas fa-check text-info me-2"></i>支持图片、视频、文档</li>
+                                            <li><i class="fas fa-check text-info me-2"></i>实时预览功能</li>
+                                            <li><i class="fas fa-check text-info me-2"></i>单文件最大50MB</li>
+                                        </ul>
+                                        
+                                        <div class="mt-3">
+                                            <label class="form-label">选择文件:</label>
+                                            <input type="file" class="form-control" id="fileDemo" multiple 
+                                                   accept="image/*,video/*,.pdf,.doc,.docx,.txt" 
+                                                   onchange="demoFilePreview(this.files)">
+                                            <small class="text-muted">最多选择9个文件，单个文件不超过50MB</small>
+                                            
+                                            <div id="filePreviewDemo" class="mt-3" style="display: none;">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="fw-bold">文件预览:</span>
+                                                        <button class="btn btn-sm btn-outline-danger" onclick="clearDemoPreview()">
+                                                            <i class="fas fa-times"></i> 清空
+                                                        </button>
+                                                    </div>
+                                                    <div id="filePreviewList"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 功能链接 -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning">
+                                        <h5><i class="fas fa-link me-2"></i>快速访问</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <a href="/chat" class="btn btn-primary w-100 mb-2">
+                                                    <i class="fas fa-comments me-2"></i>聊天首页
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="/chat/test" class="btn btn-success w-100 mb-2">
+                                                    <i class="fas fa-flask me-2"></i>API测试
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="/chat/private?userId=1" class="btn btn-info w-100 mb-2">
+                                                    <i class="fas fa-user me-2"></i>私聊演示
+                                                </a>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <a href="/" class="btn btn-secondary w-100 mb-2">
+                                                    <i class="fas fa-home me-2"></i>返回首页
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 技术说明 -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle me-2"></i>技术特性</h6>
+                                    <ul class="mb-0">
+                                        <li><strong>用户搜索:</strong> 使用JPA查询，支持模糊匹配，自动排除当前用户</li>
+                                        <li><strong>文件上传:</strong> 支持多文件同时上传，前端实时预览，后端类型验证</li>
+                                        <li><strong>图片预览:</strong> 使用FileReader API实现本地预览，无需上传即可查看</li>
+                                        <li><strong>视频预览:</strong> 使用URL.createObjectURL创建临时预览链接</li>
+                                        <li><strong>文件限制:</strong> 前后端双重验证，确保文件数量和大小符合要求</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedFiles = [];
+
+        async function demoSearchUsers() {
+            const keyword = document.getElementById('userSearchDemo').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!keyword) {
+                resultsDiv.innerHTML = '';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> 搜索中...</div>';
+            
+            try {
+                const response = await fetch(`/api/chat/users/search?keyword=${encodeURIComponent(keyword)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.users && data.users.length > 0) {
+                        resultsDiv.innerHTML = data.users.map(user => `
+                            <div class="d-flex align-items-center p-2 border-bottom">
+                                <img src="${user.avatar}" alt="头像" class="rounded-circle me-2" width="32" height="32">
+                                <div>
+                                    <div class="fw-bold">${user.nickname || user.username}</div>
+                                    <small class="text-muted">@${user.username}</small>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        resultsDiv.innerHTML = '<div class="text-muted text-center py-2">未找到用户</div>';
+                    }
+                } else {
+                    resultsDiv.innerHTML = `<div class="text-danger text-center py-2">搜索失败: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="text-danger text-center py-2">请求失败: ${error.message}</div>`;
+            }
+        }
+
+        function demoFilePreview(files) {
+            if (!files || files.length === 0) {
+                document.getElementById('filePreviewDemo').style.display = 'none';
+                return;
+            }
+            
+            if (files.length > 9) {
+                alert('最多只能选择9个文件');
+                document.getElementById('fileDemo').value = '';
+                return;
+            }
+            
+            selectedFiles = Array.from(files);
+            const previewDiv = document.getElementById('filePreviewDemo');
+            const listDiv = document.getElementById('filePreviewList');
+            
+            listDiv.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'd-flex align-items-center p-2 border-bottom';
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        item.innerHTML = `
+                            <img src="${e.target.result}" alt="${file.name}" class="me-2" 
+                                 style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                            <div class="flex-grow-1">
+                                <div class="fw-bold">${file.name}</div>
+                                <small class="text-muted">${formatFileSize(file.size)}</small>
+                            </div>
+                            <span class="badge bg-primary">图片</span>
+                        `;
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type.startsWith('video/')) {
+                    const videoUrl = URL.createObjectURL(file);
+                    item.innerHTML = `
+                        <video src="${videoUrl}" class="me-2" muted
+                               style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;"></video>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${file.name}</div>
+                            <small class="text-muted">${formatFileSize(file.size)}</small>
+                        </div>
+                        <span class="badge bg-info">视频</span>
+                    `;
+                } else {
+                    item.innerHTML = `
+                        <div class="me-2 text-center" style="width: 40px; height: 40px; line-height: 40px; background: #f8f9fa; border-radius: 4px;">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${file.name}</div>
+                            <small class="text-muted">${formatFileSize(file.size)}</small>
+                        </div>
+                        <span class="badge bg-secondary">文件</span>
+                    `;
+                }
+                
+                listDiv.appendChild(item);
+            });
+            
+            previewDiv.style.display = 'block';
+        }
+
+        function clearDemoPreview() {
+            document.getElementById('fileDemo').value = '';
+            document.getElementById('filePreviewDemo').style.display = 'none';
+            selectedFiles = [];
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 绑定搜索框回车事件
+        document.getElementById('userSearchDemo').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                demoSearchUsers();
+            }
+        });
+    </script>
+</body>
+</html>

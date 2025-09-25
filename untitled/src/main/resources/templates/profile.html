@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的主页 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        /* 导航栏优化样式 */
+        .nav-link-sm {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.6rem !important;
+            white-space: nowrap;
+        }
+
+        .btn-nav-sm {
+            font-size: 0.8rem !important;
+            padding: 0.3rem 0.6rem !important;
+        }
+
+        .navbar-text-sm {
+            font-size: 0.85rem !important;
+        }
+
+        .navbar-nav .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            transform: translateY(-1px);
+            color: #fff !important;
+        }
+
+        /* 导航栏三分布局 */
+        .navbar-left {
+            flex: 0 0 auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 1rem;
+            margin-right: 1rem;
+        }
+
+        .navbar-center {
+            flex: 0 0 auto;
+            padding: 0 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-right {
+            flex: 0 0 auto;
+            padding-left: 1rem;
+            margin-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 聊天未读消息计数样式 */
+        .chat-unread-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.6rem;
+            padding: 2px 5px;
+            min-width: 16px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .profile-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" opacity="0.1"><polygon points="0,100 1000,0 1000,100"/></svg>');
+            background-size: cover;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #667eea;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 25px;
+            padding: 0.75rem 1.5rem;
+            margin: 0 0.25rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-pills .nav-link.active {
+            background: var(--primary-gradient);
+            border-color: transparent;
+        }
+
+        .nav-pills .nav-link:not(.active) {
+            background: white;
+            color: #6c757d;
+            border-color: #e9ecef;
+        }
+
+        .nav-pills .nav-link:not(.active):hover {
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        .gradient-btn {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* 个人主页视频卡片样式 */
+        .video-card-profile {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .video-card-profile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        .video-thumbnail-profile {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+            transition: transform 0.3s ease;
+        }
+
+        .video-card-profile:hover .video-thumbnail-profile {
+            transform: scale(1.05);
+        }
+
+        .video-status-badge-profile {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+        }
+
+        .video-stats-profile {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 8px;
+        }
+
+        .video-stats-profile .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .btn-group-profile {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-group-profile .btn {
+            flex: 1;
+            border-radius: 8px;
+        }
+
+        /* 设置页面样式 */
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px 16px 0 0 !important;
+            border: none;
+        }
+
+        /* 紧凑版个人资料头部 */
+        .profile-header-compact {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .profile-avatar-compact {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            overflow: hidden;
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .profile-avatar-compact .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-name-compact {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .profile-bio-compact {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            max-width: 400px;
+        }
+
+        .profile-meta-compact {
+            font-size: 0.85rem;
+        }
+
+        .meta-item-compact {
+            color: #6c757d;
+        }
+
+        .meta-item-compact i {
+            color: #667eea;
+        }
+
+        .profile-actions-compact .btn {
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .profile-avatar-compact {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .profile-name-compact {
+                font-size: 1.25rem;
+            }
+
+            .profile-meta-compact {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .profile-actions-compact {
+                margin-top: 1rem;
+            }
+        }
+
+        /* 编辑资料模态框样式 */
+        .avatar-upload-section {
+            padding: 1rem;
+        }
+
+        .current-avatar {
+            position: relative;
+        }
+
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e9ecef;
+        }
+
+        .avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            margin: 0 auto;
+            border: 3px solid #e9ecef;
+        }
+
+        .avatar-upload {
+            margin-top: 1rem;
+        }
+
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 16px 16px 0 0;
+            border: none;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+
+        .modal-footer {
+            border: none;
+            padding: 1.5rem;
+        }
+
+        /* 视频缩略图样式 */
+        .video-thumbnail-card {
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center w-100">
+            <!-- 登录状态下显示 -->
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center w-100 justify-content-between">
+                <!-- 左侧功能区 -->
+                <div class="d-flex flex-row align-items-center navbar-left">
+                    <a class="nav-link me-2 nav-link-sm" href="/chat">
+                        <i class="fas fa-comments me-1"></i>聊天
+                        <span class="badge bg-danger ms-1" id="chatUnreadBadge" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/upload">
+                        <i class="fas fa-upload me-1"></i>上传
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/music">
+                        <i class="fas fa-music me-1"></i>音乐
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/posts">
+                        <i class="fas fa-heart me-1"></i>动态
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/private-album">
+                        <i class="fas fa-lock me-1"></i>私密相册
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/voice-clone">
+                        <i class="fas fa-microphone me-1"></i>语音克隆
+                    </a>
+                </div>
+
+                <!-- 中间区域 -->
+                <div class="navbar-center">
+                    <!-- 个人主页不显示签到按钮 -->
+                </div>
+
+                <!-- 右侧用户区 -->
+                <div class="d-flex flex-row align-items-center navbar-right">
+                    <a class="nav-link me-2 nav-link-sm notification-bell" href="/notifications">
+                        <i class="fas fa-bell me-1"></i>通知
+                        <span class="badge bg-danger notification-badge" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/chat" style="position: relative;">
+                        <i class="fas fa-comments me-1"></i>聊天
+                        <span class="chat-unread-badge badge bg-danger" style="display: none; position: absolute; top: -5px; right: 5px; font-size: 0.6rem;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/profile" id="userProfileLink">
+                        <i class="fas fa-user me-1"></i>我的主页
+                        <span id="userLevelBadge" class="badge bg-primary ms-1" style="display: none;"></span>
+                    </a>
+                    <div sec:authorize="hasRole('ADMIN')" class="me-2">
+                        <a class="nav-link nav-link-sm" href="/admin">
+                            <i class="fas fa-cog me-1"></i>管理
+                        </a>
+                    </div>
+                    <span class="navbar-text me-2 navbar-text-sm">
+                        <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button class="btn btn-outline-light btn-sm btn-nav-sm" type="submit">退出</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 未登录状态下显示 -->
+            <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-2 nav-link-sm" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>登录
+                </a>
+                <a class="nav-link nav-link-sm" href="/register">
+                    <i class="fas fa-user-plus me-1"></i>注册
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 个人资料头部 - 紧凑版 -->
+<section class="profile-header-compact bg-light py-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar-compact">
+                    <img th:if="${user.avatar != null}" th:src="${user.avatar}" alt="用户头像" class="avatar-img">
+                    <i th:unless="${user.avatar != null}" class="fas fa-user"></i>
+                </div>
+            </div>
+            <div class="col">
+                <div class="profile-info-compact">
+                    <h3 class="profile-name-compact mb-1" th:text="${user.username}">用户名</h3>
+                    <p class="profile-bio-compact text-muted mb-2" th:text="${user.bio ?: '这个人很懒，什么都没有留下...'}">个人简介</p>
+                    <div class="profile-meta-compact">
+                        <span class="meta-item-compact me-3">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            <span th:text="${#temporals.format(user.createdAt, 'yyyy年MM月')}">2024年1月</span>
+                        </span>
+                        <span class="meta-item-compact me-3">
+                            <i class="fas fa-video me-1"></i>
+                            <span th:text="${userStats != null ? userStats.totalVideos : #lists.size(videos)}">0</span> 个视频
+                        </span>
+                        <span class="meta-item-compact">
+                            <i class="fas fa-eye me-1"></i>
+                            <span th:text="${userStats != null ? userStats.totalViews : 0}">0</span> 次观看
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="profile-actions-compact">
+                    <a href="/upload" class="btn btn-primary btn-sm me-2">
+                        <i class="fas fa-upload me-1"></i>上传视频
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showEditModal()">
+                        <i class="fas fa-edit me-1"></i>编辑资料
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container mt-5">
+    <!-- 统计卡片 -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-video fa-2x text-primary mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalVideos}">0</div>
+                <h6 class="text-muted">我的视频</h6>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-eye fa-2x text-success mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalViews}">0</div>
+                <h6 class="text-muted">总观看量</h6>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-comments fa-2x text-info mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalComments}">0</div>
+                <h6 class="text-muted">我的评论</h6>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-heart fa-2x text-danger mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalLikes}">0</div>
+                <h6 class="text-muted">获得点赞</h6>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航标签 -->
+    <ul class="nav nav-pills justify-content-center mb-5" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos" type="button" role="tab">
+                <i class="fas fa-video me-2"></i>我的视频 (<span th:text="${#lists.size(videos)}">0</span>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button" role="tab">
+                <i class="fas fa-star me-2"></i>收藏视频 (<span th:text="${#lists.size(favoriteVideos)}">0</span>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="liked-tab" data-bs-toggle="tab" data-bs-target="#liked" type="button" role="tab">
+                <i class="fas fa-heart me-2"></i>喜欢视频 (<span th:text="${#lists.size(likedVideos)}">0</span>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="/achievements">
+                <i class="fas fa-trophy me-2"></i>我的成就
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" href="/stats">
+                <i class="fas fa-chart-line me-2"></i>数据统计
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                <i class="fas fa-cog me-2"></i>个人设置
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="profileTabsContent">
+        <!-- 我的视频标签页 -->
+        <div class="tab-pane fade show active" id="videos" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <h4>我的视频</h4>
+                <a href="/upload" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i>上传新视频
+                </a>
+            </div>
+
+            <div class="row">
+                <div th:if="${#lists.isEmpty(videos)}" class="col-12 text-center py-5">
+                    <h5 class="text-muted">暂无视频</h5>
+                    <p class="text-muted">快来上传你的第一个视频吧！</p>
+                </div>
+
+                <div th:each="video : ${videos}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 video-card-profile">
+                        <div class="position-relative">
+                            <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                                 class="card-img-top video-thumbnail-profile" alt="缩略图">
+
+                            <!-- 视频状态标签 -->
+                            <div class="video-status-badge-profile">
+                                <span th:switch="${video.status.name()}" class="badge">
+                                    <span th:case="'APPROVED'" class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>已通过
+                                    </span>
+                                    <span th:case="'PENDING'" class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>待审核
+                                    </span>
+                                    <span th:case="'REJECTED'" class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>已拒绝
+                                    </span>
+                                    <span th:case="'BANNED'" class="badge bg-dark">
+                                        <i class="fas fa-ban me-1"></i>已封禁
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                            <p class="card-text flex-grow-1 small text-muted" th:text="${#strings.abbreviate(video.description, 60)}">视频描述</p>
+
+                            <!-- 视频统计 -->
+                            <div class="video-stats-profile mb-3">
+                                <div class="stat-item">
+                                    <i class="fas fa-eye text-primary"></i>
+                                    <span th:text="${video.views != null ? video.views : 0}">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-heart text-danger"></i>
+                                    <span th:text="${video.likeCount != null ? video.likeCount : 0}">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <span th:text="${video.favoriteCount != null ? video.favoriteCount : 0}">0</span>
+                                </div>
+                            </div>
+
+                            <!-- 发布时间 -->
+                            <small class="text-muted mb-2">
+                                <i class="fas fa-clock me-1"></i>
+                                <span th:text="${#temporals.format(video.createdAt, 'yyyy-MM-dd HH:mm')}">发布时间</span>
+                            </small>
+
+                            <!-- 操作按钮 -->
+                            <div class="btn-group-profile">
+                                <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play me-1"></i>观看
+                                </a>
+                                <a th:href="@{/video/{id}/edit(id=${video.id})}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-edit me-1"></i>编辑
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm"
+                                        onclick="deleteVideo(this)"
+                                        th:data-video-id="${video.id}"
+                                        th:data-video-title="${video.title}">
+                                    <i class="fas fa-trash me-1"></i>删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 收藏视频标签页 -->
+        <div class="tab-pane fade" id="favorites" role="tabpanel">
+            <div class="mt-3">
+                <h4>收藏的视频</h4>
+            </div>
+
+            <div class="row">
+                <div th:if="${#lists.isEmpty(favoriteVideos)}" class="col-12 text-center py-5">
+                    <h5 class="text-muted">暂无收藏</h5>
+                    <p class="text-muted">去发现一些有趣的视频吧！</p>
+                </div>
+
+                <div th:each="video : ${favoriteVideos}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                             class="card-img-top" style="height: 200px; object-fit: cover;" alt="缩略图">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                            <p class="card-text flex-grow-1 small" th:text="${video.description}">视频描述</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i><span th:text="${video.user != null ? video.user.username : '作者'}">作者</span>
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-eye me-1"></i><span th:text="${video.views != null ? video.views : 0}">0</span>
+                                </small>
+                            </div>
+                            <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play me-1"></i>观看
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 喜欢视频标签页 -->
+        <div class="tab-pane fade" id="liked" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
+                <h4>喜欢的视频</h4>
+                <small class="text-muted">您点赞过的视频</small>
+            </div>
+
+            <div class="row" th:if="${!#lists.isEmpty(likedVideos)}">
+                <div th:each="video : ${likedVideos}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100">
+                        <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                             class="card-img-top video-thumbnail-card" alt="缩略图">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                            <p class="card-text flex-grow-1 small" th:text="${video.description}">视频描述</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-user me-1"></i><span th:text="${video.user != null ? video.user.username : '作者'}">作者</span>
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-eye me-1"></i><span th:text="${video.views != null ? video.views : 0}">0</span>
+                                </small>
+                            </div>
+                            <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play me-1"></i>观看
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row" th:if="${#lists.isEmpty(likedVideos)}">
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-heart fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无喜欢的视频</h5>
+                    <p class="text-muted">去发现一些有趣的视频并点赞吧！</p>
+                    <a href="/" class="gradient-btn text-decoration-none">
+                        <i class="fas fa-home me-2"></i>去首页看看
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人设置标签页 -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="mt-3">
+                <h4 class="mb-4">个人设置</h4>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>基本信息</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="profileForm">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="username" class="form-label">用户名</label>
+                                            <input type="text" class="form-control" id="username"
+                                                   th:value="${user.username}" readonly>
+                                            <small class="text-muted">用户名不可修改</small>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label">邮箱</label>
+                                            <input type="email" class="form-control" id="email"
+                                                   th:value="${user.email}">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="bio" class="form-label">个人简介</label>
+                                        <textarea class="form-control" id="bio" rows="3"
+                                                  placeholder="介绍一下自己吧..."></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="avatar" class="form-label">头像</label>
+                                        <input type="file" class="form-control" id="avatar" accept="image/*">
+                                        <small class="text-muted">支持 JPG、PNG 格式，最大 2MB</small>
+                                    </div>
+
+                                    <button type="submit" class="btn gradient-btn">
+                                        <i class="fas fa-save me-2"></i>保存设置
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-lock me-2"></i>修改密码</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="passwordForm">
+                                    <div class="mb-3">
+                                        <label for="currentPassword" class="form-label">当前密码</label>
+                                        <input type="password" class="form-control" id="currentPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">新密码</label>
+                                        <input type="password" class="form-control" id="newPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">确认新密码</label>
+                                        <input type="password" class="form-control" id="confirmPassword" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-key me-2"></i>修改密码
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>偏好设置</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                    <label class="form-check-label" for="emailNotifications">
+                                        邮件通知
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="publicProfile" checked>
+                                    <label class="form-check-label" for="publicProfile">
+                                        公开个人资料
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="autoPlay">
+                                    <label class="form-check-label" for="autoPlay">
+                                        自动播放视频
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>账户统计</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>注册时间</span>
+                                    <span th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd')}">2024-01-01</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>视频总数</span>
+                                    <span th:text="${userStats.totalVideos}">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>总观看量</span>
+                                    <span th:text="${userStats.totalViews}">0</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>评论总数</span>
+                                    <span th:text="${userStats.totalComments}">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑资料模态框 -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProfileModalLabel">
+                    <i class="fas fa-edit me-2"></i>编辑个人资料
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="avatar-upload-section">
+                                <div class="current-avatar mb-3">
+                                    <img th:if="${user.avatar != null}" th:src="${user.avatar}" alt="当前头像" class="avatar-preview">
+                                    <div th:unless="${user.avatar != null}" class="avatar-placeholder">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div class="avatar-upload">
+                                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                                    <div class="btn-group-vertical w-100" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('avatarInput').click()">
+                                            <i class="fas fa-upload me-1"></i>上传图片
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="showAvatarUrlModal()">
+                                            <i class="fas fa-link me-1"></i>使用URL
+                                        </button>
+                                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="resetAvatar()">
+                                            <i class="fas fa-undo me-1"></i>重置默认
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="editUsername" class="form-label">用户名</label>
+                                <input type="text" class="form-control" id="editUsername" th:value="${user.username}" readonly>
+                                <small class="text-muted">用户名不可修改</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editEmail" class="form-label">邮箱</label>
+                                <input type="email" class="form-control" id="editEmail" th:value="${user.email}">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editNickname" class="form-label">昵称</label>
+                                <input type="text" class="form-control" id="editNickname" th:value="${user.nickname}" placeholder="设置一个昵称">
+                                <small class="text-muted">显示名称，可以与用户名不同</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editBio" class="form-label">个人简介</label>
+                                <textarea class="form-control" id="editBio" rows="4"
+                                          th:text="${user.bio}" placeholder="介绍一下自己吧..."></textarea>
+                                <small class="text-muted">最多500个字符</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()">
+                    <i class="fas fa-save me-1"></i>保存更改
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- 智能助手功能已禁用 -->
+<!-- <script src="/js/pet-themes.js"></script> -->
+<!-- <script src="/js/smart-pet.js"></script> -->
+<!-- <script src="/js/ai-assistant.js"></script> -->
+
+<script>
+// 删除视频确认
+function deleteVideo(button) {
+    const videoId = button.getAttribute('data-video-id');
+    const videoTitle = button.getAttribute('data-video-title');
+
+    if (confirm(`确定要删除视频"${videoTitle}"吗？此操作不可撤销。`)) {
+        // 创建表单并提交
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/video/${videoId}/delete`;
+
+        // 添加CSRF token（如果需要）
+        const csrfToken = document.querySelector('meta[name="_csrf"]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_csrf';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// 显示编辑模态框
+function showEditModal() {
+    const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
+    modal.show();
+}
+
+// 保存个人资料
+function saveProfile() {
+    const bio = document.getElementById('editBio').value;
+    const email = document.getElementById('editEmail').value;
+    const nickname = document.getElementById('editNickname').value;
+
+    fetch('/api/user/profile/update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            bio: bio,
+            email: email,
+            nickname: nickname
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            throw new Error('服务器返回的不是JSON格式');
+        }
+    })
+    .then(data => {
+        if (data.success) {
+            alert('个人信息更新成功！');
+            location.reload(); // 刷新页面显示更新后的信息
+        } else {
+            alert('更新失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('更新失败，请稍后重试');
+    });
+}
+
+// 头像上传处理
+document.getElementById('avatarInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // 预览头像
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.querySelector('.avatar-preview');
+            const placeholder = document.querySelector('.avatar-placeholder');
+            if (preview) {
+                preview.src = e.target.result;
+            } else if (placeholder) {
+                placeholder.innerHTML = `<img src="${e.target.result}" alt="头像预览" class="avatar-preview">`;
+            }
+        };
+        reader.readAsDataURL(file);
+
+        // 上传头像
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/api/avatar/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('头像上传成功！');
+
+                // 触发头像同步更新
+                if (window.currentUser && data.avatarUrl && window.AvatarSync) {
+                    window.AvatarSync.triggerUpdate(window.currentUser.id, data.avatarUrl);
+                }
+
+                // 刷新页面显示新头像
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert('上传失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('上传失败，请稍后重试');
+        });
+    }
+});
+
+
+
+// 个人信息表单提交
+const profileForm = document.getElementById('profileForm');
+if (profileForm) {
+    profileForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert('个人信息保存成功！');
+    });
+}
+
+// 密码修改表单提交
+const passwordForm = document.getElementById('passwordForm');
+if (passwordForm) {
+    passwordForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (newPassword !== confirmPassword) {
+            alert('两次输入的密码不一致！');
+            return;
+        }
+
+        alert('密码修改成功！');
+    });
+}
+
+// 显示头像URL设置模态框
+function showAvatarUrlModal() {
+    const modal = new bootstrap.Modal(document.getElementById('avatarUrlModal'));
+    modal.show();
+}
+
+// 设置头像URL
+function setAvatarUrl() {
+    const url = document.getElementById('avatarUrlInput').value.trim();
+    if (!url) {
+        alert('请输入头像URL');
+        return;
+    }
+
+    fetch('/api/avatar/set-url', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ avatarUrl: url })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('头像设置成功！');
+
+            // 触发头像同步更新
+            if (window.currentUser && window.AvatarSync) {
+                window.AvatarSync.triggerUpdate(window.currentUser.id, url);
+            }
+
+            location.reload(); // 刷新页面显示新头像
+        } else {
+            alert('设置失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('设置失败，请稍后重试');
+    });
+
+    // 关闭模态框
+    const modal = bootstrap.Modal.getInstance(document.getElementById('avatarUrlModal'));
+    modal.hide();
+}
+
+// 重置头像
+function resetAvatar() {
+    if (confirm('确定要重置为默认头像吗？')) {
+        fetch('/api/avatar/reset', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('头像已重置！');
+
+                // 触发头像同步更新
+                if (window.currentUser && data.avatarUrl && window.AvatarSync) {
+                    window.AvatarSync.triggerUpdate(window.currentUser.id, data.avatarUrl);
+                }
+
+                location.reload(); // 刷新页面显示默认头像
+            } else {
+                alert('重置失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('重置失败，请稍后重试');
+        });
+    }
+}
+
+// URL预览功能
+const avatarUrlInput = document.getElementById('avatarUrlInput');
+if (avatarUrlInput) {
+    avatarUrlInput.addEventListener('input', function() {
+        const url = this.value.trim();
+        const preview = document.getElementById('avatarUrlPreview');
+
+        if (url && preview) {
+            preview.src = url;
+            preview.style.display = 'block';
+            preview.onerror = function() {
+                this.style.display = 'none';
+            };
+        } else if (preview) {
+            preview.style.display = 'none';
+        }
+    });
+}
+</script>
+
+<!-- 头像URL设置模态框 -->
+<div class="modal fade" id="avatarUrlModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">设置头像URL</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="avatarUrlInput" class="form-label">头像图片URL</label>
+                    <input type="url" class="form-control" id="avatarUrlInput" placeholder="https://example.com/avatar.jpg">
+                    <div class="form-text">请输入有效的图片URL地址</div>
+                </div>
+                <div class="text-center">
+                    <img id="avatarUrlPreview" src="" alt="预览" style="max-width: 120px; max-height: 120px; border-radius: 50%; display: none;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="setAvatarUrl()">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户数据 -->
+<div data-current-user
+     data-username="[[${#authentication.name}]]"
+     style="display: none;"></div>
+
+<!-- 全局通知管理 -->
+<script src="/js/global-notifications.js"></script>
+
+<!-- 全局智能助手 -->
+<script src="/js/global-smart-pet.js"></script>
+
+<script>
+
+
+    // 显示通知
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+
+    // 更新聊天未读消息计数
+    function updateChatUnreadCount() {
+        fetch('/api/chat/unread-count', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const totalCount = data.count || 0;
+            const chatBadge = document.querySelector('.chat-unread-badge');
+
+            if (chatBadge) {
+                if (totalCount > 0) {
+                    chatBadge.textContent = totalCount > 99 ? '99+' : totalCount;
+                    chatBadge.style.display = 'inline-block';
+                } else {
+                    chatBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取聊天未读消息计数失败:', error);
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化聊天未读消息计数
+        updateChatUnreadCount();
+
+        // 定期更新聊天未读消息计数（每30秒）
+        setInterval(updateChatUnreadCount, 30000);
+    });
+</script>
+
+<!-- 头像同步脚本 -->
+<script src="/js/avatar-sync.js"></script>
+
+</body>
+</html>

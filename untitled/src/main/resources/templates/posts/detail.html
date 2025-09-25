@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态详情 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .moment-detail {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .moment-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .moment-header {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .moment-content {
+            padding: 20px;
+        }
+        .moment-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .moment-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .moment-actions {
+            padding: 15px 20px;
+            border-top: 1px solid #f0f0f0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .comment-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .like-btn {
+            border: none;
+            background: none;
+            color: #666;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 20px;
+            transition: all 0.3s;
+        }
+        .like-btn:hover {
+            background: #f8f9fa;
+        }
+        .like-btn.liked {
+            color: #e74c3c;
+            background: #ffeaea;
+        }
+        .comment-section {
+            padding: 20px;
+        }
+        .comment-item {
+            border-bottom: 1px solid #f0f0f0;
+            padding: 15px 0;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        .comment-form {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">视频网站</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/posts">动态</a>
+                <a class="nav-link" href="/music">音乐</a>
+                <div th:if="${currentUser}" class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span th:text="${currentUser.username}">用户</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><a class="dropdown-item" href="/posts/my">我的动态</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+                <div th:unless="${currentUser}">
+                    <a class="nav-link" href="/login">登录</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="moment-detail">
+            <div class="d-flex align-items-center mb-4">
+                <a href="/posts" class="btn btn-outline-secondary me-3">
+                    <i class="fas fa-arrow-left"></i> 返回动态
+                </a>
+                <h2 class="mb-0">动态详情</h2>
+            </div>
+
+            <div class="moment-card">
+                <!-- 动态头部 -->
+                <div class="moment-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <a th:href="@{'/user/' + ${moment.userId}}" class="text-decoration-none">
+                                <img th:src="${author?.avatar ?: '/uploads/avatars/default.svg'}"
+                                     class="user-avatar me-3" alt="用户头像" style="cursor: pointer;">
+                            </a>
+                            <div>
+                                <a th:href="@{'/user/' + ${moment.userId}}" class="text-decoration-none">
+                                    <h5 class="mb-0 text-dark" th:text="${author?.username ?: '未知用户'}">用户名</h5>
+                                </a>
+                                <small class="text-muted" th:text="${#temporals.format(moment.createTime, 'yyyy-MM-dd HH:mm')}">时间</small>
+                                <span th:if="${moment.location}" class="text-muted ms-2">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span th:text="${moment.location}">位置</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 删除按钮 (仅作者可见) -->
+                        <div th:if="${currentUser != null and currentUser.id == moment.userId}">
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteMoment()">
+                                <i class="fas fa-trash"></i> 删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 动态内容 -->
+                <div class="moment-content">
+                    <p class="fs-5" th:text="${moment.content}">动态内容</p>
+                    
+                    <!-- 图片展示 -->
+                    <div th:if="${imagePaths != null and !imagePaths.isEmpty()}" class="moment-images">
+                        <div th:each="image : ${imagePaths}" th:if="${image != null and !image.isEmpty()}">
+                            <img th:src="@{'/' + ${image}}"
+                                 class="moment-image"
+                                 alt="动态图片"
+                                 onclick="showImageModal(this.src)">
+                        </div>
+                    </div>
+                    
+                    <div th:if="${moment.mood}" class="mt-3">
+                        <span class="badge bg-light text-dark fs-6">
+                            <i class="fas fa-smile"></i>
+                            <span th:text="${moment.mood}">心情</span>
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- 动态操作 -->
+                <div class="moment-actions">
+                    <div class="d-flex align-items-center">
+                        <button th:if="${currentUser}"
+                                th:class="'like-btn me-3' + (${isLiked} ? ' liked' : '')"
+                                th:onclick="'likeMoment(' + ${moment.id} + ')'"
+                                th:id="'like-btn-' + ${moment.id}">
+                            <i class="fas fa-heart"></i>
+                            <span th:id="'like-count-' + ${moment.id}" th:text="${moment.likeCount}">0</span>
+                            <span class="ms-1">点赞</span>
+                        </button>
+                        <span th:unless="${currentUser}" class="text-muted me-3">
+                            <i class="fas fa-heart"></i>
+                            <span th:text="${moment.likeCount}">0</span>
+                            <span class="ms-1">点赞</span>
+                        </span>
+
+                        <span class="text-muted me-3">
+                            <i class="fas fa-comment"></i>
+                            <span th:text="${comments != null ? comments.size() : 0}">0</span>
+                            <span class="ms-1">评论</span>
+                        </span>
+
+                        <button class="btn btn-outline-primary btn-sm" onclick="showShareModal()">
+                            <i class="fas fa-share"></i>
+                            <span class="ms-1">转发</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 点赞用户显示 -->
+                <div th:if="${likes != null and !likes.isEmpty()}" class="likes-info px-3 pb-2">
+                    <small class="text-muted">
+                        <i class="fas fa-heart text-danger"></i>
+                        <span th:each="like, iterStat : ${likes}">
+                            <a th:href="@{'/user/' + ${like.userId}}" class="text-decoration-none text-primary" th:text="${like.user?.username ?: '用户'}">用户</a><span th:if="${!iterStat.last}">, </span>
+                        </span>
+                        <span th:if="${likes.size() >= 30}"> 等人点赞</span>
+                        <span th:unless="${likes.size() >= 30}"> 点赞了这条动态</span>
+                    </small>
+                </div>
+                
+                <!-- 评论区 -->
+                <div class="comment-section">
+                    <h5 class="mb-3">评论 (<span th:text="${comments != null ? comments.size() : 0}">0</span>)</h5>
+                    
+                    <!-- 评论列表 -->
+                    <div th:if="${comments != null and !comments.isEmpty()}">
+                        <div th:each="comment : ${comments}" class="comment-item">
+                            <div class="d-flex">
+                                <img th:src="${comment.user?.avatar ?: '/uploads/avatars/default.svg'}"
+                                     class="comment-avatar me-3" alt="用户头像">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <strong th:text="${comment.user?.username ?: '未知用户'}">用户名</strong>
+                                        <small class="text-muted ms-2" th:text="${#temporals.format(comment.createTime, 'MM-dd HH:mm')}">时间</small>
+                                    </div>
+                                    <p class="mb-0" th:text="${comment.content}">评论内容</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 空评论状态 -->
+                    <div th:if="${comments == null or comments.isEmpty()}" class="text-center py-4">
+                        <i class="fas fa-comment-slash fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">暂无评论，快来抢沙发吧！</p>
+                    </div>
+                    
+                    <!-- 评论表单 -->
+                    <div th:if="${currentUser}" class="comment-form">
+                        <form onsubmit="submitComment(event)">
+                            <div class="d-flex">
+                                <img th:src="${currentUser.avatar ?: '/uploads/avatars/default.svg'}"
+                                     class="comment-avatar me-3" alt="我的头像">
+                                <div class="flex-grow-1">
+                                    <textarea class="form-control mb-2" id="commentContent" 
+                                            placeholder="写下你的评论..." rows="2" required></textarea>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-paper-plane"></i> 发表评论
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div th:unless="${currentUser}" class="text-center py-3">
+                        <p class="text-muted">
+                            <a href="/login">登录</a> 后可以发表评论
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片模态框 -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <img id="modalImage" src="" class="w-100" alt="图片">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 转发模态框 -->
+    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="shareModalLabel">
+                        <i class="fas fa-share me-2"></i>分享动态
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">分享链接</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="shareUrl" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyShareUrl()">
+                                <i class="fas fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">快速分享到</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <!-- 国内平台 -->
+                            <button class="btn btn-outline-success btn-sm" onclick="shareToWeChat()">
+                                <i class="fab fa-weixin"></i> 微信
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="shareToQQ()">
+                                <i class="fab fa-qq"></i> QQ
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="shareToWeibo()">
+                                <i class="fab fa-weibo"></i> 微博
+                            </button>
+
+                            <!-- 国外平台 -->
+                            <button class="btn btn-outline-primary btn-sm" onclick="shareToFacebook()">
+                                <i class="fab fa-facebook"></i> Facebook
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="shareToTwitter()">
+                                <i class="fab fa-twitter"></i> Twitter
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="shareToReddit()">
+                                <i class="fab fa-reddit"></i> Reddit
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="shareToLinkedIn()">
+                                <i class="fab fa-linkedin"></i> LinkedIn
+                            </button>
+                            <button class="btn btn-outline-dark btn-sm" onclick="shareToTelegram()">
+                                <i class="fab fa-telegram"></i> Telegram
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        点击平台按钮将在新窗口中打开分享页面
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:inline="javascript">
+        const momentId = /*[[${moment.id}]]*/ 0;
+        
+        function likeMoment(momentId) {
+            fetch('/posts/' + momentId + '/like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.text())
+            .then(data => {
+                const result = JSON.parse(data);
+                if (result.success) {
+                    const likeBtn = document.getElementById('like-btn-' + momentId);
+                    const likeCount = document.getElementById('like-count-' + momentId);
+                    
+                    if (result.liked) {
+                        likeBtn.classList.add('liked');
+                    } else {
+                        likeBtn.classList.remove('liked');
+                    }
+                    
+                    likeCount.textContent = result.likeCount;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        // 转发相关函数
+        function showShareModal() {
+            const currentUrl = window.location.href;
+            document.getElementById('shareUrl').value = currentUrl;
+
+            const shareModal = new bootstrap.Modal(document.getElementById('shareModal'));
+            shareModal.show();
+        }
+
+        function copyShareUrl() {
+            const shareUrl = document.getElementById('shareUrl');
+            shareUrl.select();
+            shareUrl.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand('copy');
+                alert('链接已复制到剪贴板！');
+            } catch (err) {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制链接');
+            }
+        }
+
+        function shareToWeChat() {
+            // 微信分享通常需要通过二维码或复制链接
+            copyShareUrl();
+            alert('链接已复制，请在微信中粘贴分享');
+        }
+
+        function shareToQQ() {
+            const url = encodeURIComponent(window.location.href);
+            const title = encodeURIComponent(document.title);
+            const shareUrl = `https://connect.qq.com/widget/shareqq/index.html?url=${url}&title=${title}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToWeibo() {
+            const url = encodeURIComponent(window.location.href);
+            const title = encodeURIComponent(document.title);
+            const shareUrl = `https://service.weibo.com/share/share.php?url=${url}&title=${title}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToFacebook() {
+            const url = encodeURIComponent(window.location.href);
+            const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToTwitter() {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent(document.title);
+            const shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToReddit() {
+            const url = encodeURIComponent(window.location.href);
+            const title = encodeURIComponent(document.title);
+            const shareUrl = `https://www.reddit.com/submit?url=${url}&title=${title}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToLinkedIn() {
+            const url = encodeURIComponent(window.location.href);
+            const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function shareToTelegram() {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent(document.title);
+            const shareUrl = `https://t.me/share/url?url=${url}&text=${text}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function submitComment(event) {
+            event.preventDefault();
+            const content = document.getElementById('commentContent').value.trim();
+            
+            if (!content) {
+                alert('请输入评论内容');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('content', content);
+
+            fetch('/posts/' + momentId + '/comment', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                const result = JSON.parse(data);
+                if (result.success) {
+                    location.reload(); // 刷新页面显示新评论
+                } else {
+                    alert(result.message || '评论失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('评论失败，请重试');
+            });
+        }
+
+        function deleteMoment() {
+            if (confirm('确定要删除这条动态吗？删除后无法恢复。')) {
+                fetch('/posts/delete/' + momentId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }
+                })
+                .then(response => response.text())
+                .then(data => {
+                    const result = JSON.parse(data);
+                    if (result.success) {
+                        alert('删除成功');
+                        location.href = '/posts';
+                    } else {
+                        alert(result.message || '删除失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+
+        function showImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf?.token}" th:if="${_csrf}"/>
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}" th:if="${_csrf}"/>
+    <title>关注管理 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            margin: 20px auto;
+            padding: 30px;
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .stats-label {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .user-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .user-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .user-card:hover::before {
+            opacity: 1;
+        }
+
+        .user-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .default-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .follow-btn {
+            min-width: 110px;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            padding: 8px 20px;
+        }
+
+        .btn-follow {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-follow::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-follow:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-follow:hover::before {
+            left: 100%;
+        }
+
+        .btn-follow:active {
+            transform: translateY(-1px) scale(1.02);
+            transition: all 0.1s;
+        }
+
+        .btn-unfollow {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-unfollow::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-unfollow:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e53e3e 100%);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.5);
+        }
+
+        .btn-unfollow:hover::before {
+            left: 100%;
+        }
+
+        .btn-unfollow:active {
+            transform: translateY(-1px) scale(1.02);
+            transition: all 0.1s;
+        }
+
+        .mutual-badge {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);
+        }
+
+        .following-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 25px;
+            padding: 12px 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .search-box:focus {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+            outline: none;
+        }
+
+        .filter-select {
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            padding: 12px 20px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+            outline: none;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .user-info h6 {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .user-username {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .user-bio {
+            color: #95a5a6;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-container">
+            <!-- 页面标题 -->
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-users"></i> 关注管理
+                </h1>
+                <p class="mb-0" style="opacity: 0.9;">管理你的关注关系，发现更多朋友</p>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="followingCount">0</div>
+                        <p class="stats-label">关注</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="followersCount">0</div>
+                        <p class="stats-label">粉丝</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="mutualCount">0</div>
+                        <p class="stats-label">互关</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="contactsCount">0</div>
+                        <p class="stats-label">联系人</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 搜索和过滤 -->
+            <div class="row mb-4">
+                <div class="col-md-8 mb-3">
+                    <input type="text" id="searchInput" class="form-control search-box"
+                           placeholder="🔍 搜索用户名、昵称或简介..." onkeyup="searchUsers()">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <select id="filterSelect" class="form-select filter-select" onchange="filterUsers()">
+                        <option value="all">📋 所有用户</option>
+                        <option value="following">👥 我关注的</option>
+                        <option value="followers">👤 关注我的</option>
+                        <option value="mutual">💕 互相关注</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <span class="text-muted" id="userCountDisplay">正在加载用户...</span>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+
+            <!-- 用户列表 -->
+            <div id="usersList" class="row">
+                <!-- 用户卡片将在这里动态加载 -->
+            </div>
+
+            <!-- 加载提示 -->
+            <div id="loadingIndicator" class="text-center py-4" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p class="text-muted mt-3">正在加载用户数据...</p>
+            </div>
+
+            <!-- 空状态 -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <i class="fas fa-users-slash"></i>
+                <h4>没有找到用户</h4>
+                <p>尝试调整搜索条件或过滤器</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刷新按钮 -->
+    <button class="refresh-btn" onclick="refreshData()" title="刷新数据">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allUsers = [];
+        let followersData = [];
+        let currentFilter = 'all';
+        let refreshInterval;
+        let currentUser = null;
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+            loadUsers();
+            loadStats();
+            startAutoRefresh();
+        });
+
+        // 获取当前用户信息
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/user/current', {
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                }
+            } catch (error) {
+                console.error('获取当前用户信息失败:', error);
+            }
+        }
+
+        // 开始自动刷新
+        function startAutoRefresh() {
+            // 每30秒自动刷新一次统计数据
+            refreshInterval = setInterval(() => {
+                loadStats();
+            }, 30000);
+        }
+
+        // 停止自动刷新
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        // 刷新所有数据
+        async function refreshData() {
+            await loadUsers();
+            await loadStats();
+            showNotification('数据已刷新', 'success');
+        }
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                showLoading(true);
+                hideEmptyState();
+
+                // 并行加载所有用户和关注我的用户
+                const [usersResponse, followersResponse] = await Promise.all([
+                    fetch('/api/users/search?q=', { credentials: 'include' }),
+                    fetch('/api/follow/followers', { credentials: 'include' })
+                ]);
+
+                const usersData = await usersResponse.json();
+                const followersDataResponse = await followersResponse.json();
+
+                if (usersData.success) {
+                    allUsers = usersData.data || [];
+                    // 过滤掉当前用户
+                    if (currentUser) {
+                        allUsers = allUsers.filter(user => user.id !== currentUser.id);
+                    }
+                    await loadFollowStatuses();
+                }
+
+                if (followersDataResponse.success) {
+                    followersData = followersDataResponse.data || [];
+                } else {
+                    followersData = [];
+                }
+
+                if (usersData.success) {
+                    filterUsers();
+                    updateUserCountDisplay();
+                } else {
+                    console.error('加载用户失败:', usersData.message);
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('加载用户失败:', error);
+                showEmptyState();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 加载关注状态
+        async function loadFollowStatuses() {
+            for (let user of allUsers) {
+                try {
+                    const response = await fetch(`/api/follow/status/${user.id}`, {
+                        credentials: 'include'
+                    });
+                    const data = await response.json();
+                    user.isFollowing = data.isFollowing || false;
+                    user.isMutual = data.isMutual || false;
+                } catch (error) {
+                    console.error(`获取用户${user.id}关注状态失败:`, error);
+                    user.isFollowing = false;
+                    user.isMutual = false;
+                }
+            }
+        }
+
+        // 显示用户列表
+        function displayUsers(users) {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+
+            if (users.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            hideEmptyState();
+            users.forEach(user => {
+                const userCard = createUserCard(user);
+                usersList.appendChild(userCard);
+            });
+        }
+
+        // 创建用户卡片
+        function createUserCard(user) {
+            const col = document.createElement('div');
+            col.className = 'col-lg-6 col-xl-4 mb-3';
+            col.setAttribute('data-user-id', user.id);
+
+            const badges = [];
+
+            if (user.isMutual) {
+                badges.push('<span class="mutual-badge"><i class="fas fa-heart"></i> 互关</span>');
+            } else if (user.isFollowing) {
+                badges.push('<span class="following-badge"><i class="fas fa-user-check"></i> 已关注</span>');
+            }
+
+            // 创建头像HTML
+            const avatarHtml = createAvatarHtml(user);
+
+            col.innerHTML = `
+                <div class="user-card" data-user-id="${user.id}">
+                    <div class="d-flex align-items-start">
+                        ${avatarHtml}
+                        <div class="flex-grow-1 user-info">
+                            <h6>${escapeHtml(user.nickname || user.username)}</h6>
+                            <p class="user-username">@${escapeHtml(user.username)}</p>
+                            <div class="mb-2">${badges.join(' ')}</div>
+                            <p class="user-bio">${escapeHtml(user.bio || '这个人很懒，什么都没有留下...')}</p>
+                        </div>
+                        <div class="action-buttons">
+                            ${createFollowButton(user)}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return col;
+        }
+
+        // 创建头像HTML
+        function createAvatarHtml(user) {
+            if (user.avatar && user.avatar !== '/uploads/avatars/default.png') {
+                return `
+                    <img src="${user.avatar}" alt="${escapeHtml(user.nickname || user.username)}"
+                         class="user-avatar me-3"
+                         onerror="this.outerHTML = createDefaultAvatar('${escapeHtml(user.nickname || user.username)}')">
+                `;
+            } else {
+                return createDefaultAvatar(user.nickname || user.username);
+            }
+        }
+
+        // 创建默认头像
+        function createDefaultAvatar(name) {
+            const firstChar = (name || '?').charAt(0).toUpperCase();
+            return `
+                <div class="user-avatar me-3 default-avatar">
+                    ${firstChar}
+                </div>
+            `;
+        }
+
+
+
+        // HTML转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 创建关注按钮
+        function createFollowButton(user) {
+            const buttonId = `follow-btn-${user.id}`;
+            if (user.isFollowing) {
+                return `
+                    <button id="${buttonId}" class="follow-btn btn-unfollow" onclick="unfollowUser(${user.id})">
+                        <i class="fas fa-user-minus"></i> 取消关注
+                    </button>
+                `;
+            } else {
+                return `
+                    <button id="${buttonId}" class="follow-btn btn-follow" onclick="followUser(${user.id})">
+                        <i class="fas fa-user-plus"></i> 关注
+                    </button>
+                `;
+            }
+        }
+
+        // 关注用户
+        async function followUser(userId) {
+            const button = document.getElementById(`follow-btn-${userId}`);
+            const originalHtml = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 关注中...';
+                button.disabled = true;
+
+                const response = await fetch(`/api/follow/${userId}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 更新用户状态
+                    const user = allUsers.find(u => u.id === userId);
+                    if (user) {
+                        user.isFollowing = true;
+                        user.isMutual = data.isMutual || false;
+                    }
+
+                    // 更新UI
+                    updateUserCard(userId);
+                    loadStats();
+                    showNotification(data.isMutual ? '关注成功，你们现在互相关注了！' : '关注成功！', 'success');
+                } else {
+                    showNotification('关注失败: ' + data.message, 'error');
+                    button.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('关注失败:', error);
+                showNotification('关注失败，请稍后重试', 'error');
+                button.innerHTML = originalHtml;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // 取消关注用户
+        async function unfollowUser(userId) {
+            const button = document.getElementById(`follow-btn-${userId}`);
+            const originalHtml = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 取消中...';
+                button.disabled = true;
+
+                // 使用统一的toggle API
+                const response = await fetch(`/api/follow/user/${userId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 更新用户状态
+                    const user = allUsers.find(u => u.id === userId);
+                    if (user) {
+                        user.isFollowing = data.isFollowing || false;
+                        user.isMutual = data.isMutual || false;
+                    }
+
+                    // 更新UI
+                    updateUserCard(userId);
+                    loadStats();
+                    showNotification(data.message || '操作成功', 'success');
+                } else {
+                    showNotification('取消关注失败: ' + data.message, 'error');
+                    button.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('取消关注失败:', error);
+                showNotification('取消关注失败，请稍后重试', 'error');
+                button.innerHTML = originalHtml;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // 更新用户卡片
+        function updateUserCard(userId) {
+            const user = allUsers.find(u => u.id === userId);
+            if (!user) return;
+
+            const userCard = document.querySelector(`[data-user-id="${userId}"]`);
+            if (userCard) {
+                // 重新创建整个卡片
+                const col = userCard.parentElement;
+                const newCard = createUserCard(user);
+                col.replaceWith(newCard);
+            }
+        }
+
+
+
+        // 搜索用户
+        function searchUsers() {
+            const filteredUsers = getFilteredUsers();
+            displayUsers(filteredUsers);
+            updateUserCountDisplay();
+        }
+
+        // 过滤用户
+        function filterUsers() {
+            currentFilter = document.getElementById('filterSelect').value;
+            const filteredUsers = getFilteredUsers();
+            displayUsers(filteredUsers);
+            updateUserCountDisplay();
+        }
+
+        // 应用过滤器
+        function applyFilter(users) {
+            switch (currentFilter) {
+                case 'following':
+                    return users.filter(user => user.isFollowing);
+                case 'followers':
+                    // 返回关注我的用户
+                    const followerIds = followersData.map(f => f.id);
+                    return users.filter(user => followerIds.includes(user.id));
+                case 'mutual':
+                    return users.filter(user => user.isMutual);
+                default:
+                    return users;
+            }
+        }
+
+        // 加载统计信息
+        async function loadStats() {
+            try {
+                // 从用户列表计算统计信息
+                const followingCount = allUsers.filter(user => user.isFollowing).length;
+                const mutualCount = allUsers.filter(user => user.isMutual).length;
+
+                // 使用动画更新数字
+                animateNumber('followingCount', followingCount);
+                animateNumber('mutualCount', mutualCount);
+                animateNumber('contactsCount', mutualCount); // 联系人就是互关用户
+
+                // 尝试获取粉丝数
+                try {
+                    const response = await fetch('/api/follow/followers/count', {
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        animateNumber('followersCount', data.count || 0);
+                    } else {
+                        document.getElementById('followersCount').textContent = '?';
+                    }
+                } catch (error) {
+                    // 如果API不存在，暂时显示问号
+                    document.getElementById('followersCount').textContent = '?';
+                }
+            } catch (error) {
+                console.error('加载统计信息失败:', error);
+            }
+        }
+
+        // 数字动画
+        function animateNumber(elementId, targetNumber) {
+            const element = document.getElementById(elementId);
+            const currentNumber = parseInt(element.textContent) || 0;
+            const increment = targetNumber > currentNumber ? 1 : -1;
+            const duration = 500; // 动画持续时间
+            const steps = Math.abs(targetNumber - currentNumber);
+            const stepDuration = steps > 0 ? duration / steps : 0;
+
+            if (steps === 0) return;
+
+            let current = currentNumber;
+            const timer = setInterval(() => {
+                current += increment;
+                element.textContent = current;
+
+                if (current === targetNumber) {
+                    clearInterval(timer);
+                }
+            }, stepDuration);
+        }
+
+        // 显示/隐藏加载指示器
+        function showLoading(show) {
+            const indicator = document.getElementById('loadingIndicator');
+            indicator.style.display = show ? 'block' : 'none';
+        }
+
+        // 显示空状态
+        function showEmptyState() {
+            const emptyState = document.getElementById('emptyState');
+            emptyState.style.display = 'block';
+        }
+
+        // 隐藏空状态
+        function hideEmptyState() {
+            const emptyState = document.getElementById('emptyState');
+            emptyState.style.display = 'none';
+        }
+
+        // 更新用户数量显示
+        function updateUserCountDisplay() {
+            const display = document.getElementById('userCountDisplay');
+            const filteredUsers = getFilteredUsers();
+            const total = allUsers.length;
+            const filtered = filteredUsers.length;
+
+            if (currentFilter === 'all') {
+                display.textContent = `共 ${total} 个用户`;
+            } else {
+                const filterNames = {
+                    'following': '我关注的',
+                    'followers': '关注我的',
+                    'mutual': '互相关注'
+                };
+                display.textContent = `${filterNames[currentFilter]} ${filtered} 个用户 (共 ${total} 个)`;
+            }
+        }
+
+        // 获取过滤后的用户
+        function getFilteredUsers() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+
+            let filteredUsers = allUsers;
+            if (query) {
+                filteredUsers = allUsers.filter(user =>
+                    user.username.toLowerCase().includes(query) ||
+                    user.nickname.toLowerCase().includes(query) ||
+                    (user.bio && user.bio.toLowerCase().includes(query))
+                );
+            }
+
+            return applyFilter(filteredUsers);
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            `;
+
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // 自动移除通知
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>

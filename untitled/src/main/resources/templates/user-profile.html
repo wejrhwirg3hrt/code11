@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf?.token}" th:if="${_csrf}"/>
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}" th:if="${_csrf}"/>
+    <title th:text="${targetUser.username} + ' 的主页 - 视频网站'">用户主页 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+    <link href="/css/user-profile.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .profile-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" opacity="0.1"><polygon points="0,100 1000,0 1000,100"/></svg>');
+            background-size: cover;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #667eea;
+            overflow: hidden;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            height: 100%;
+            position: relative;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn-follow {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .btn-follow::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-follow:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(40, 167, 69, 0.5);
+            color: white;
+            background: linear-gradient(45deg, #20c997, #28a745);
+        }
+
+        .btn-follow:hover::before {
+            left: 100%;
+        }
+
+        .btn-follow:active {
+            transform: translateY(-1px) scale(1.02);
+            transition: all 0.1s;
+        }
+
+        .btn-message {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .btn-message::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-message:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(23, 162, 184, 0.5);
+            color: white;
+            background: linear-gradient(45deg, #138496, #17a2b8);
+        }
+
+        .btn-message:hover::before {
+            left: 100%;
+        }
+
+        .btn-message:active {
+            transform: translateY(-1px) scale(1.02);
+            transition: all 0.1s;
+        }
+
+        .btn-mutual {
+            background: linear-gradient(45deg, #e91e63, #f06292);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .btn-mutual::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-mutual:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(233, 30, 99, 0.5);
+            color: white;
+            background: linear-gradient(45deg, #f06292, #e91e63);
+        }
+
+        .btn-mutual:hover::before {
+            left: 100%;
+        }
+
+        .btn-mutual:active {
+            transform: translateY(-1px) scale(1.02);
+            transition: all 0.1s;
+        }
+
+        /* 添加工具提示样式 */
+        .btn-follow, .btn-message, .btn-mutual {
+            position: relative;
+        }
+
+        .btn-follow::after, .btn-message::after, .btn-mutual::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .btn-follow::after {
+            content: "点击关注此用户";
+        }
+
+        .btn-message::after {
+            content: "发送私信";
+        }
+
+        .btn-mutual::after {
+            content: "互相关注中";
+        }
+
+        .btn-follow:hover::after, .btn-message:hover::after, .btn-mutual:hover::after {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        @media (max-width: 768px) {
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-3" href="/upload">
+                    <i class="fas fa-upload me-1"></i>上传
+                </a>
+                <a class="nav-link me-3" href="/profile">
+                    <i class="fas fa-user me-1"></i>我的主页
+                </a>
+                <a class="nav-link me-3" href="/chat?type=private">
+                    <i class="fas fa-envelope me-1"></i>私信
+                </a>
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                </span>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <button class="btn btn-outline-light btn-sm" type="submit">退出</button>
+                </form>
+            </div>
+            
+            <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-3" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>登录
+                </a>
+                <a class="nav-link" href="/register">
+                    <i class="fas fa-user-plus me-1"></i>注册
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 用户个人资料头部 -->
+<section class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar">
+                    <img th:if="${targetUser.avatar != null}" th:src="${targetUser.avatar}" alt="用户头像">
+                    <i th:unless="${targetUser.avatar != null}" class="fas fa-user"></i>
+                </div>
+            </div>
+            <div class="col">
+                <h2 class="mb-2" th:text="${targetUser.username}">用户名</h2>
+                <p class="mb-3 opacity-75" th:text="${targetUser.bio ?: '这个人很懒，什么都没有留下...'}">个人简介</p>
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                    <span>
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        <span th:text="${#temporals.format(targetUser.createdAt, 'yyyy年MM月')}">2024年1月</span> 加入
+                    </span>
+                    <span>
+                        <i class="fas fa-video me-1"></i>
+                        <span th:text="${userStats.totalVideos}">0</span> 个视频
+                    </span>
+                    <span>
+                        <i class="fas fa-eye me-1"></i>
+                        <span th:text="${userStats.totalViews}">0</span> 次观看
+                    </span>
+                </div>
+                
+                <!-- 操作按钮 - 只对非本人显示 -->
+                <div th:if="${!isOwnProfile}" sec:authorize="isAuthenticated()" class="action-buttons">
+                    <button th:class="${isFollowing ? (isMutualFollow == true ? 'btn btn-mutual' : 'btn btn-secondary') : 'btn btn-follow'}"
+                            onclick="toggleFollow(this)"
+                            th:data-user-id="${targetUser.id}"
+                            th:title="${isFollowing ? (isMutualFollow == true ? '互相关注' : '取消关注') : '关注用户'}">
+                        <i th:class="${isFollowing ? (isMutualFollow == true ? 'fas fa-heart me-2' : 'fas fa-user-check me-2') : 'fas fa-user-plus me-2'}"></i>
+                        <span th:text="${isFollowing ? (isMutualFollow == true ? '互相关注' : '已关注') : '关注'}">关注</span>
+                    </button>
+                    <button onclick="sendPrivateMessage(this)"
+                            th:data-user-id="${targetUser.id}"
+                            th:data-username="${targetUser.username}"
+                       class="btn btn-message"
+                       title="发送私信">
+                        <i class="fas fa-comment me-2"></i>私信
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="container mt-5">
+    <!-- 统计卡片 -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-4 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-video fa-2x text-primary mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalVideos}">0</div>
+                <h6 class="text-muted">发布视频</h6>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-eye fa-2x text-success mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalViews}">0</div>
+                <h6 class="text-muted">总观看量</h6>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+            <div class="stats-card">
+                <i class="fas fa-heart fa-2x text-danger mb-3"></i>
+                <div class="stats-number" th:text="${userStats.totalLikes}">0</div>
+                <h6 class="text-muted">获得点赞</h6>
+            </div>
+        </div>
+    </div>
+
+    <!-- 标签页导航 -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs profile-tabs" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos" type="button" role="tab">
+                        <i class="fas fa-video me-2"></i>发布的视频
+                        <span class="badge bg-primary ms-2" th:text="${userVideos.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation" th:if="${isOwnProfile}">
+                    <button class="nav-link" id="liked-tab" data-bs-toggle="tab" data-bs-target="#liked" type="button" role="tab">
+                        <i class="fas fa-thumbs-up me-2"></i>喜欢的视频
+                        <span class="badge bg-success ms-2" th:text="${likedVideos.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation" th:if="${isOwnProfile}">
+                    <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button" role="tab">
+                        <i class="fas fa-heart me-2"></i>收藏的视频
+                        <span class="badge bg-danger ms-2" th:text="${favoriteVideos.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation" th:if="${isOwnProfile}">
+                    <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                        <i class="fas fa-cog me-2"></i>个人设置
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 标签页内容 -->
+    <div class="tab-content" id="profileTabsContent">
+        <!-- 发布的视频 -->
+        <div class="tab-pane fade show active" id="videos" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-video me-2"></i>
+                        <span th:text="${targetUser.username}">用户</span> 的视频
+                    </h5>
+                </div>
+        <div class="card-body">
+            <div class="row" th:if="${!#lists.isEmpty(userVideos)}">
+                <div th:each="video : ${userVideos}" class="col-lg-4 col-md-6 mb-4">
+                    <div class="video-card">
+                        <!-- 视频状态标识 -->
+                        <div th:if="${isOwnProfile and video.status != T(org.example.entity.Video$VideoStatus).APPROVED}"
+                             class="position-absolute top-0 end-0 m-2">
+                            <span th:if="${video.status == T(org.example.entity.Video$VideoStatus).PENDING}"
+                                  class="badge bg-warning text-dark">
+                                <i class="fas fa-clock me-1"></i>待审核
+                            </span>
+                            <span th:if="${video.status == T(org.example.entity.Video$VideoStatus).REJECTED}"
+                                  class="badge bg-danger">
+                                <i class="fas fa-times me-1"></i>已拒绝
+                            </span>
+                            <span th:if="${video.status == T(org.example.entity.Video$VideoStatus).BANNED}"
+                                  class="badge bg-dark">
+                                <i class="fas fa-ban me-1"></i>已封禁
+                            </span>
+                        </div>
+                        <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                             class="video-thumbnail" alt="缩略图">
+                        <div class="card-body">
+                            <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                            <p class="card-text small text-muted" th:text="${#strings.abbreviate(video.description, 60)}">视频描述</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-eye me-1"></i><span th:text="${video.views ?: 0}">0</span>
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-heart me-1"></i><span th:text="${video.likeCount ?: 0}">0</span>
+                                </small>
+                            </div>
+                            <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-play me-1"></i>观看视频
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${#lists.isEmpty(userVideos)}" class="empty-state">
+                <i class="fas fa-video"></i>
+                <h5 class="text-muted">暂无视频</h5>
+                <p class="text-muted">该用户还没有发布任何视频</p>
+            </div>
+        </div>
+    </div>
+        </div>
+
+        <!-- 喜欢的视频 -->
+        <div class="tab-pane fade" id="liked" role="tabpanel" th:if="${isOwnProfile}">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-thumbs-up me-2"></i>喜欢的视频
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" th:if="${!#lists.isEmpty(likedVideos)}">
+                        <div th:each="video : ${likedVideos}" class="col-lg-4 col-md-6 mb-4">
+                            <div class="video-card">
+                                <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                                     class="video-thumbnail" alt="缩略图">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                                    <p class="card-text small text-muted" th:text="${#strings.abbreviate(video.description, 60)}">视频描述</p>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i><span th:text="${video.user.username}">作者</span>
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-eye me-1"></i><span th:text="${video.views ?: 0}">0</span>
+                                        </small>
+                                    </div>
+                                    <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-play me-1"></i>观看视频
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(likedVideos)}" class="empty-state">
+                        <i class="fas fa-thumbs-up"></i>
+                        <h5 class="text-muted">暂无喜欢的视频</h5>
+                        <p class="text-muted">您还没有点赞任何视频</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 收藏的视频 -->
+        <div class="tab-pane fade" id="favorites" role="tabpanel" th:if="${isOwnProfile}">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heart me-2"></i>收藏的视频
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" th:if="${!#lists.isEmpty(favoriteVideos)}">
+                        <div th:each="video : ${favoriteVideos}" class="col-lg-4 col-md-6 mb-4">
+                            <div class="video-card">
+                                <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/300x200'}"
+                                     class="video-thumbnail" alt="缩略图">
+                                <div class="card-body">
+                                    <h6 class="card-title" th:text="${video.title}">视频标题</h6>
+                                    <p class="card-text small text-muted" th:text="${#strings.abbreviate(video.description, 60)}">视频描述</p>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i><span th:text="${video.user.username}">作者</span>
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-eye me-1"></i><span th:text="${video.views ?: 0}">0</span>
+                                        </small>
+                                    </div>
+                                    <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-danger btn-sm w-100">
+                                        <i class="fas fa-play me-1"></i>观看视频
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(favoriteVideos)}" class="empty-state">
+                        <i class="fas fa-heart"></i>
+                        <h5 class="text-muted">暂无收藏的视频</h5>
+                        <p class="text-muted">您还没有收藏任何视频</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 个人设置 -->
+        <div class="tab-pane fade" id="settings" role="tabpanel" th:if="${isOwnProfile}">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>个人设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本信息</h6>
+                            <form id="profileForm">
+                                <div class="mb-3">
+                                    <label for="editNickname" class="form-label">昵称</label>
+                                    <input type="text" class="form-control" id="editNickname"
+                                           th:value="${targetUser.nickname}" placeholder="请输入昵称">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editBio" class="form-label">个人简介</label>
+                                    <textarea class="form-control" id="editBio" rows="3"
+                                              th:text="${targetUser.bio}" placeholder="请输入个人简介"></textarea>
+                                </div>
+                                <button type="button" class="btn btn-primary" onclick="updateProfile()" title="保存个人资料更改">
+                                    <i class="fas fa-save me-1"></i>保存更改
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>头像设置</h6>
+                            <div class="text-center mb-3">
+                                <img th:src="${targetUser.avatar != null ? targetUser.avatar : '/uploads/avatars/default.svg'}"
+                                     alt="当前头像" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                            </div>
+                            <div class="mb-3">
+                                <label for="avatarFile" class="form-label">上传新头像</label>
+                                <input type="file" class="form-control" id="avatarFile" accept="image/*" onchange="uploadAvatar()">
+                            </div>
+                            <div class="mb-3">
+                                <label for="avatarUrl" class="form-label">或输入头像URL</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="avatarUrl" placeholder="https://example.com/avatar.jpg">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="setAvatarFromUrl()">
+                                        <i class="fas fa-link"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/smart-pet.js"></script>
+<script src="/js/user-profile.js"></script>
+
+<!-- 用户数据 -->
+<div data-current-user
+     data-username="[[${#authentication.name}]]"
+     style="display: none;"></div>
+
+<!-- 测试按钮 - 临时添加用于调试 -->
+<div th:if="${!isOwnProfile}" sec:authorize="isAuthenticated()" style="position: fixed; bottom: 20px; left: 20px; z-index: 9999;">
+    <button onclick="testButtonClick()" class="btn btn-warning btn-sm">
+        <i class="fas fa-bug me-1"></i>测试按钮
+    </button>
+</div>
+
+<!-- 全局智能助手 -->
+<script src="/js/global-smart-pet.js"></script>
+
+<script>
+// 测试函数
+function testButtonClick() {
+    console.log('测试按钮被点击');
+    alert('JavaScript功能正常！');
+}
+</script>
+
+</body>
+</html>

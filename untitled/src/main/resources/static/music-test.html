@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐播放测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .music-player {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+    </style>
+</head>
+<body>
+    <h1>🎵 音乐播放测试页面</h1>
+    
+    <div class="test-section">
+        <h2>📊 系统状态检查</h2>
+        <button onclick="checkSystemStatus()">检查系统状态</button>
+        <div id="systemStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎵 音乐库测试</h2>
+        <button onclick="loadMusicLibrary()">加载音乐库</button>
+        <div id="musicLibrary"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 文件访问测试</h2>
+        <button onclick="testFileAccess()">测试文件访问</button>
+        <div id="fileAccessTest"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎧 音乐播放器测试</h2>
+        <div class="music-player">
+            <h3>测试音乐播放</h3>
+            <audio id="testAudio" controls>
+                <source src="/uploads/music/2e3e9e3a-aed2-4cbc-900d-83fc51f71e3d_呦猫UNEKO - 梦回还 (TV size).mp3" type="audio/mpeg">
+                您的浏览器不支持音频播放。
+            </audio>
+            <div>
+                <button onclick="testDirectAccess()">测试直接访问</button>
+                <button onclick="testApiAccess()">测试API访问</button>
+            </div>
+            <div id="playbackStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function checkSystemStatus() {
+            showStatus('systemStatus', '正在检查系统状态...', 'info');
+            
+            try {
+                const response = await fetch('/api/debug/music-persistence-status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    let status = `
+                        <h4>✅ 系统状态正常</h4>
+                        <p>数据库记录数: ${data.databaseRecords}</p>
+                        <p>文件系统文件数: ${data.fileSystemFiles}</p>
+                        <h5>数据库中的音乐:</h5>
+                        <ul>
+                    `;
+                    
+                    data.databaseMusic.forEach(music => {
+                        status += `<li>${music.title} - ${music.artist} (路径: ${music.filePath})</li>`;
+                    });
+                    
+                    status += '</ul>';
+                    showStatus('systemStatus', status, 'success');
+                } else {
+                    showStatus('systemStatus', `❌ 系统状态异常: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('systemStatus', `❌ 检查失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadMusicLibrary() {
+            showStatus('musicLibrary', '正在加载音乐库...', 'info');
+            
+            try {
+                const response = await fetch('/api/music/library');
+                const musicList = await response.json();
+                
+                if (musicList.length > 0) {
+                    let library = '<h4>✅ 音乐库加载成功</h4><ul>';
+                    musicList.forEach(music => {
+                        library += `
+                            <li>
+                                <strong>${music.title}</strong> - ${music.artist}
+                                <br>路径: ${music.url}
+                                <br>时长: ${music.duration}秒
+                                <br>播放次数: ${music.playCount}
+                            </li>
+                        `;
+                    });
+                    library += '</ul>';
+                    showStatus('musicLibrary', library, 'success');
+                } else {
+                    showStatus('musicLibrary', '⚠️ 音乐库为空', 'info');
+                }
+            } catch (error) {
+                showStatus('musicLibrary', `❌ 加载失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFileAccess() {
+            showStatus('fileAccessTest', '正在测试文件访问...', 'info');
+            
+            const testFiles = [
+                '/uploads/music/2e3e9e3a-aed2-4cbc-900d-83fc51f71e3d_呦猫UNEKO - 梦回还 (TV size).mp3',
+                '/files/music/2e3e9e3a-aed2-4cbc-900d-83fc51f71e3d_呦猫UNEKO - 梦回还 (TV size).mp3'
+            ];
+            
+            let results = '<h4>文件访问测试结果:</h4>';
+            
+            for (const filePath of testFiles) {
+                try {
+                    const response = await fetch(filePath, { method: 'HEAD' });
+                    if (response.ok) {
+                        results += `<p>✅ ${filePath} - 可访问 (状态码: ${response.status})</p>`;
+                    } else {
+                        results += `<p>❌ ${filePath} - 不可访问 (状态码: ${response.status})</p>`;
+                    }
+                } catch (error) {
+                    results += `<p>❌ ${filePath} - 访问失败: ${error.message}</p>`;
+                }
+            }
+            
+            showStatus('fileAccessTest', results, 'info');
+        }
+
+        function testDirectAccess() {
+            const audio = document.getElementById('testAudio');
+            const status = document.getElementById('playbackStatus');
+            
+            status.innerHTML = '<div class="status info">正在测试直接访问播放...</div>';
+            
+            audio.addEventListener('loadeddata', function() {
+                status.innerHTML = '<div class="status success">✅ 音频文件加载成功！可以播放。</div>';
+            });
+            
+            audio.addEventListener('error', function(e) {
+                status.innerHTML = `<div class="status error">❌ 音频文件加载失败: ${e.message}</div>`;
+            });
+            
+            audio.load();
+        }
+
+        async function testApiAccess() {
+            const status = document.getElementById('playbackStatus');
+            status.innerHTML = '<div class="status info">正在测试API访问...</div>';
+            
+            try {
+                const response = await fetch('/api/music/library');
+                const musicList = await response.json();
+                
+                if (musicList.length > 0) {
+                    const firstMusic = musicList[0];
+                    const audio = document.getElementById('testAudio');
+                    audio.src = firstMusic.url;
+                    audio.load();
+                    
+                    status.innerHTML = `
+                        <div class="status success">
+                            ✅ API访问成功！正在播放: ${firstMusic.title} - ${firstMusic.artist}
+                        </div>
+                    `;
+                } else {
+                    status.innerHTML = '<div class="status error">❌ 音乐库为空</div>';
+                }
+            } catch (error) {
+                status.innerHTML = `<div class="status error">❌ API访问失败: ${error.message}</div>`;
+            }
+        }
+
+        // 页面加载时自动检查
+        window.addEventListener('load', function() {
+            checkSystemStatus();
+        });
+    </script>
+</body>
+</html> 

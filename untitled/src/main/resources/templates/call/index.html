@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频通话 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .call-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #1a1a1a;
+        }
+
+        .local-video {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+            object-fit: cover;
+            background: #333;
+            z-index: 10;
+        }
+
+        .call-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 20;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .btn-mute {
+            background: #6c757d;
+        }
+
+        .btn-mute.muted {
+            background: #dc3545;
+        }
+
+        .btn-video {
+            background: #6c757d;
+        }
+
+        .btn-video.disabled {
+            background: #dc3545;
+        }
+
+        .btn-end {
+            background: #dc3545;
+        }
+
+        .call-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            z-index: 10;
+        }
+
+        .call-status {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .call-timer {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            z-index: 15;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 10px;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="call-container">
+        <!-- 连接状态 -->
+        <div id="connectionStatus" class="connection-status">
+            <div class="loading-spinner"></div>
+            <div>正在连接...</div>
+        </div>
+
+        <!-- 通话信息 -->
+        <div class="call-info">
+            <div class="call-status" id="callStatus">连接中</div>
+            <div class="call-timer" id="callTimer">00:00</div>
+        </div>
+
+        <!-- 视频容器 -->
+        <div class="video-container">
+            <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+            <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+        </div>
+
+        <!-- 通话控制 -->
+        <div class="call-controls">
+            <button id="muteBtn" class="control-btn btn-mute" title="静音">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button id="videoBtn" class="control-btn btn-video" title="关闭摄像头">
+                <i class="fas fa-video"></i>
+            </button>
+            <button id="endBtn" class="control-btn btn-end" title="结束通话">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- WebSocket相关库 -->
+    <script src="/lib/sockjs.min.js"></script>
+    <script src="/lib/stomp.min.js"></script>
+    <!-- WebRTC客户端 -->
+    <script src="/js/webrtc-client.js"></script>
+
+    <script>
+        // 全局变量
+        let webrtcClient = null;
+        let stompClient = null;
+        let callTimer = null;
+        let callStartTime = null;
+        let isAudioMuted = false;
+        let isVideoEnabled = true;
+
+        // 从模板获取数据
+        const currentUser = {
+            id: [[${currentUser.id}]],
+            username: '[[${currentUser.username}]]',
+            email: '[[${currentUser.email}]]'
+        };
+        const roomId = '[[${roomId}]]';
+        const callType = '[[${callType}]]';
+        const otherUserId = [[${otherUserId}]];
+        const otherUserName = '[[${otherUserName}]]';
+
+        console.log('通话页面初始化:', { currentUser, roomId, callType, otherUserId, otherUserName });
+        console.log('URL参数:', window.location.search);
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await initializeCall();
+            } catch (error) {
+                console.error('通话初始化失败:', error);
+                showError('通话初始化失败: ' + error.message);
+            }
+        });
+
+        // 初始化通话
+        async function initializeCall() {
+            console.log('开始初始化通话...');
+            console.log('检查参数:', {
+                hasCurrentUser: !!currentUser,
+                currentUserId: currentUser?.id,
+                hasRoomId: !!roomId,
+                roomIdValue: roomId
+            });
+
+            // 检查必要参数
+            if (!currentUser || !currentUser.id || !roomId) {
+                const error = `缺少必要的通话参数: currentUser=${!!currentUser}, currentUser.id=${currentUser?.id}, roomId=${roomId}`;
+                console.error(error);
+                throw new Error(error);
+            }
+
+            // 连接WebSocket
+            await connectWebSocket();
+
+            // 初始化WebRTC客户端
+            await initWebRTCClient();
+
+            // 设置控制按钮事件
+            setupControlButtons();
+
+            console.log('通话初始化完成');
+        }
+
+        // 连接WebSocket
+        function connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                console.log('连接WebSocket...');
+                
+                const socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.debug = null; // 禁用调试输出
+
+                stompClient.connect({}, (frame) => {
+                    console.log('WebSocket连接成功');
+                    
+                    // 订阅WebRTC消息
+                    subscribeToWebRTCMessages();
+                    
+                    // 发送加入房间消息
+                    stompClient.send('/app/webrtc/join', {}, JSON.stringify({
+                        userId: currentUser.id.toString(),
+                        roomId: roomId
+                    }));
+                    
+                    resolve();
+                }, (error) => {
+                    console.error('WebSocket连接失败:', error);
+                    reject(new Error('WebSocket连接失败'));
+                });
+            });
+        }
+
+        // 初始化WebRTC客户端
+        async function initWebRTCClient() {
+            console.log('初始化WebRTC客户端...');
+
+            webrtcClient = new WebRTCClient();
+            webrtcClient.stompClient = stompClient;
+            webrtcClient.currentUserId = currentUser.id.toString();
+            webrtcClient.currentRoomId = roomId;
+            webrtcClient.currentCallType = callType;
+
+            // 设置通话数据
+            webrtcClient.currentCallData = {
+                callerId: isInitiator ? currentUser.id.toString() : otherUserId.toString(),
+                calleeId: isInitiator ? otherUserId.toString() : currentUser.id.toString(),
+                callType: callType,
+                roomId: roomId
+            };
+
+            // 设置事件回调
+            webrtcClient.onRemoteStream = (stream) => {
+                console.log('收到远程视频流');
+                const remoteVideo = document.getElementById('remoteVideo');
+                remoteVideo.srcObject = stream;
+                hideConnectionStatus();
+                startCallTimer();
+                updateCallStatus('已连接');
+            };
+
+            webrtcClient.onConnectionStateChange = (state) => {
+                console.log('连接状态变化:', state);
+                updateCallStatus(state);
+            };
+
+            // 获取本地媒体流
+            await webrtcClient.getLocalStream(callType);
+
+            // 显示本地视频
+            const localVideo = document.getElementById('localVideo');
+            localVideo.srcObject = webrtcClient.localStream;
+
+            // 创建PeerConnection
+            await webrtcClient.createPeerConnection();
+
+            // 检查是否是发起方（通过URL参数或其他方式判断）
+            const urlParams = new URLSearchParams(window.location.search);
+            const isInitiator = urlParams.get('initiator') === 'true';
+
+            // 设置WebRTC客户端的发起方状态
+            webrtcClient.isInitiator = isInitiator;
+
+            // 设置通话数据
+            if (otherUserId) {
+                webrtcClient.currentCallData = {
+                    callerId: isInitiator ? currentUser.id.toString() : otherUserId.toString(),
+                    calleeId: isInitiator ? otherUserId.toString() : currentUser.id.toString(),
+                    callType: callType,
+                    roomId: roomId
+                };
+                console.log('设置通话数据:', webrtcClient.currentCallData);
+            }
+
+            if (isInitiator) {
+                console.log('作为发起方，创建并发送Offer');
+                await webrtcClient.createAndSendOffer();
+            } else {
+                console.log('作为接收方，等待Offer');
+            }
+
+            console.log('WebRTC客户端初始化完成');
+        }
+
+        // 订阅WebRTC消息
+        function subscribeToWebRTCMessages() {
+            console.log('订阅WebRTC消息...');
+
+            // 订阅Offer
+            stompClient.subscribe(`/user/queue/webrtc/offer`, (message) => {
+                const data = JSON.parse(message.body);
+                console.log('收到Offer:', data);
+                webrtcClient.handleOffer(data);
+            });
+
+            // 订阅Answer
+            stompClient.subscribe(`/user/queue/webrtc/answer`, (message) => {
+                const data = JSON.parse(message.body);
+                console.log('收到Answer:', data);
+                webrtcClient.handleAnswer(data);
+            });
+
+            // 订阅ICE候选
+            stompClient.subscribe(`/user/queue/webrtc/ice-candidate`, (message) => {
+                const data = JSON.parse(message.body);
+                console.log('收到ICE候选:', data);
+                webrtcClient.handleIceCandidate(data);
+            });
+
+            // 订阅通话结束
+            stompClient.subscribe(`/user/queue/webrtc/call-ended`, (message) => {
+                const data = JSON.parse(message.body);
+                console.log('通话结束:', data);
+                endCall();
+            });
+        }
+
+        // 设置控制按钮
+        function setupControlButtons() {
+            // 静音按钮
+            document.getElementById('muteBtn').addEventListener('click', toggleMute);
+            
+            // 视频按钮
+            document.getElementById('videoBtn').addEventListener('click', toggleVideo);
+            
+            // 结束通话按钮
+            document.getElementById('endBtn').addEventListener('click', endCall);
+        }
+
+        // 切换静音
+        function toggleMute() {
+            if (webrtcClient && webrtcClient.localStream) {
+                const audioTracks = webrtcClient.localStream.getAudioTracks();
+                audioTracks.forEach(track => {
+                    track.enabled = !track.enabled;
+                });
+                
+                isAudioMuted = !isAudioMuted;
+                const muteBtn = document.getElementById('muteBtn');
+                const icon = muteBtn.querySelector('i');
+                
+                if (isAudioMuted) {
+                    muteBtn.classList.add('muted');
+                    icon.className = 'fas fa-microphone-slash';
+                } else {
+                    muteBtn.classList.remove('muted');
+                    icon.className = 'fas fa-microphone';
+                }
+            }
+        }
+
+        // 切换视频
+        function toggleVideo() {
+            if (webrtcClient && webrtcClient.localStream) {
+                const videoTracks = webrtcClient.localStream.getVideoTracks();
+                videoTracks.forEach(track => {
+                    track.enabled = !track.enabled;
+                });
+                
+                isVideoEnabled = !isVideoEnabled;
+                const videoBtn = document.getElementById('videoBtn');
+                const icon = videoBtn.querySelector('i');
+                
+                if (!isVideoEnabled) {
+                    videoBtn.classList.add('disabled');
+                    icon.className = 'fas fa-video-slash';
+                } else {
+                    videoBtn.classList.remove('disabled');
+                    icon.className = 'fas fa-video';
+                }
+            }
+        }
+
+        // 结束通话
+        function endCall() {
+            console.log('结束通话');
+            
+            // 停止计时器
+            if (callTimer) {
+                clearInterval(callTimer);
+            }
+            
+            // 清理WebRTC
+            if (webrtcClient) {
+                webrtcClient.cleanup();
+            }
+            
+            // 发送结束通话消息
+            if (stompClient) {
+                stompClient.send('/app/webrtc/end', {}, JSON.stringify({
+                    roomId: roomId,
+                    userId: currentUser.id.toString()
+                }));
+            }
+            
+            // 返回上一页
+            window.history.back();
+        }
+
+        // 开始计时
+        function startCallTimer() {
+            callStartTime = Date.now();
+            callTimer = setInterval(updateTimer, 1000);
+        }
+
+        // 更新计时器
+        function updateTimer() {
+            if (callStartTime) {
+                const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('callTimer').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // 隐藏连接状态
+        function hideConnectionStatus() {
+            document.getElementById('connectionStatus').style.display = 'none';
+        }
+
+        // 更新通话状态
+        function updateCallStatus(status) {
+            document.getElementById('callStatus').textContent = status;
+        }
+
+        // 显示错误
+        function showError(message) {
+            const container = document.querySelector('.call-container');
+            container.innerHTML = `<div class="error-message">${message}</div>`;
+        }
+
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', () => {
+            if (webrtcClient) {
+                webrtcClient.cleanup();
+            }
+            if (stompClient) {
+                stompClient.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

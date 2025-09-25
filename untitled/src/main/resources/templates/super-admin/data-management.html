@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据管理与初始化</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .main-container {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            margin: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1 class="text-center mb-4">
+            <i class="fas fa-database me-3"></i>数据管理与初始化
+        </h1>
+        
+        <!-- 数据统计 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <h3 id="userCount">0</h3>
+                    <p class="mb-0">总用户数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-video"></i>
+                    <h3 id="videoCount">0</h3>
+                    <p class="mb-0">总视频数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-comments"></i>
+                    <h3 id="commentCount">0</h3>
+                    <p class="mb-0">总评论数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-music"></i>
+                    <h3 id="musicCount">0</h3>
+                    <p class="mb-0">总音乐数</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mb-4">
+            <button class="btn btn-primary" onclick="loadStats()">
+                <i class="fas fa-sync-alt me-2"></i>刷新统计数据
+            </button>
+        </div>
+        
+        <!-- 数据管理操作 -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">
+                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                            清理所有用户数据
+                        </h5>
+                        <p class="card-text text-muted">此操作将删除所有用户数据，请谨慎操作！</p>
+                        <button class="btn btn-warning" onclick="cleanupAllUsers()">
+                            <i class="fas fa-trash me-2"></i>清理所有用户数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">
+                            <i class="fas fa-database text-success me-2"></i>
+                            初始化测试数据
+                        </h5>
+                        <p class="card-text text-muted">创建测试用户、视频、音乐等示例数据</p>
+                        <button class="btn btn-success" onclick="initTestData()">
+                            <i class="fas fa-plus me-2"></i>初始化测试数据
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 消息提示区域 -->
+        <div id="alertContainer" class="mt-4"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+        });
+
+        // 加载统计数据
+        function loadStats() {
+            fetch('/super-admin/data-management/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.statistics) {
+                        const stats = data.statistics;
+                        document.getElementById('userCount').textContent = stats.userCount || 0;
+                        document.getElementById('videoCount').textContent = stats.videoCount || 0;
+                        document.getElementById('commentCount').textContent = stats.commentCount || 0;
+                        document.getElementById('musicCount').textContent = stats.musicCount || 0;
+                    }
+                })
+                .catch(error => {
+                    console.error('加载统计数据失败:', error);
+                    showAlert('加载统计数据失败', 'danger');
+                });
+        }
+
+        // 清理所有用户数据
+        function cleanupAllUsers() {
+            if (confirm('确定要清理所有用户数据吗？此操作不可恢复！')) {
+                fetch('/super-admin/data-management/cleanup-all-users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('所有用户数据清理成功', 'success');
+                        loadStats();
+                    } else {
+                        showAlert('清理失败：' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('清理失败', 'danger');
+                });
+            }
+        }
+
+        // 初始化测试数据
+        function initTestData() {
+            if (confirm('确定要初始化测试数据吗？')) {
+                fetch('/super-admin/data-management/init-test-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('测试数据初始化成功', 'success');
+                        loadStats();
+                    } else {
+                        showAlert('初始化失败：' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('初始化失败', 'danger');
+                });
+            }
+        }
+
+        // 显示提示消息
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+            
+            alertContainer.innerHTML = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    alert.remove();
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单通话测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .call-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10000;
+            display: none;
+        }
+        .call-popup.show { display: block; }
+        .call-popup h3 { margin-top: 0; }
+        .call-buttons { margin-top: 15px; }
+        .call-buttons button { margin: 0 10px; }
+        .accept-btn { background: #28a745; }
+        .reject-btn { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>📞 简单通话测试</h1>
+    
+    <div class="section">
+        <h3>1. 连接状态</h3>
+        <div id="connectionStatus" class="status info">未连接</div>
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开</button>
+    </div>
+    
+    <div class="section">
+        <h3>2. 用户设置</h3>
+        <input type="text" id="userIdInput" placeholder="用户ID" value="1">
+        <button onclick="setUser()">设置用户</button>
+        <div id="userStatus" class="status info">未设置用户</div>
+    </div>
+    
+    <div class="section">
+        <h3>3. 发送通话邀请</h3>
+        <input type="text" id="targetUserInput" placeholder="目标用户ID" value="2">
+        <button onclick="sendVideoCall()" id="videoBtn" disabled>视频通话</button>
+        <button onclick="sendAudioCall()" id="audioBtn" disabled>语音通话</button>
+    </div>
+    
+    <div class="section">
+        <h3>4. 通话状态</h3>
+        <div id="callStatus" class="status info">无通话</div>
+        <button onclick="endCall()" id="endBtn" disabled>结束通话</button>
+    </div>
+    
+    <div class="section">
+        <h3>5. 日志</h3>
+        <button onclick="clearLog()">清空</button>
+        <div id="log"></div>
+    </div>
+
+    <!-- 来电弹窗 -->
+    <div id="callPopup" class="call-popup">
+        <h3>📞 来电</h3>
+        <p id="callerInfo">来自: 未知用户</p>
+        <p id="callTypeInfo">通话类型: 未知</p>
+        <div class="call-buttons">
+            <button class="accept-btn" onclick="acceptCall()">接听</button>
+            <button class="reject-btn" onclick="rejectCall()">拒绝</button>
+        </div>
+    </div>
+
+    <!-- 引入库 -->
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/stomp.min.js"></script>
+
+    <script>
+        let stompClient = null;
+        let currentUserId = null;
+        let currentCallData = null;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('log');
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function setUser() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            if (!userId) {
+                alert('请输入用户ID');
+                return;
+            }
+            currentUserId = userId;
+            updateStatus('userStatus', `当前用户: ${userId}`, 'success');
+            log(`设置用户ID: ${userId}`);
+        }
+
+        function connect() {
+            if (!currentUserId) {
+                setUser();
+            }
+
+            try {
+                log('开始连接WebSocket...');
+                updateStatus('connectionStatus', '连接中...', 'warning');
+
+                const socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.debug = null;
+
+                stompClient.connect({}, function(frame) {
+                    log('✅ WebSocket连接成功');
+                    updateStatus('connectionStatus', '已连接', 'success');
+                    
+                    // 启用按钮
+                    document.getElementById('videoBtn').disabled = false;
+                    document.getElementById('audioBtn').disabled = false;
+                    
+                    // 订阅消息
+                    subscribeMessages();
+                    
+                    // 发送加入消息
+                    stompClient.send('/app/webrtc/join', {}, JSON.stringify({
+                        userId: currentUserId
+                    }));
+                    
+                }, function(error) {
+                    log(`❌ 连接失败: ${error}`);
+                    updateStatus('connectionStatus', '连接失败', 'error');
+                });
+
+            } catch (error) {
+                log(`❌ 连接异常: ${error.message}`);
+                updateStatus('connectionStatus', '连接异常', 'error');
+            }
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                stompClient = null;
+            }
+            updateStatus('connectionStatus', '已断开', 'info');
+            document.getElementById('videoBtn').disabled = true;
+            document.getElementById('audioBtn').disabled = true;
+            log('连接已断开');
+        }
+
+        function subscribeMessages() {
+            if (!stompClient || !currentUserId) return;
+
+            log('订阅消息...');
+
+            // 订阅通话邀请 - 多种路径
+            stompClient.subscribe(`/user/queue/webrtc/call-invitation`, (message) => {
+                const data = JSON.parse(message.body);
+                log(`🔔 收到通话邀请(用户队列): ${JSON.stringify(data)}`);
+                showCallInvitation(data);
+            });
+
+            stompClient.subscribe(`/topic/webrtc/call-invitation/${currentUserId}`, (message) => {
+                const data = JSON.parse(message.body);
+                log(`🔔 收到通话邀请(主题): ${JSON.stringify(data)}`);
+                showCallInvitation(data);
+            });
+
+            stompClient.subscribe(`/topic/webrtc/call-invitation-broadcast`, (message) => {
+                const data = JSON.parse(message.body);
+                log(`🔔 收到通话邀请(广播): ${JSON.stringify(data)}`);
+                // 只处理发给当前用户的邀请
+                if (data.calleeId === currentUserId) {
+                    showCallInvitation(data);
+                }
+            });
+
+            // 订阅通话接受
+            stompClient.subscribe(`/user/queue/webrtc/call-accepted`, (message) => {
+                const data = JSON.parse(message.body);
+                log(`✅ 通话被接受: ${JSON.stringify(data)}`);
+                updateStatus('callStatus', '通话已连接', 'success');
+            });
+
+            // 订阅通话拒绝
+            stompClient.subscribe(`/user/queue/webrtc/call-rejected`, (message) => {
+                const data = JSON.parse(message.body);
+                log(`❌ 通话被拒绝: ${JSON.stringify(data)}`);
+                updateStatus('callStatus', '通话被拒绝', 'error');
+                setTimeout(() => resetCallState(), 3000);
+            });
+
+            log('✅ 消息订阅完成');
+        }
+
+        function sendVideoCall() {
+            sendCall('video');
+        }
+
+        function sendAudioCall() {
+            sendCall('audio');
+        }
+
+        function sendCall(callType) {
+            const targetUserId = document.getElementById('targetUserInput').value.trim();
+            if (!targetUserId) {
+                alert('请输入目标用户ID');
+                return;
+            }
+
+            if (!stompClient) {
+                alert('请先连接');
+                return;
+            }
+
+            try {
+                log(`🚀 发起${callType}通话给用户: ${targetUserId}`);
+                
+                const message = {
+                    callerId: currentUserId,
+                    calleeId: targetUserId,
+                    callType: callType
+                };
+
+                stompClient.send('/app/webrtc/invite', {}, JSON.stringify(message));
+                log('📤 通话邀请已发送');
+                
+                updateStatus('callStatus', `正在呼叫 ${targetUserId}`, 'warning');
+                document.getElementById('endBtn').disabled = false;
+                
+            } catch (error) {
+                log(`❌ 发送失败: ${error.message}`);
+            }
+        }
+
+        function showCallInvitation(data) {
+            currentCallData = data;
+            
+            document.getElementById('callerInfo').textContent = `来自: ${data.callerName || data.callerId}`;
+            document.getElementById('callTypeInfo').textContent = `通话类型: ${data.callType}`;
+            document.getElementById('callPopup').classList.add('show');
+            
+            updateStatus('callStatus', `收到来电: ${data.callType}`, 'warning');
+            log('📱 显示来电弹窗');
+        }
+
+        function acceptCall() {
+            if (!currentCallData || !stompClient) return;
+
+            log('✅ 接听通话');
+            
+            stompClient.send('/app/webrtc/accept', {}, JSON.stringify({
+                roomId: currentCallData.roomId,
+                calleeId: currentUserId
+            }));
+
+            document.getElementById('callPopup').classList.remove('show');
+            updateStatus('callStatus', '通话中', 'success');
+            document.getElementById('endBtn').disabled = false;
+        }
+
+        function rejectCall() {
+            if (!currentCallData || !stompClient) return;
+
+            log('❌ 拒绝通话');
+            
+            stompClient.send('/app/webrtc/reject', {}, JSON.stringify({
+                roomId: currentCallData.roomId,
+                calleeId: currentUserId
+            }));
+
+            document.getElementById('callPopup').classList.remove('show');
+            resetCallState();
+        }
+
+        function endCall() {
+            log('📞 结束通话');
+            
+            if (stompClient && currentCallData) {
+                stompClient.send('/app/webrtc/end', {}, JSON.stringify({
+                    roomId: currentCallData.roomId,
+                    userId: currentUserId
+                }));
+            }
+
+            resetCallState();
+        }
+
+        function resetCallState() {
+            currentCallData = null;
+            updateStatus('callStatus', '无通话', 'info');
+            document.getElementById('endBtn').disabled = true;
+            document.getElementById('callPopup').classList.remove('show');
+        }
+
+        // 页面加载时设置用户
+        window.addEventListener('load', () => {
+            log('页面加载完成');
+            setUser();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'与 ' + ${targetUser.username} + ' 的私聊 - 视频分享平台'">私聊 - 视频分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/chat.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频分享平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link active" href="/chat">
+                    <i class="fas fa-comments me-1"></i>聊天
+                    <span class="badge bg-danger ms-1" id="totalUnreadCount" style="display: none;">0</span>
+                </a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <img th:src="${currentUser.avatar}" alt="头像" class="rounded-circle me-1" width="24" height="24">
+                        <span th:text="${currentUser.username}">用户名</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 私聊界面 -->
+    <div class="container-fluid chat-container">
+        <div class="row h-100">
+            <!-- 聊天区域 -->
+            <div class="col-12 chat-main">
+                <!-- 聊天头部 -->
+                <div class="chat-header">
+                    <div class="d-flex align-items-center">
+                        <a href="/chat" class="btn btn-sm btn-outline-secondary me-3">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        <img th:src="${targetUser.avatar}" alt="头像" class="rounded-circle me-3" width="40" height="40">
+                        <div>
+                            <h6 class="mb-0" th:text="${targetUser.username}">聊天对象</h6>
+                            <small class="text-muted">在线</small>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-sm btn-outline-secondary me-2" title="视频通话">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary me-2" title="语音通话">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>查看资料</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-thumbtack me-2"></i>置顶会话</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-volume-mute me-2"></i>静音通知</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-ban me-2"></i>屏蔽用户</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 关注状态提示 -->
+                <div class="follow-status-alert" id="followStatusAlert">
+                    <!-- 关注状态提示将通过JavaScript动态显示 -->
+                </div>
+
+                <!-- 消息区域 -->
+                <div class="messages-container" id="messagesContainer">
+                    <div class="messages-list" id="messagesList">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-comments fa-2x mb-3"></i>
+                            <p>开始与 <span th:text="${targetUser.username}">用户</span> 的对话吧！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文件预览区域 -->
+                <div class="file-preview-area" id="filePreviewArea" style="display: none;">
+                    <div class="file-preview-content">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">准备发送的文件：</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="clearFilePreview()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="filePreviewList">
+                            <!-- 文件预览项将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="message-input-area" id="messageInputArea">
+                    <div class="input-toolbar">
+                        <button class="btn btn-sm btn-outline-secondary" title="表情" onclick="toggleEmojiPicker()">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="图片" onclick="selectFile('image')">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="文件" onclick="selectFile('file')">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="视频" onclick="selectFile('video')">
+                            <i class="fas fa-video"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <textarea class="form-control" id="messageInput" placeholder="输入消息..." rows="1" 
+                                  onkeydown="handleMessageInput(event)" oninput="autoResize(this)"></textarea>
+                        <button class="btn btn-primary" id="sendButton" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 发送限制提示 -->
+                    <div class="send-limit-notice" id="sendLimitNotice" style="display: none;">
+                        <small class="text-warning">
+                            <i class="fas fa-info-circle me-1"></i>
+                            您只能发送一条消息，对方关注您后才能继续聊天
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表情选择器 -->
+    <div class="emoji-picker" id="emojiPicker" style="display: none;">
+        <div class="emoji-categories">
+            <button class="emoji-category active" data-category="faces">😊</button>
+            <button class="emoji-category" data-category="gestures">👍</button>
+            <button class="emoji-category" data-category="hearts">❤️</button>
+            <button class="emoji-category" data-category="animals">🐱</button>
+        </div>
+        <div class="emoji-grid" id="emojiGrid">
+            <!-- 表情将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <!-- 文件输入 -->
+    <input type="file" id="fileInput" style="display: none;" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar">
+
+    <!-- 文件预览提示 -->
+    <div class="file-upload-tips" style="display: none;">
+        <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            最多可选择9个文件，单个文件不超过50MB
+        </small>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/chat.js"></script>
+    
+    <script>
+        // 初始化私聊页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取当前用户信息和目标用户信息
+            window.currentUser = {
+                id: [[${currentUser.id}]],
+                username: '[[${currentUser.username}]]',
+                avatar: '[[${currentUser.avatar}]]'
+            };
+            
+            window.targetUser = {
+                id: [[${targetUser.id}]],
+                username: '[[${targetUser.username}]]',
+                avatar: '[[${targetUser.avatar}]]'
+            };
+            
+            // 初始化聊天功能
+            if (typeof ChatApp !== 'undefined') {
+                ChatApp.init();
+                ChatApp.initPrivateChat(window.targetUser);
+            }
+        });
+    </script>
+</body>
+</html>

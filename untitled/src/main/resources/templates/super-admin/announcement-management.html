@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公告管理 - 超级管理员</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+        }
+        .announcement-content {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-crown-fill text-warning fs-1"></i>
+                        <h5 class="text-white mt-2">超级管理员</h5>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i>仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/admin-management">
+                                <i class="bi bi-people-fill me-2"></i>管理员管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/user-management">
+                                <i class="bi bi-person-lines-fill me-2"></i>用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/video-management">
+                                <i class="bi bi-camera-video-fill me-2"></i>视频管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/comment-management">
+                                <i class="bi bi-chat-dots-fill me-2"></i>评论管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/cdn-management">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>CDN管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/super-admin/announcement-management">
+                                <i class="bi bi-megaphone-fill me-2"></i>公告管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/data-management">
+                                <i class="bi bi-database-fill me-2"></i>数据管理
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="bi bi-box-arrow-right me-2"></i>退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="bi bi-megaphone-fill me-2"></i>公告管理</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="/super-admin/announcement/create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>创建公告
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 成功/错误消息 -->
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- 公告列表 -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-list-ul me-2"></i>公告列表
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>标题</th>
+                                        <th>内容</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="announcement : ${announcements}">
+                                        <td th:text="${announcement.id}"></td>
+                                        <td>
+                                            <strong th:text="${announcement.title}"></strong>
+                                        </td>
+                                        <td>
+                                            <div class="announcement-content" th:text="${announcement.content}"></div>
+                                        </td>
+                                        <td>
+                                            <span th:if="${announcement.active}" class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>激活
+                                            </span>
+                                            <span th:unless="${announcement.active}" class="badge bg-secondary">
+                                                <i class="bi bi-pause-circle me-1"></i>停用
+                                            </span>
+                                        </td>
+                                        <td th:text="${#temporals.format(announcement.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <form th:action="@{/super-admin/announcement/{id}/toggle(id=${announcement.id})}" 
+                                                      method="post" style="display: inline;">
+                                                    <button type="submit" 
+                                                            th:class="${announcement.active} ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-success'"
+                                                            onclick="return confirm('确定要更改公告状态吗？')">
+                                                        <i th:class="${announcement.active} ? 'bi bi-pause-circle' : 'bi bi-play-circle'"></i>
+                                                        <span th:text="${announcement.active} ? '停用' : '激活'"></span>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${#lists.isEmpty(announcements)}">
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                            暂无公告数据
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

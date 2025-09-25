@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天 - 视频分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/chat.css" rel="stylesheet">
+    <link href="/css/webrtc-call.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频分享平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link active" href="/chat">
+                    <i class="fas fa-comments me-1"></i>聊天
+                    <span class="badge bg-danger ms-1" id="totalUnreadCount" style="display: none;">0</span>
+                </a>
+
+                <div class="nav-item dropdown" th:if="${currentUser != null and currentUser.username != null}">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <img th:src="${currentUser.avatar ?: '/images/default-avatar.png'}" alt="头像" class="rounded-circle me-1" width="24" height="24">
+                        <span th:text="${currentUser.username}">用户名</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+                <!-- 未登录用户显示登录按钮 -->
+                <div class="nav-item" th:if="${currentUser == null}">
+                    <a class="nav-link" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>登录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 聊天主界面 -->
+    <div class="container-fluid chat-container">
+        <div class="row h-100">
+            <!-- 会话列表 -->
+            <div class="col-md-4 col-lg-3 chat-sidebar">
+                <div class="chat-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>聊天
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="搜索会话..." id="searchInput">
+                    </div>
+                </div>
+
+                <!-- 会话列表 -->
+                <div class="conversation-list" id="conversationList">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <p>暂无会话</p>
+                        <p class="small">点击右上角的 + 号开始新的聊天</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 聊天区域 -->
+            <div class="col-md-8 col-lg-9 chat-main" id="chatMain">
+                <!-- 欢迎界面 -->
+                <div class="chat-welcome" id="chatWelcome">
+                    <div class="text-center">
+                        <i class="fas fa-comments fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted">欢迎使用聊天功能</h4>
+                        <p class="text-muted">选择一个会话开始聊天，或创建新的会话</p>
+                    </div>
+                </div>
+
+                <!-- 聊天界面 -->
+                <div class="chat-interface" id="chatInterface" style="display: none;">
+                    <!-- 聊天头部 -->
+                    <div class="chat-conversation-header">
+                        <div class="d-flex align-items-center">
+                            <img id="chatAvatar" src="/images/default-avatar.png" alt="头像" class="rounded-circle me-3" width="40" height="40">
+                            <div>
+                                <h6 class="mb-0" id="chatTitle">聊天对象</h6>
+                                <small class="text-muted" id="chatStatus">在线</small>
+                            </div>
+                        </div>
+                        <div class="chat-actions" id="chatActions" style="display: none;">
+                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="startAudioCall()" title="语音通话">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary me-2" onclick="startVideoCall()" title="视频通话">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 消息区域 -->
+                    <div class="messages-container" id="messagesContainer">
+                        <div class="messages-list" id="messagesList">
+                            <!-- 消息将在这里显示 -->
+                        </div>
+                        <!-- 滚动到底部按钮 -->
+                        <div class="scroll-to-bottom-btn" id="scrollToBottomBtn" style="display: none;">
+                            <button class="btn btn-primary btn-sm rounded-circle" onclick="ChatApp.scrollToLatestMessage(true)" title="滚动到最新消息">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 文件预览区域 -->
+                    <div class="file-preview-area" id="filePreviewArea" style="display: none;">
+                        <div class="file-preview-content">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">准备发送的文件：</span>
+                                <button class="btn btn-sm btn-outline-danger" onclick="clearFilePreview()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="filePreviewList">
+                                <!-- 文件预览项将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="message-input-area" id="messageInputArea">
+                        <div class="input-toolbar">
+                            <button class="btn btn-sm btn-outline-secondary" title="表情" onclick="toggleEmojiPicker()">
+                                <i class="fas fa-smile"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" title="图片" onclick="selectFile('image')">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" title="文件" onclick="selectFile('file')">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" title="视频" onclick="selectFile('video')">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <!-- 测试按钮 -->
+                            <button class="btn btn-sm btn-outline-info" title="刷新在线状态" onclick="ChatApp.updateAllUsersOnlineStatus()">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </div>
+
+                        <div class="input-group">
+                            <textarea class="form-control" id="messageInput" placeholder="输入消息..." rows="1"
+                                      onkeydown="handleMessageInput(event)" oninput="autoResize(this)"></textarea>
+                            <button class="btn btn-primary" id="sendButton" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表情选择器 -->
+    <div class="emoji-picker" id="emojiPicker" style="display: none;">
+        <div class="emoji-categories">
+            <button class="emoji-category active" data-category="faces">😊</button>
+            <button class="emoji-category" data-category="gestures">👍</button>
+            <button class="emoji-category" data-category="hearts">❤️</button>
+            <button class="emoji-category" data-category="animals">🐱</button>
+        </div>
+        <div class="emoji-grid" id="emojiGrid">
+            <!-- 表情将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <!-- 文件输入 -->
+    <input type="file" id="fileInput" style="display: none;" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar">
+
+    <!-- WebRTC通话界面 -->
+    <div class="call-overlay" id="callOverlay">
+        <div class="call-container">
+            <!-- 连接状态指示器 -->
+            <div class="connection-status" id="connectionStatus">连接中...</div>
+
+            <!-- 视频通话界面 -->
+            <div class="video-call-container" id="videoCallContainer" style="display: none;">
+                <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
+                <video id="localVideo" class="local-video" autoplay playsinline muted></video>
+            </div>
+
+            <!-- 语音通话界面 -->
+            <div class="audio-call-container" id="audioCallContainer" style="display: none;">
+                <img id="callAvatar" class="call-avatar" src="/images/default-avatar.png" alt="用户头像">
+                <div class="call-user-info">
+                    <div class="call-user-name" id="callUserName">用户名</div>
+                    <div class="call-status" id="callStatus">连接中...</div>
+                    <div class="call-duration" id="callDuration">00:00</div>
+                </div>
+            </div>
+
+            <!-- 来电界面 -->
+            <div class="incoming-call" id="incomingCall" style="display: none;">
+                <img id="incomingCallAvatar" class="incoming-call-avatar" src="/images/default-avatar.png" alt="用户头像">
+                <div class="incoming-call-info">
+                    <div class="incoming-call-name" id="incomingCallName">用户名</div>
+                    <div class="incoming-call-type" id="incomingCallType">语音通话</div>
+                </div>
+                <div class="incoming-call-controls">
+                    <button class="call-control-btn btn-reject" onclick="rejectCall()" title="拒绝">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                    <button class="call-control-btn btn-answer" onclick="acceptCall()" title="接听">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 通话控制栏 -->
+            <div class="call-controls" id="callControls">
+                <button class="call-control-btn btn-mute" id="muteBtn" onclick="toggleMute()" title="静音">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="call-control-btn btn-video" id="videoBtn" onclick="toggleVideo()" title="摄像头" style="display: none;">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="call-control-btn btn-hangup" onclick="endCall()" title="挂断">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建聊天模态框 -->
+    <div class="modal fade" id="newChatModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新建聊天</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">搜索用户</label>
+                        <input type="text" class="form-control" id="userSearchInput" placeholder="输入用户名搜索...">
+                    </div>
+                    <div id="userSearchResults" class="user-search-results">
+                        <!-- 搜索结果将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/lib/sockjs.min.js"></script>
+    <script src="/lib/stomp.min.js"></script>
+    <script src="/js/global-call-popup.js"></script>
+    <script src="/js/avatar-sync.js"></script>
+    <script src="/js/chat.js?v=20250821-2"></script>
+    <script src="/js/webrtc-client.js"></script>
+    <script src="/js/global-webrtc-manager.js"></script>
+    <script src="/js/call-ui.js"></script>
+
+    <!-- 用户信息传递 -->
+    <script th:inline="javascript">
+        window.currentUser = /*[[${currentUser}]]*/ null;
+        window.isAuthenticated = /*[[${isAuthenticated}]]*/ false;
+        console.log('用户信息传递:', window.currentUser);
+        console.log('认证状态:', window.isAuthenticated);
+    </script>
+
+    <script>
+        // 初始化聊天页面
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('聊天主页 - 当前用户信息:', window.currentUser);
+            console.log('认证状态:', window.isAuthenticated);
+
+            // 检查用户是否已登录
+            if (!window.currentUser || !window.currentUser.id) {
+                console.warn('用户未登录，重定向到登录页面');
+                window.location.href = '/auth/login';
+                return;
+            }
+
+            // 初始化聊天功能
+            if (typeof ChatApp !== 'undefined') {
+                ChatApp.init();
+            } else {
+                console.error('ChatApp 未定义');
+            }
+
+            // 初始化WebRTC客户端
+            if (window.currentUser && window.currentUser.id) {
+                initializeWebRTC();
+            }
+
+            // 监听新建聊天模态框显示事件
+            const newChatModal = document.getElementById('newChatModal');
+            if (newChatModal) {
+                newChatModal.addEventListener('shown.bs.modal', function() {
+                    // 模态框显示时自动加载所有用户
+                    if (typeof ChatApp !== 'undefined') {
+                        ChatApp.searchUsers(''); // 空搜索会返回所有用户
+                    }
+                });
+
+                // 模态框隐藏时清空搜索结果
+                newChatModal.addEventListener('hidden.bs.modal', function() {
+                    document.getElementById('userSearchInput').value = '';
+                    document.getElementById('userSearchResults').innerHTML = '';
+                });
+            }
+        });
+
+        // WebRTC相关变量（这些变量在call-ui.js中已声明，这里不需要重复声明）
+
+        // 初始化WebRTC
+        async function initializeWebRTC() {
+            try {
+                // 检查SockJS和Stomp是否可用
+                if (typeof SockJS === 'undefined') {
+                    console.error('SockJS库未加载');
+                    return;
+                }
+                if (typeof Stomp === 'undefined') {
+                    console.error('Stomp库未加载');
+                    return;
+                }
+
+                // 检查GlobalWebRTCManager类是否存在
+                if (typeof GlobalWebRTCManager === 'undefined') {
+                    console.error('GlobalWebRTCManager类未定义，请检查global-webrtc-manager.js是否正确加载');
+                    return;
+                }
+
+                // 创建全局WebRTC管理器实例
+                if (!window.globalWebRTCManager) {
+                    window.globalWebRTCManager = new GlobalWebRTCManager('chat');
+                    console.log('聊天页面全局WebRTC管理器已创建');
+                }
+
+                await window.globalWebRTCManager.initialize();
+
+                // 检查WebRTC客户端是否成功创建
+                if (!window.webrtcClient) {
+                    throw new Error('WebRTC客户端创建失败');
+                }
+
+                // 设置事件回调
+                window.webrtcClient.onCallInvitation = handleCallInvitation;
+                window.webrtcClient.onCallAccepted = handleCallAccepted;
+                window.webrtcClient.onCallRejected = handleCallRejected;
+                window.webrtcClient.onCallEnded = handleCallEnded;
+                window.webrtcClient.onRemoteStream = handleRemoteStream;
+                window.webrtcClient.onConnectionStateChange = handleConnectionStateChange;
+
+                console.log('✅ WebRTC客户端初始化成功');
+            } catch (error) {
+                console.error('WebRTC客户端初始化失败:', error);
+            }
+        }
+
+        // 发起语音通话
+        async function startAudioCall() {
+            // 检查WebRTC客户端是否已初始化
+            if (!window.webrtcClient) {
+                console.error('❌ WebRTC客户端未初始化');
+                alert('WebRTC客户端未初始化，请刷新页面重试');
+                return;
+            }
+
+            // 优先使用当前聊天会话的对象
+            let targetUser = await getCurrentChatUser();
+
+            if (!targetUser || !targetUser.id) {
+                alert('请先选择聊天对象');
+                return;
+            }
+
+            try {
+                await window.webrtcClient.initiateCall(targetUser.id.toString(), 'audio');
+                showCallInterface('audio', targetUser, 'calling');
+            } catch (error) {
+                console.error('❌ 发起语音通话失败:', error);
+                alert('发起语音通话失败: ' + error.message);
+            }
+        }
+
+        // 发起视频通话
+        async function startVideoCall() {
+            // 检查WebRTC客户端是否已初始化
+            if (!window.webrtcClient) {
+                console.error('❌ WebRTC客户端未初始化');
+                alert('WebRTC客户端未初始化，请刷新页面重试');
+                return;
+            }
+
+            // 优先使用当前聊天会话的对象
+            let targetUser = await getCurrentChatUser();
+
+            console.log('发起视频通话 - 当前用户:', targetUser);
+            console.log('ChatApp状态:', {
+                currentConversationId: ChatApp.currentConversationId,
+                conversations: ChatApp.conversations,
+                targetUser: ChatApp.targetUser
+            });
+
+            if (!targetUser || !targetUser.id) {
+                alert('请先选择聊天对象');
+                return;
+            }
+
+            try {
+                await window.webrtcClient.initiateCall(targetUser.id.toString(), 'video');
+                showCallInterface('video', targetUser, 'calling');
+            } catch (error) {
+                console.error('❌ 发起视频通话失败:', error);
+                alert('发起视频通话失败: ' + error.message);
+            }
+        }
+
+        // 获取当前聊天用户
+        async function getCurrentChatUser() {
+            console.log('getCurrentChatUser 调用');
+            console.log('ChatApp.currentConversationId:', ChatApp.currentConversationId);
+            console.log('ChatApp.conversations:', ChatApp.conversations);
+            console.log('ChatApp.targetUser:', ChatApp.targetUser);
+
+            // 方法1：如果有当前活跃的聊天会话，从会话列表中找到对应的会话
+            if (ChatApp.currentConversationId && ChatApp.conversations) {
+                const currentConversation = ChatApp.conversations.find(conv => conv.id === ChatApp.currentConversationId);
+                console.log('找到的当前会话:', currentConversation);
+
+                if (currentConversation) {
+                    // 对于私聊，返回对方用户信息
+                    if (currentConversation.type === 'private' && currentConversation.otherUser) {
+                        console.log('返回私聊用户:', currentConversation.otherUser);
+                        return {
+                            id: currentConversation.otherUser.id,
+                            username: currentConversation.otherUser.username,
+                            nickname: currentConversation.otherUser.nickname,
+                            avatar: currentConversation.otherUser.avatar
+                        };
+                    }
+
+                    // 对于群聊，可以考虑其他逻辑
+                    if (currentConversation.participants && currentConversation.participants.length > 0) {
+                        const currentUserId = window.currentUser ? window.currentUser.id : null;
+                        const otherParticipant = currentConversation.participants.find(p => p.id !== currentUserId);
+                        if (otherParticipant) {
+                            console.log('返回群聊参与者:', otherParticipant);
+                            return otherParticipant;
+                        }
+                    }
+                }
+            }
+
+            // 方法2：如果没有活跃会话，使用选中的目标用户
+            if (ChatApp.targetUser && ChatApp.targetUser.id) {
+                console.log('返回目标用户:', ChatApp.targetUser);
+                return ChatApp.targetUser;
+            }
+
+            // 方法3：通过API获取会话详情
+            if (ChatApp.currentConversationId) {
+                try {
+                    console.log('尝试通过API获取会话详情...');
+                    const response = await fetch(`/api/chat/conversations/${ChatApp.currentConversationId}/participants`, {
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.participants) {
+                            const currentUserId = window.currentUser ? window.currentUser.id : null;
+                            const otherParticipant = data.participants.find(p => p.id !== currentUserId);
+                            if (otherParticipant) {
+                                console.log('从API获取到的用户信息:', otherParticipant);
+                                return otherParticipant;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('获取会话参与者失败:', error);
+                }
+            }
+
+            // 方法4：从聊天界面头部获取用户信息（临时方案）
+            const chatTitle = document.getElementById('chatTitle');
+            if (chatTitle && chatTitle.textContent && chatTitle.textContent !== '聊天对象') {
+                console.log('使用临时方案 - 用户名:', chatTitle.textContent);
+                // 对于testuser，我们知道ID是2
+                const userId = chatTitle.textContent === 'testuser' ? 2 : 'testuser';
+                return {
+                    id: userId,
+                    username: chatTitle.textContent,
+                    nickname: chatTitle.textContent
+                };
+            }
+
+            console.log('未找到聊天用户');
+            return null;
+        }
+
+        // 显示通话界面
+        function showCallInterface(callType, user, status) {
+            const callOverlay = document.getElementById('callOverlay');
+            const videoContainer = document.getElementById('videoCallContainer');
+            const audioContainer = document.getElementById('audioCallContainer');
+            const incomingCall = document.getElementById('incomingCall');
+            const videoBtn = document.getElementById('videoBtn');
+            const muteBtn = document.getElementById('muteBtn');
+
+            // 显示遮罩层
+            callOverlay.classList.add('show');
+
+            // 初始化按钮状态
+            initializeCallButtons(callType);
+
+            if (callType === 'video') {
+                videoContainer.style.display = 'flex';
+                audioContainer.style.display = 'none';
+                videoBtn.style.display = 'block';
+            } else {
+                videoContainer.style.display = 'none';
+                audioContainer.style.display = 'flex';
+                videoBtn.style.display = 'none';
+
+                // 设置用户信息
+                document.getElementById('callAvatar').src = user.avatar || '/images/default-avatar.png';
+                document.getElementById('callUserName').textContent = user.nickname || user.username;
+            }
+
+            incomingCall.style.display = 'none';
+            updateCallStatus(status);
+        }
+
+        // 初始化通话按钮状态
+        function initializeCallButtons(callType) {
+            const muteBtn = document.getElementById('muteBtn');
+            const videoBtn = document.getElementById('videoBtn');
+
+            // 初始化静音按钮（默认音频开启）
+            if (muteBtn) {
+                muteBtn.classList.remove('active');
+                muteBtn.innerHTML = '<i class="fas fa-microphone"></i>';
+                muteBtn.title = '静音';
+            }
+
+            // 初始化视频按钮（默认视频开启）
+            if (videoBtn && callType === 'video') {
+                videoBtn.classList.remove('active');
+                videoBtn.innerHTML = '<i class="fas fa-video"></i>';
+                videoBtn.title = '关闭摄像头';
+            }
+
+            console.log('通话按钮状态已初始化');
+        }
+
+        // 处理来电邀请
+        function handleCallInvitation(data) {
+            console.log('=== 收到来电邀请 ===');
+            console.log('来电数据:', data);
+
+            currentCallData = data;
+
+            // 优先使用全局弹框
+            if (window.globalCallPopup && typeof window.globalCallPopup.show === 'function') {
+                console.log('使用全局弹框显示来电');
+                try {
+                    window.globalCallPopup.show(data);
+                    console.log('✅ 全局弹框已显示');
+                    return;
+                } catch (error) {
+                    console.error('全局弹框显示失败:', error);
+                    // 继续使用备用方案
+                }
+            }
+
+            // 备用方案：使用页面本地弹框
+            console.log('使用页面本地弹框显示来电');
+            const callOverlay = document.getElementById('callOverlay');
+            const incomingCall = document.getElementById('incomingCall');
+            const videoContainer = document.getElementById('videoCallContainer');
+            const audioContainer = document.getElementById('audioCallContainer');
+
+            console.log('UI元素检查:', {
+                callOverlay: !!callOverlay,
+                incomingCall: !!incomingCall,
+                videoContainer: !!videoContainer,
+                audioContainer: !!audioContainer
+            });
+
+            if (!callOverlay || !incomingCall) {
+                console.error('关键UI元素未找到，无法显示来电界面');
+                // 最后的备用方案：使用浏览器确认对话框
+                const accept = confirm(`收到来自 ${data.callerName || '未知用户'} 的${data.callType === 'video' ? '视频' : '语音'}通话邀请，是否接听？`);
+                if (accept) {
+                    acceptCall();
+                } else {
+                    rejectCall();
+                }
+                return;
+            }
+
+            // 显示来电界面
+            console.log('显示来电界面...');
+            callOverlay.classList.add('show');
+            incomingCall.style.display = 'flex';
+            if (videoContainer) videoContainer.style.display = 'none';
+            if (audioContainer) audioContainer.style.display = 'none';
+
+            // 设置来电信息
+            const callerName = data.callerName || '未知用户';
+            const callType = data.callType === 'video' ? '视频通话' : '语音通话';
+            const callerAvatar = data.callerAvatar || '/images/default-avatar.png';
+
+            console.log('设置来电信息:', { callerName, callType, callerAvatar });
+
+            document.getElementById('incomingCallName').textContent = callerName;
+            document.getElementById('incomingCallType').textContent = callType;
+            document.getElementById('incomingCallAvatar').src = callerAvatar;
+
+            console.log('来电界面已显示');
+        }
+
+        // 接听通话
+        function acceptCall() {
+            console.log('接听通话，当前通话数据:', currentCallData);
+            
+            // 隐藏全局弹框
+            if (window.globalCallPopup && window.globalCallPopup.isVisible()) {
+                window.globalCallPopup.hide();
+            }
+            
+            if (currentCallData && window.webrtcClient) {
+                window.webrtcClient.acceptCall(currentCallData.roomId);
+                showCallInterface(currentCallData.callType, currentCallData, 'connecting');
+                startCallTimer();
+            } else {
+                console.error('❌ WebRTC客户端未初始化或通话数据缺失');
+                alert('无法接听通话，请刷新页面重试');
+            }
+        }
+
+        // 拒绝通话
+        function rejectCall() {
+            console.log('拒绝通话，当前通话数据:', currentCallData);
+            
+            // 隐藏全局弹框
+            if (window.globalCallPopup && window.globalCallPopup.isVisible()) {
+                window.globalCallPopup.hide();
+            }
+            
+            if (currentCallData && window.webrtcClient) {
+                window.webrtcClient.rejectCall(currentCallData.roomId);
+                hideCallInterface();
+            } else {
+                console.error('❌ WebRTC客户端未初始化或通话数据缺失');
+                hideCallInterface();
+            }
+        }
+
+        // 将函数暴露到全局作用域，供全局弹框调用
+        window.acceptCall = acceptCall;
+        window.rejectCall = rejectCall;
+
+        // 挂断通话
+        function endCall() {
+            if (window.webrtcClient) {
+                window.webrtcClient.endCall();
+            } else {
+                console.error('❌ WebRTC客户端未初始化');
+            }
+            hideCallInterface();
+        }
+
+        // 隐藏通话界面
+        function hideCallInterface() {
+            const callOverlay = document.getElementById('callOverlay');
+            callOverlay.classList.remove('show');
+
+            stopCallTimer();
+            currentCallData = null;
+
+            // 停止本地视频流
+            const localVideo = document.getElementById('localVideo');
+            if (localVideo.srcObject) {
+                localVideo.srcObject.getTracks().forEach(track => track.stop());
+                localVideo.srcObject = null;
+            }
+
+            // 清空远程视频流
+            const remoteVideo = document.getElementById('remoteVideo');
+            if (remoteVideo.srcObject) {
+                remoteVideo.srcObject = null;
+            }
+        }
+
+        // 切换静音 - 使用call-ui.js中的异步版本
+        // 这个函数已在call-ui.js中定义，这里不需要重复定义
+
+        // 切换视频 - 使用call-ui.js中的异步版本
+        // 这个函数已在call-ui.js中定义，这里不需要重复定义
+    </script>
+
+    <!-- 会话右键菜单 -->
+    <div id="conversationContextMenu" class="context-menu" style="display: none;">
+        <div class="context-menu-item" onclick="openConversation()">
+            <i class="fas fa-comment me-2"></i>打开会话
+        </div>
+        <div class="context-menu-item" onclick="pinConversationFromContext()">
+            <i class="fas fa-thumbtack me-2"></i>置顶会话
+        </div>
+        <div class="context-menu-item" onclick="muteConversationFromContext()">
+            <i class="fas fa-volume-mute me-2"></i>静音通知
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item text-warning" onclick="clearChatMessagesFromContext()">
+            <i class="fas fa-broom me-2"></i>清空聊天记录
+        </div>
+        <div class="context-menu-item text-info" onclick="unfollowUserFromContext()">
+            <i class="fas fa-user-minus me-2"></i>取消关注
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item text-danger" onclick="deleteConversationFromContext()">
+            <i class="fas fa-trash me-2"></i>删除会话
+        </div>
+    </div>
+</body>
+</html>

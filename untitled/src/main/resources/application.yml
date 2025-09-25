@@ -1,0 +1,226 @@
+# ===== 深度性能优化配置 =====
+
+server:
+  port: 8081
+  tomcat:
+    # 连接池优化
+    connection-timeout: 10000
+    max-connections: 10000
+    accept-count: 200
+    # 线程池优化
+    threads:
+      max: 400
+      min-spare: 20
+    # 压缩优化
+    compression: on
+    compression-mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    compression-min-size: 1024
+    # 连接优化
+    keep-alive-timeout: 60000
+    max-keep-alive-requests: 200
+    # 禁用不必要的功能
+    relaxed-query-chars: "|,{,},[,],^"
+    uri-encoding: UTF-8
+    redirect-port: -1
+    # 启用HTTP/2
+    ssl-protocols: TLSv1.2,TLSv1.3
+
+# 数据库连接池优化
+spring:
+  datasource:
+    hikari:
+      # 连接池大小
+      maximum-pool-size: 20
+      minimum-idle: 5
+      # 连接超时
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # 连接测试
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+      # 泄漏检测
+      leak-detection-threshold: 60000
+      # 自动提交
+      auto-commit: true
+      # 事务隔离
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+  
+  # JPA优化
+  jpa:
+    # 禁用open-in-view（重要性能优化）
+    open-in-view: false
+    # 批量操作优化
+    properties:
+      hibernate:
+        # 连接池配置
+        connection:
+          provider_disables_autocommit: true
+        # 批量操作
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true
+        # 查询优化
+        order_inserts: true
+        order_updates: true
+        # 二级缓存
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+        # 统计信息
+        generate_statistics: false
+        # 方言优化
+        dialect: org.hibernate.dialect.MySQLDialect
+        # 查询优化
+        query:
+          fail_on_pagination_over_collection_fetch: false
+          in_clause_parameter_padding: true
+        # 批量获取
+        default_batch_fetch_size: 16
+        # 延迟加载
+        enable_lazy_load_no_trans: false
+        # 命名策略
+        naming:
+          physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        # 自动DDL
+        hbm2ddl:
+          auto: validate
+        # 日志级别
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+
+  # 缓存优化
+  cache:
+    type: simple
+    cache-names: userMusic,publicMusic,allPublicMusic,musicById,musicSearch,popularMusic,musicStats
+    simple:
+      cache-names: userMusic,publicMusic,allPublicMusic,musicById,musicSearch,popularMusic,musicStats
+      time-to-live: 300s
+
+  # 文件上传优化
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+  # 应用配置
+  application:
+    name: video-website
+
+# 日志优化
+logging:
+  level:
+    # 降低日志级别，减少I/O开销
+    root: WARN
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.apache.catalina: WARN
+    org.apache.coyote: WARN
+    # 只保留关键业务日志
+    org.example.controller: INFO
+    org.example.service: INFO
+    org.example.config: INFO
+    # 禁用Vosk详细日志
+    org.example.service.VoskAudioRecognitionService: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log
+    max-size: 100MB
+    max-history: 30
+
+# 异步配置优化
+async:
+  core-pool-size: 10
+  max-pool-size: 50
+  queue-capacity: 100
+  thread-name-prefix: async-
+
+# 自定义配置
+app:
+  # 上传路径
+  upload:
+    path: ./uploads
+    temp-path: ${java.io.tmpdir}/video-website
+  
+  # 流媒体优化
+  streaming:
+    enable-range-requests: true
+    buffer-size: 16384
+    timeout: 60000
+    max-concurrent-streams: 20
+    chunk-size: 1024KB
+  
+  # Vosk优化
+  vosk:
+    # 延迟加载Vosk模型
+    lazy-load: true
+    # 模型路径
+    model-path: models/vosk-model-cn-0.22
+    # 禁用启动时检查
+    check-on-startup: false
+    # 异步初始化
+    async-init: true
+  
+  # 性能监控
+  performance:
+    # 启用性能监控
+    enabled: true
+    # 缓存统计
+    cache-stats: true
+    # 数据库监控
+    db-monitor: true
+    # 响应时间监控
+    response-time: true
+  
+  # 缓存配置
+  cache:
+    # 用户音乐缓存时间
+    user-music-ttl: 300s
+    # 公共音乐缓存时间
+    public-music-ttl: 1800s
+    # 音乐详情缓存时间
+    music-detail-ttl: 3600s
+    # 热门音乐缓存时间
+    popular-music-ttl: 1800s
+    # 搜索结果缓存时间
+    search-result-ttl: 300s
+
+# 管理端点优化
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,caches
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+    metrics:
+      enabled: true
+    caches:
+      enabled: true
+  simple:
+    metrics:
+      export:
+        enabled: true
+
+# 安全配置优化
+security:
+  # 禁用不必要的安全检查
+  basic:
+    enabled: false
+  # 允许跨域
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "*"
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600 

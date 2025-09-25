@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户等级 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .level-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            margin: 20px auto;
+            max-width: 1200px;
+            padding: 30px;
+        }
+
+        .level-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .level-badge {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .level-badge::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .level-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            z-index: 1;
+        }
+
+        .level-title {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .level-progress {
+            background: #e9ecef;
+            border-radius: 25px;
+            height: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .level-progress-bar {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            border-radius: 25px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .level-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: progress-shine 2s infinite;
+        }
+
+        @keyframes progress-shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .exp-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .tasks-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background 0.3s ease;
+        }
+
+        .task-item:hover {
+            background: #f8f9fa;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        .task-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .task-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: white;
+        }
+
+        .task-details h6 {
+            margin: 0;
+            color: #333;
+        }
+
+        .task-details p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .task-reward {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .task-completed {
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .checkin-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .checkin-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .checkin-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .checkin-btn:disabled {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.3);
+            color: rgba(255,255,255,0.5);
+        }
+
+        .level-rewards {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .reward-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            background: #f8f9fa;
+        }
+
+        .reward-level {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .navbar {
+            background: rgba(255,255,255,0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-play-circle me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>首页</a>
+                <a class="nav-link" href="/profile"><i class="fas fa-user me-1"></i>个人中心</a>
+                <a class="nav-link active" href="/user/level"><i class="fas fa-trophy me-1"></i>等级</a>
+                <a class="nav-link" href="/stats"><i class="fas fa-chart-bar me-1"></i>统计</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="level-container">
+            <!-- 等级头部 -->
+            <div class="level-header">
+                <div class="level-badge">
+                    <div class="level-number" id="currentLevel">1</div>
+                </div>
+                <h2 class="level-title" id="levelTitle">新手探索者</h2>
+                <p class="text-muted">继续努力，解锁更多精彩内容！</p>
+
+                <!-- 经验进度条 -->
+                <div class="level-progress">
+                    <div class="level-progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="exp-info">
+                    <span>当前经验: <span id="currentExp">0</span></span>
+                    <span>下级所需: <span id="nextLevelExp">100</span></span>
+                </div>
+            </div>
+
+            <!-- 统计数据 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-value" id="totalExp">0</div>
+                    <div class="stat-label">总经验值</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="stat-value" id="achievementCount">0</div>
+                    <div class="stat-label">获得成就</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-value" id="checkinDays">0</div>
+                    <div class="stat-label">连续签到</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="stat-value" id="completedTasks">0</div>
+                    <div class="stat-label">完成任务</div>
+                </div>
+            </div>
+
+            <!-- 每日签到 -->
+            <div class="checkin-card">
+                <h4><i class="fas fa-calendar-alt me-2"></i>每日签到</h4>
+                <p class="mb-3">每日签到获得经验值，连续签到获得额外奖励！</p>
+                <button class="btn checkin-btn" id="checkinBtn" onclick="dailyCheckin()">
+                    <i class="fas fa-gift me-2"></i>立即签到
+                </button>
+                <div class="mt-3">
+                    <small>连续签到 <span id="streakDays">0</span> 天</small>
+                </div>
+            </div>
+
+            <!-- 每日任务 -->
+            <div class="tasks-section">
+                <h4 class="mb-4"><i class="fas fa-list-check me-2"></i>每日任务</h4>
+                <div id="dailyTasks">
+                    <!-- 任务列表将通过JavaScript动态加载 -->
+                </div>
+            </div>
+
+            <!-- 等级奖励 -->
+            <div class="level-rewards">
+                <h4 class="mb-4"><i class="fas fa-gift me-2"></i>等级奖励</h4>
+                <div id="levelRewards">
+                    <!-- 奖励列表将通过JavaScript动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 等级配置
+        const LEVEL_CONFIG = {
+            maxLevel: 100,
+            baseExp: 100,
+            expMultiplier: 1.2
+        };
+
+        // 等级称号
+        const LEVEL_TITLES = {
+            1: "新手探索者",
+            10: "初级创作者",
+            20: "活跃用户",
+            30: "资深玩家",
+            40: "内容专家",
+            50: "社区达人",
+            60: "影响力用户",
+            70: "平台精英",
+            80: "传奇创作者",
+            90: "超级大神",
+            100: "至尊王者"
+        };
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserLevel();
+            loadUserStats();
+            loadDailyTasks();
+            loadLevelRewards();
+            checkCheckinStatus();
+        });
+
+        // 加载用户等级信息
+        async function loadUserLevel() {
+            try {
+                const response = await fetch('/api/user-activity/level', {
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        updateLevelDisplay(result.data);
+                    }
+                } else {
+                    console.error('Failed to load user level');
+                }
+            } catch (error) {
+                console.error('Error loading user level:', error);
+            }
+        }
+
+        // 加载用户统计数据
+        async function loadUserStats() {
+            try {
+                const response = await fetch('/dashboard/api/stats', {
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateStatsDisplay(stats);
+                } else {
+                    console.error('Failed to load user stats');
+                }
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+
+        // 更新等级显示
+        function updateLevelDisplay(data) {
+            const level = data.level || 1;
+            const exp = data.experience || 0;
+            const nextLevelExp = calculateExpForLevel(level + 1);
+            const currentLevelExp = calculateExpForLevel(level);
+            const expInCurrentLevel = exp - currentLevelExp;
+            const expNeededForNext = nextLevelExp - currentLevelExp;
+            const progress = (expInCurrentLevel / expNeededForNext) * 100;
+
+            document.getElementById('currentLevel').textContent = level;
+            document.getElementById('levelTitle').textContent = getLevelTitle(level);
+            document.getElementById('currentExp').textContent = expInCurrentLevel;
+            document.getElementById('nextLevelExp').textContent = expNeededForNext;
+            document.getElementById('totalExp').textContent = exp;
+            document.getElementById('progressBar').style.width = progress + '%';
+
+            // 更新统计数据
+            document.getElementById('achievementCount').textContent = data.achievementCount || 0;
+            document.getElementById('checkinDays').textContent = data.consecutiveCheckins || 0;
+            document.getElementById('completedTasks').textContent = data.completedTasks || 0;
+        }
+
+        // 更新统计数据显示
+        function updateStatsDisplay(stats) {
+            document.getElementById('achievementCount').textContent = stats.totalAchievements || 0;
+            document.getElementById('checkinDays').textContent = stats.consecutiveDays || 0;
+            document.getElementById('completedTasks').textContent = stats.totalTasks || 0;
+        }
+
+        // 计算等级所需经验
+        function calculateExpForLevel(level) {
+            if (level <= 1) return 0;
+            let totalExp = 0;
+            for (let i = 1; i < level; i++) {
+                totalExp += Math.floor(LEVEL_CONFIG.baseExp * Math.pow(LEVEL_CONFIG.expMultiplier, i - 1));
+            }
+            return totalExp;
+        }
+
+        // 获取等级称号
+        function getLevelTitle(level) {
+            const titles = Object.keys(LEVEL_TITLES).map(Number).sort((a, b) => b - a);
+            for (let titleLevel of titles) {
+                if (level >= titleLevel) {
+                    return LEVEL_TITLES[titleLevel];
+                }
+            }
+            return LEVEL_TITLES[1];
+        }
+
+        // 每日签到
+        async function dailyCheckin() {
+            const checkinBtn = document.getElementById('checkinBtn');
+            const originalText = checkinBtn.innerHTML;
+
+            try {
+                // 显示加载状态
+                checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>签到中...';
+                checkinBtn.disabled = true;
+
+                const response = await fetch('/api/checkin', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showSuccess(`签到成功！获得 ${result.reward} 经验值\n连续签到 ${result.consecutiveDays} 天，总计签到 ${result.totalDays} 天`);
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-2"></i>已签到 (${result.totalDays}天)`;
+                    checkinBtn.classList.add('btn-success');
+                    checkinBtn.disabled = true;
+
+                    // 更新连续签到天数显示
+                    document.getElementById('streakDays').textContent = result.consecutiveDays || 0;
+
+                    // 重新加载用户等级信息
+                    loadUserLevel();
+                } else {
+                    if (result.alreadyCheckedIn) {
+                        showInfo(`今天已经签到过了\n连续签到 ${result.consecutiveDays || 0} 天，总计签到 ${result.totalDays || 0} 天`);
+                        checkinBtn.innerHTML = `<i class="fas fa-check me-2"></i>已签到 (${result.totalDays || 0}天)`;
+                        checkinBtn.classList.add('btn-success');
+                        checkinBtn.disabled = true;
+                        document.getElementById('streakDays').textContent = result.consecutiveDays || 0;
+                    } else {
+                        showError(result.message || '签到失败');
+                        checkinBtn.innerHTML = originalText;
+                        checkinBtn.disabled = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Checkin error:', error);
+                showError('签到失败，请稍后重试');
+                checkinBtn.innerHTML = originalText;
+                checkinBtn.disabled = false;
+            }
+        }
+
+        // 检查签到状态
+        async function checkCheckinStatus() {
+            try {
+                const response = await fetch('/api/checkin/status', {
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const checkinBtn = document.getElementById('checkinBtn');
+
+                    if (result.success && result.hasCheckedInToday) {
+                        checkinBtn.disabled = true;
+                        checkinBtn.innerHTML = `<i class="fas fa-check me-2"></i>已签到 (${result.totalDays || 0}天)`;
+                        checkinBtn.classList.add('btn-success');
+                    }
+
+                    document.getElementById('streakDays').textContent = result.consecutiveDays || 0;
+                }
+            } catch (error) {
+                console.error('Error checking checkin status:', error);
+            }
+        }
+
+        // 加载每日任务
+        async function loadDailyTasks() {
+            try {
+                const response = await fetch('/api/user-activity/daily-tasks', {
+                    credentials: 'same-origin'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        displayDailyTasks(result.data);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading daily tasks:', error);
+            }
+        }
+
+        // 显示每日任务
+        function displayDailyTasks(tasks) {
+            const container = document.getElementById('dailyTasks');
+            container.innerHTML = '';
+
+            tasks.forEach(task => {
+                const taskElement = createTaskElement(task);
+                container.appendChild(taskElement);
+            });
+        }
+
+        // 创建任务元素
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = 'task-item';
+
+            const iconColor = task.completed ? '#28a745' : getTaskIconColor(task.type);
+
+            div.innerHTML = `
+                <div class="task-info">
+                    <div class="task-icon" style="background: ${iconColor}">
+                        <i class="${getTaskIcon(task.type)}"></i>
+                    </div>
+                    <div class="task-details">
+                        <h6>${task.name}</h6>
+                        <p>${task.description}</p>
+                        <small>进度: ${task.progress}/${task.target}</small>
+                    </div>
+                </div>
+                <div class="${task.completed ? 'task-completed' : 'task-reward'}">
+                    ${task.completed ? '已完成' : '+' + task.expReward + ' EXP'}
+                </div>
+            `;
+
+            return div;
+        }
+
+        // 获取任务图标
+        function getTaskIcon(type) {
+            const icons = {
+                'video_upload': 'fas fa-upload',
+                'video_watch': 'fas fa-play',
+                'comment': 'fas fa-comment',
+                'like': 'fas fa-heart',
+                'share': 'fas fa-share'
+            };
+            return icons[type] || 'fas fa-tasks';
+        }
+
+        // 获取任务图标颜色
+        function getTaskIconColor(type) {
+            const colors = {
+                'video_upload': '#007bff',
+                'video_watch': '#28a745',
+                'comment': '#ffc107',
+                'like': '#dc3545',
+                'share': '#6f42c1'
+            };
+            return colors[type] || '#6c757d';
+        }
+
+        // 加载等级奖励
+        function loadLevelRewards() {
+            const container = document.getElementById('levelRewards');
+            const rewards = [
+                { level: 5, reward: '解锁个人主页装饰' },
+                { level: 10, reward: '获得专属头像框' },
+                { level: 15, reward: '解锁高级表情包' },
+                { level: 20, reward: '获得VIP标识' },
+                { level: 30, reward: '解锁直播功能' },
+                { level: 50, reward: '获得专属称号' },
+                { level: 80, reward: '解锁创作者工具' },
+                { level: 100, reward: '至尊王者徽章' }
+            ];
+
+            container.innerHTML = '';
+            rewards.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'reward-item';
+                div.innerHTML = `
+                    <div class="reward-level">${item.level}</div>
+                    <div>
+                        <strong>等级 ${item.level} 奖励</strong><br>
+                        <small class="text-muted">${item.reward}</small>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 显示成功消息
+        function showSuccess(message) {
+            alert(message);
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            alert(message);
+        }
+    </script>
+</body>
+</html>

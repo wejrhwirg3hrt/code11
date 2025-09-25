@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建CDN配置 - 超级管理员</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-crown me-2"></i>
+                            超级管理员
+                        </h4>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/admin-management">
+                                <i class="fas fa-users-cog me-2"></i>
+                                管理员管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/user-management">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/video-management">
+                                <i class="fas fa-video me-2"></i>
+                                视频管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/comment-management">
+                                <i class="fas fa-comments me-2"></i>
+                                评论管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/super-admin/cdn-management">
+                                <i class="fas fa-cloud me-2"></i>
+                                CDN管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/data-management">
+                                <i class="fas fa-database me-2"></i>
+                                数据管理
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-plus me-2"></i>
+                        创建CDN配置
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="/super-admin/cdn-management" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            返回列表
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 消息提示 -->
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- 创建表单 -->
+                <div class="row justify-content-center">
+                    <div class="col-md-10">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-cloud me-2"></i>
+                                    CDN配置信息
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form action="/super-admin/cdn/create" method="post">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="name" class="form-label">
+                                                    <i class="fas fa-tag me-1"></i>
+                                                    配置名称 <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" class="form-control" id="name" name="name" 
+                                                       required placeholder="请输入CDN配置名称">
+                                                <div class="form-text">用于标识此CDN配置的名称</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="domain" class="form-label">
+                                                    <i class="fas fa-globe me-1"></i>
+                                                    域名 <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" class="form-control" id="domain" name="domain" 
+                                                       required placeholder="cdn.example.com">
+                                                <div class="form-text">CDN加速域名</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="region" class="form-label">
+                                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                                    地区 <span class="text-danger">*</span>
+                                                </label>
+                                                <select class="form-select" id="region" name="region" required>
+                                                    <option value="">请选择地区</option>
+                                                    <option value="华北">华北</option>
+                                                    <option value="华东">华东</option>
+                                                    <option value="华南">华南</option>
+                                                    <option value="华中">华中</option>
+                                                    <option value="西南">西南</option>
+                                                    <option value="西北">西北</option>
+                                                    <option value="东北">东北</option>
+                                                    <option value="海外">海外</option>
+                                                </select>
+                                                <div class="form-text">CDN节点所在地区</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="bandwidth" class="form-label">
+                                                    <i class="fas fa-tachometer-alt me-1"></i>
+                                                    带宽 <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" class="form-control" id="bandwidth" name="bandwidth" 
+                                                       required placeholder="100 Mbps">
+                                                <div class="form-text">CDN节点带宽容量</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="provider" class="form-label">
+                                                    <i class="fas fa-building me-1"></i>
+                                                    服务商
+                                                </label>
+                                                <select class="form-select" id="provider" name="provider">
+                                                    <option value="">请选择服务商</option>
+                                                    <option value="阿里云">阿里云</option>
+                                                    <option value="腾讯云">腾讯云</option>
+                                                    <option value="华为云">华为云</option>
+                                                    <option value="百度云">百度云</option>
+                                                    <option value="七牛云">七牛云</option>
+                                                    <option value="又拍云">又拍云</option>
+                                                    <option value="自建">自建</option>
+                                                </select>
+                                                <div class="form-text">CDN服务提供商</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="status" class="form-label">
+                                                    <i class="fas fa-toggle-on me-1"></i>
+                                                    初始状态
+                                                </label>
+                                                <select class="form-select" id="status" name="status">
+                                                    <option value="ACTIVE">活跃</option>
+                                                    <option value="INACTIVE">停用</option>
+                                                    <option value="MAINTENANCE">维护中</option>
+                                                </select>
+                                                <div class="form-text">CDN配置的初始状态</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="originServer" class="form-label">
+                                            <i class="fas fa-server me-1"></i>
+                                            源站地址
+                                        </label>
+                                        <input type="text" class="form-control" id="originServer" name="originServer" 
+                                               placeholder="origin.example.com">
+                                        <div class="form-text">回源服务器地址</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="cacheRules" class="form-label">
+                                            <i class="fas fa-cogs me-1"></i>
+                                            缓存规则
+                                        </label>
+                                        <textarea class="form-control" id="cacheRules" name="cacheRules" rows="4" 
+                                                  placeholder="请输入缓存规则配置..."></textarea>
+                                        <div class="form-text">CDN缓存规则配置，支持JSON格式</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">
+                                            <i class="fas fa-comment me-1"></i>
+                                            描述
+                                        </label>
+                                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                                  placeholder="请输入CDN配置描述..."></textarea>
+                                        <div class="form-text">CDN配置的详细描述</div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>配置说明：</strong>
+                                            <ul class="mb-0 mt-2">
+                                                <li>创建后的CDN配置需要手动启用才能生效</li>
+                                                <li>域名必须已完成备案和DNS解析</li>
+                                                <li>缓存规则支持JSON格式配置</li>
+                                                <li>建议先创建为停用状态，测试无误后再启用</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                        <a href="/super-admin/cdn-management" class="btn btn-secondary me-md-2">
+                                            <i class="fas fa-times me-2"></i>
+                                            取消
+                                        </a>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-2"></i>
+                                            创建配置
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 表单验证
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const name = document.getElementById('name').value;
+            const domain = document.getElementById('domain').value;
+            const region = document.getElementById('region').value;
+            const bandwidth = document.getElementById('bandwidth').value;
+
+            if (!name || !domain || !region || !bandwidth) {
+                e.preventDefault();
+                alert('请填写所有必填字段');
+                return;
+            }
+
+            // 验证域名格式
+            const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$/;
+            if (!domainRegex.test(domain)) {
+                e.preventDefault();
+                alert('请输入有效的域名格式');
+                return;
+            }
+        });
+
+        // 缓存规则格式化
+        document.getElementById('cacheRules').addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value && value.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(value);
+                    this.value = JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // 忽略JSON格式错误
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统日志 - 管理后台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .log-entry {
+            border-left: 4px solid #dee2e6;
+            margin-bottom: 10px;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+        }
+        .log-entry.warning {
+            border-left-color: #ffc107;
+        }
+        .log-details {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/admin">管理后台</a>
+                <a class="nav-link" href="/">返回首页</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-list-alt me-2"></i>系统日志</h2>
+                    <div>
+                        <button class="btn btn-outline-primary" onclick="refreshLogs()">
+                            <i class="fas fa-sync-alt me-1"></i>刷新
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="showErrors()">
+                            <i class="fas fa-exclamation-triangle me-1"></i>仅显示错误
+                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-trash me-1"></i>清除记录
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="clearErrorLogs()">
+                                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>清除错误日志
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearAllLogs()">
+                                    <i class="fas fa-trash text-danger me-2"></i>清除所有日志
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="showClearBeforeDateModal()">
+                                    <i class="fas fa-calendar text-warning me-2"></i>清除指定日期前日志
+                                </a></li>
+                            </ul>
+                        </div>
+                        <div class="btn-group ms-2" role="group">
+                            <button class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-alt me-1"></i>清除文件
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="clearLogFiles()">
+                                    <i class="fas fa-file-text text-warning me-2"></i>清除日志文件
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearUploadFiles()">
+                                    <i class="fas fa-upload text-info me-2"></i>清除上传文件
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearTempFiles()">
+                                    <i class="fas fa-temp text-secondary me-2"></i>清除临时文件
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearAllProjectFiles()">
+                                    <i class="fas fa-folder text-danger me-2"></i>清除所有项目文件
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="completeCleanup()">
+                                    <i class="fas fa-broom text-danger me-2"></i>完整清理（数据库+文件）
+                                </a></li>
+                            </ul>
+                        </div>
+                        <div class="btn-group ms-2" role="group">
+                            <button class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-times me-1"></i>清除用户数据
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="clearUserUploadFiles()">
+                                    <i class="fas fa-upload text-info me-2"></i>清除用户上传文件
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearUserDatabaseRecords()">
+                                    <i class="fas fa-database text-warning me-2"></i>清除用户数据库记录
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="clearUserTempFiles()">
+                                    <i class="fas fa-temp text-secondary me-2"></i>清除用户临时文件
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="clearAllUserData()">
+                                    <i class="fas fa-user-times text-danger me-2"></i>清除所有用户数据
+                                </a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="clearUserDataByUsername()">
+                                    <i class="fas fa-user text-danger me-2"></i>清除指定用户数据
+                                </a></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-outline-info ms-2" onclick="getFileStatistics()">
+                            <i class="fas fa-chart-bar me-1"></i>文件统计
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 系统状态概览 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title text-success">总日志数</h5>
+                                <h3 th:text="${totalElements}">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title text-danger">错误数量</h5>
+                                <h3 id="errorCount" th:text="${#lists.size(recentErrors)}">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title text-info">当前页</h5>
+                                <h3 th:text="${currentPage + 1}">1</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title text-warning">总页数</h5>
+                                <h3 th:text="${totalPages}">1</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近错误 -->
+                <div th:if="${not #lists.isEmpty(recentErrors)}" class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>最近错误</h5>
+                    <div th:each="error : ${recentErrors}" class="mb-2">
+                        <strong th:text="${error.action}">Action</strong>: 
+                        <span th:text="${error.errorMessage}">Error message</span>
+                        <small class="text-muted">
+                            (<span th:text="${#temporals.format(error.createdAt, 'yyyy-MM-dd HH:mm:ss')}">Time</span>)
+                        </small>
+                    </div>
+                </div>
+
+                <!-- 文件统计信息 -->
+                <div id="fileStatistics" class="alert alert-info" style="display: none;">
+                    <h5><i class="fas fa-chart-bar me-2"></i>文件统计信息</h5>
+                    <div id="fileStatsContent">
+                        <p class="text-muted">点击"文件统计"按钮查看详细信息...</p>
+                    </div>
+                </div>
+
+                <!-- 日志列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">日志记录</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="logContainer">
+                            <div th:each="log : ${logs.content}" 
+                                 class="log-entry card p-3"
+                                 th:classappend="${log.status.toLowerCase()}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge me-2"
+                                                  th:classappend="${log.status == 'SUCCESS' ? 'bg-success' : (log.status == 'ERROR' ? 'bg-danger' : 'bg-warning')}"
+                                                  th:text="${log.status}">STATUS</span>
+                                            <strong th:text="${log.action}">Action</strong>
+                                            <span th:if="${log.username}" class="text-muted ms-2">
+                                                by <span th:text="${log.username}">user</span>
+                                            </span>
+                                        </div>
+                                        <div class="log-details text-muted mb-2" th:text="${log.details}">
+                                            Log details
+                                        </div>
+                                        <div th:if="${log.errorMessage}" class="text-danger small">
+                                            <strong>错误信息:</strong> <span th:text="${log.errorMessage}">Error</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted">
+                                            <div th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd')}">Date</div>
+                                            <div th:text="${#temporals.format(log.createdAt, 'HH:mm:ss')}">Time</div>
+                                        </small>
+                                        <div th:if="${log.ipAddress}" class="text-muted small">
+                                            IP: <span th:text="${log.ipAddress}">IP</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分页 -->
+                        <nav th:if="${totalPages > 1}" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                                    <a class="page-link" th:href="@{/admin/user-logs(page=${currentPage - 1})}">上一页</a>
+                                </li>
+                                
+                                <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
+                                    class="page-item" 
+                                    th:classappend="${i == currentPage ? 'active' : ''}">
+                                    <a class="page-link" th:href="@{/admin/user-logs(page=${i})}" th:text="${i + 1}">1</a>
+                                </li>
+                                
+                                <li class="page-item" th:classappend="${currentPage == totalPages - 1 ? 'disabled' : ''}">
+                                    <a class="page-link" th:href="@{/admin/user-logs(page=${currentPage + 1})}">下一页</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刷新按钮 -->
+    <button class="btn btn-primary refresh-btn" onclick="refreshLogs()">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <!-- 清除指定日期前日志模态框 -->
+    <div class="modal fade" id="clearBeforeDateModal" tabindex="-1" aria-labelledby="clearBeforeDateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="clearBeforeDateModalLabel">清除指定日期前日志</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clearDate" class="form-label">选择日期</label>
+                        <input type="datetime-local" class="form-control" id="clearDate" required>
+                        <div class="form-text">将清除此日期之前的所有日志记录</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="clearLogsBeforeDate()">确认清除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 刷新日志
+        function refreshLogs() {
+            location.reload();
+        }
+
+        // 仅显示错误
+        function showErrors() {
+            const logEntries = document.querySelectorAll('.log-entry');
+            logEntries.forEach(entry => {
+                if (!entry.classList.contains('error')) {
+                    entry.style.display = 'none';
+                } else {
+                    entry.style.display = 'block';
+                }
+            });
+        }
+
+        // 清除所有日志
+        function clearAllLogs() {
+            if (confirm('⚠️ 警告：此操作将清除所有日志记录，无法恢复！\n\n确定要清除所有日志吗？')) {
+                fetch('/admin/user-logs/api/clear-all', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除日志失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除错误日志
+        function clearErrorLogs() {
+            if (confirm('⚠️ 警告：此操作将清除所有错误日志记录，无法恢复！\n\n确定要清除错误日志吗？')) {
+                fetch('/admin/user-logs/api/clear-errors', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除错误日志失败，请稍后重试');
+                });
+            }
+        }
+
+        // 显示清除指定日期前日志模态框
+        function showClearBeforeDateModal() {
+            // 设置默认日期为7天前
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() - 7);
+            document.getElementById('clearDate').value = defaultDate.toISOString().slice(0, 16);
+            
+            const modal = new bootstrap.Modal(document.getElementById('clearBeforeDateModal'));
+            modal.show();
+        }
+
+        // 清除指定日期前的日志
+        function clearLogsBeforeDate() {
+            const date = document.getElementById('clearDate').value;
+            if (!date) {
+                alert('请选择日期');
+                return;
+            }
+
+            if (confirm('⚠️ 警告：此操作将清除指定日期之前的所有日志记录，无法恢复！\n\n确定要清除吗？')) {
+                fetch(`/admin/user-logs/api/clear-before-date?date=${encodeURIComponent(date)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除日志失败，请稍后重试');
+                });
+            }
+        }
+
+        // 获取文件统计信息
+        function getFileStatistics() {
+            fetch('/admin/user-logs/api/file-statistics', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('fileStatsContent').innerHTML = 
+                        '<pre class="mb-0">' + data.statistics + '</pre>';
+                    document.getElementById('fileStatistics').style.display = 'block';
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ 获取文件统计信息失败，请稍后重试');
+            });
+        }
+
+        // 清除日志文件
+        function clearLogFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有日志文件，无法恢复！\n\n确定要清除日志文件吗？')) {
+                fetch('/admin/user-logs/api/clear-log-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除日志文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除上传文件
+        function clearUploadFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有上传文件，包括用户头像、视频封面等，无法恢复！\n\n确定要清除上传文件吗？')) {
+                fetch('/admin/user-logs/api/clear-upload-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除上传文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除临时文件
+        function clearTempFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有临时文件，无法恢复！\n\n确定要清除临时文件吗？')) {
+                fetch('/admin/user-logs/api/clear-temp-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除临时文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除所有项目文件
+        function clearAllProjectFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有项目文件（日志、上传、临时文件），无法恢复！\n\n确定要清除所有项目文件吗？')) {
+                fetch('/admin/user-logs/api/clear-all-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除项目文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 完整清理（数据库+文件）
+        function completeCleanup() {
+            if (confirm('⚠️ 警告：此操作将清除所有数据库日志和项目文件，这是最彻底的清理操作，无法恢复！\n\n确定要执行完整清理吗？')) {
+                fetch('/admin/user-logs/api/complete-cleanup', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 完整清理失败，请稍后重试');
+                });
+            }
+        }
+
+        // ==================== 用户数据清理函数 ====================
+
+        // 清除用户上传文件
+        function clearUserUploadFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有用户上传的文件，包括头像、动态图片、聊天文件等，无法恢复！\n\n确定要清除用户上传文件吗？')) {
+                fetch('/admin/user-logs/api/clear-user-upload-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        if (data.details) {
+                            console.log('清理详情:', data.details);
+                        }
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除用户上传文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除用户数据库记录
+        function clearUserDatabaseRecords() {
+            if (confirm('⚠️ 警告：此操作将清除所有用户相关的数据库记录，包括用户信息、日志、设置等，无法恢复！\n\n确定要清除用户数据库记录吗？')) {
+                fetch('/admin/user-logs/api/clear-user-database-records', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        if (data.details) {
+                            console.log('清理详情:', data.details);
+                        }
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除用户数据库记录失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除用户临时文件
+        function clearUserTempFiles() {
+            if (confirm('⚠️ 警告：此操作将清除所有用户相关的临时文件，无法恢复！\n\n确定要清除用户临时文件吗？')) {
+                fetch('/admin/user-logs/api/clear-user-temp-files', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        if (data.details) {
+                            console.log('清理详情:', data.details);
+                        }
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除用户临时文件失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除所有用户数据
+        function clearAllUserData() {
+            if (confirm('⚠️ 警告：此操作将清除所有用户数据，包括数据库记录和所有用户文件，这是最彻底的用户数据清理操作，无法恢复！\n\n确定要清除所有用户数据吗？')) {
+                fetch('/admin/user-logs/api/clear-all-user-data', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ ' + data.message);
+                        if (data.details) {
+                            console.log('清理详情:', data.details);
+                        }
+                        location.reload();
+                    } else {
+                        alert('❌ ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ 清除所有用户数据失败，请稍后重试');
+                });
+            }
+        }
+
+        // 清除指定用户数据
+        function clearUserDataByUsername() {
+            const username = prompt('请输入要清除数据的用户名：');
+            if (username && username.trim()) {
+                if (confirm(`⚠️ 警告：此操作将清除用户 '${username}' 的所有数据，包括数据库记录和文件，无法恢复！\n\n确定要清除该用户的数据吗？`)) {
+                    fetch(`/admin/user-logs/api/clear-user-data/${encodeURIComponent(username.trim())}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ ' + data.message);
+                            if (data.details) {
+                                console.log('清理详情:', data.details);
+                            }
+                            location.reload();
+                        } else {
+                            alert('❌ ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('❌ 清除用户数据失败，请稍后重试');
+                    });
+                }
+            } else if (username !== null) {
+                alert('❌ 用户名不能为空');
+            }
+        }
+
+        // 自动刷新
+        setInterval(refreshLogs, 30000); // 每30秒刷新一次
+    </script>
+</body>
+</html>

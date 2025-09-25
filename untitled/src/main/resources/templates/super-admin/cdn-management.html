@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDN管理 - 超级管理员</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .status-badge {
+            font-size: 0.8em;
+            padding: 0.4em 0.8em;
+        }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            margin: 0 0.1rem;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        .stats-card .card-body {
+            padding: 1.5rem;
+        }
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-crown me-2"></i>
+                            超级管理员
+                        </h4>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/admin-management">
+                                <i class="fas fa-users-cog me-2"></i>
+                                管理员管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/user-management">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/video-management">
+                                <i class="fas fa-video me-2"></i>
+                                视频管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/comment-management">
+                                <i class="fas fa-comments me-2"></i>
+                                评论管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/super-admin/cdn-management">
+                                <i class="fas fa-cloud me-2"></i>
+                                CDN管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/super-admin/data-management">
+                                <i class="fas fa-database me-2"></i>
+                                数据管理
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-cloud me-2"></i>
+                        CDN管理
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="/super-admin/cdn/create" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            添加CDN配置
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 消息提示 -->
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- CDN统计 -->
+                <div class="row mb-4" th:if="${cdnStatistics}">
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-server fa-2x mb-2"></i>
+                                <div class="stats-number" th:text="${cdnStatistics.totalNodes ?: 0}">0</div>
+                                <div>总节点数</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <div class="stats-number" th:text="${cdnStatistics.activeNodes ?: 0}">0</div>
+                                <div>活跃节点</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-download fa-2x mb-2"></i>
+                                <div class="stats-number" th:text="${cdnStatistics.totalBandwidth ?: '0 GB'}">0 GB</div>
+                                <div>总带宽</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <div class="stats-number" th:text="${cdnStatistics.hitRate ?: '0%'}">0%</div>
+                                <div>命中率</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CDN配置列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            CDN配置列表
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>名称</th>
+                                        <th>域名</th>
+                                        <th>地区</th>
+                                        <th>状态</th>
+                                        <th>带宽</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="cdn : ${cdnConfigs}">
+                                        <td th:text="${cdn.id}"></td>
+                                        <td>
+                                            <strong th:text="${cdn.name}"></strong>
+                                        </td>
+                                        <td th:text="${cdn.domain}"></td>
+                                        <td th:text="${cdn.region}"></td>
+                                        <td>
+                                            <span th:switch="${cdn.status}">
+                                                <span th:case="'ACTIVE'" class="badge bg-success status-badge">
+                                                    <i class="fas fa-check me-1"></i>活跃
+                                                </span>
+                                                <span th:case="'INACTIVE'" class="badge bg-secondary status-badge">
+                                                    <i class="fas fa-pause me-1"></i>停用
+                                                </span>
+                                                <span th:case="'MAINTENANCE'" class="badge bg-warning status-badge">
+                                                    <i class="fas fa-wrench me-1"></i>维护中
+                                                </span>
+                                            </span>
+                                        </td>
+                                        <td th:text="${cdn.bandwidth}"></td>
+                                        <td th:text="${#temporals.format(cdn.createdAt, 'yyyy-MM-dd')}"></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <form th:action="@{/super-admin/cdn/{id}/toggle(id=${cdn.id})}" 
+                                                      method="post" style="display: inline;">
+                                                    <button type="submit" class="btn btn-outline-primary btn-action"
+                                                            th:title="${cdn.status.name() == 'ACTIVE'} ? '停用' : '启用'">
+                                                        <i th:class="${cdn.status.name() == 'ACTIVE'} ? 'fas fa-pause' : 'fas fa-play'"></i>
+                                                    </button>
+                                                </form>
+                                                <button class="btn btn-outline-warning btn-action"
+                                                        data-bs-toggle="modal" 
+                                                        th:data-bs-target="'#clearCacheModal' + ${cdn.id}"
+                                                        title="清理缓存">
+                                                    <i class="fas fa-broom"></i>
+                                                </button>
+                                                <button class="btn btn-outline-info btn-action"
+                                                        data-bs-toggle="modal" 
+                                                        th:data-bs-target="'#cdnDetailsModal' + ${cdn.id}"
+                                                        title="查看详情">
+                                                    <i class="fas fa-info"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 清理缓存模态框 -->
+    <div th:each="cdn : ${cdnConfigs}" th:id="'clearCacheModal' + ${cdn.id}" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">清理CDN缓存</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/super-admin/cdn/{id}/clear-cache(id=${cdn.id})}" method="post">
+                    <div class="modal-body">
+                        <p>清理CDN节点 <strong th:text="${cdn.name}"></strong> 的缓存</p>
+                        <div class="mb-3">
+                            <label for="path" class="form-label">指定路径（可选）</label>
+                            <input type="text" class="form-control" name="path" 
+                                   placeholder="留空清理所有缓存，或输入特定路径如 /videos/*">
+                            <div class="form-text">支持通配符，如 /videos/* 或 /images/thumbnails/*</div>
+                        </div>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>注意：</strong>清理缓存可能会暂时影响访问速度，请谨慎操作。
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-warning">确认清理</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CDN详情模态框 -->
+    <div th:each="cdn : ${cdnConfigs}" th:id="'cdnDetailsModal' + ${cdn.id}" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">CDN详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>基本信息</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>名称：</strong></td>
+                                    <td th:text="${cdn.name}"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>域名：</strong></td>
+                                    <td th:text="${cdn.domain}"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>地区：</strong></td>
+                                    <td th:text="${cdn.region}"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>状态：</strong></td>
+                                    <td>
+                                        <span th:switch="${cdn.status}">
+                                            <span th:case="'ACTIVE'" class="badge bg-success">活跃</span>
+                                            <span th:case="'INACTIVE'" class="badge bg-secondary">停用</span>
+                                            <span th:case="'MAINTENANCE'" class="badge bg-warning">维护中</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>性能信息</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>带宽：</strong></td>
+                                    <td th:text="${cdn.bandwidth}"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>创建时间：</strong></td>
+                                    <td th:text="${#temporals.format(cdn.createdAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>最后更新：</strong></td>
+                                    <td th:text="${#temporals.format(cdn.updatedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>配置信息</h6>
+                        <div class="alert alert-light">
+                            <pre th:text="${cdn.config ?: '暂无配置信息'}"></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

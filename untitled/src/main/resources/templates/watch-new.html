@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${video.title} + ' - 视频网站'">视频播放 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+
+    <!-- WebSocket库 -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+
+    <style>
+        /* 现代化全局样式 */
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 主容器样式 */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* 视频播放器区域 */
+        .video-section {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .video-player-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+        }
+
+        .video-player {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* 视频信息区域 */
+        .video-info-section {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .video-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        .video-meta {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .video-stats {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .video-stats span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* 用户信息区域 */
+        .uploader-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .uploader-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .uploader-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #667eea;
+            object-fit: cover;
+        }
+
+        .uploader-details h5 {
+            margin: 0;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .uploader-details p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-follow {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-follow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-follow.following {
+            background: #6c757d;
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-message {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-message:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 互动按钮区域 */
+        .interaction-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .interaction-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 50px;
+            background: white;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .interaction-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .interaction-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: #667eea;
+            color: white;
+        }
+
+        .interaction-btn.active:hover {
+            color: white;
+        }
+
+        /* 标签区域 */
+        .tags-section {
+            padding: 1.5rem 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .video-tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .video-tag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        /* 描述区域 */
+        .description-section {
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .description-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .description-content {
+            color: #666;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        /* 内容块区域 */
+        .content-blocks-section {
+            margin-bottom: 2rem;
+        }
+
+        .content-block {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #667eea;
+        }
+
+        .content-block-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .content-block-content {
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .content-block img,
+        .content-block video {
+            max-width: 100%;
+            border-radius: 15px;
+            margin: 1rem 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 相关视频区域 */
+        .related-videos-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .related-videos-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .related-video-card {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            margin-bottom: 1rem;
+        }
+
+        .related-video-card:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            color: inherit;
+        }
+
+        .related-video-thumbnail {
+            width: 160px;
+            height: 90px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .related-video-info h6 {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+            line-height: 1.3;
+        }
+
+        .related-video-meta {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 评论区域 */
+        .comments-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .comments-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem 0.5rem;
+            }
+            
+            .video-title {
+                font-size: 1.5rem;
+            }
+            
+            .video-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .uploader-section {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .interaction-section {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .related-video-card {
+                flex-direction: column;
+            }
+            
+            .related-video-thumbnail {
+                width: 100%;
+                height: 200px;
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .video-section,
+        .video-info-section,
+        .uploader-section,
+        .interaction-section,
+        .tags-section,
+        .description-section,
+        .content-block,
+        .related-videos-section,
+        .comments-section {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+<!-- 导航栏 -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-3" href="/upload">
+                    <i class="fas fa-upload me-1"></i>上传
+                </a>
+                <a class="nav-link me-3" href="/profile">
+                    <i class="fas fa-user me-1"></i>我的主页
+                </a>
+                <a class="nav-link me-3" href="/messages">
+                    <i class="fas fa-envelope me-1"></i>私信
+                </a>
+                <a class="nav-link me-3" href="/notifications">
+                    <i class="fas fa-bell me-1"></i>通知
+                </a>
+                <div sec:authorize="hasRole('ADMIN')" class="me-3">
+                    <a class="nav-link" href="/admin">
+                        <i class="fas fa-cog me-1"></i>管理
+                    </a>
+                </div>
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                </span>
+                <form th:action="@{/logout}" method="post" class="d-inline">
+                    <button class="btn btn-outline-light btn-sm" type="submit">退出</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 主要内容 -->
+<div class="main-container">
+    <div class="row">
+        <!-- 左侧主要内容 -->
+        <div class="col-lg-8">
+            <!-- 描述 -->
+            <div class="description-section" th:if="${video.description != null and !video.description.isEmpty()}">
+                <h3 class="description-title">
+                    <i class="fas fa-align-left"></i>
+                    视频描述
+                </h3>
+                <div class="description-content" th:utext="${video.description}">
+                    视频描述内容
+                </div>
+            </div>
+
+            <!-- 视频播放器 -->
+            <div class="video-section">
+                <div class="video-player-container">
+                    <video class="video-player" controls th:if="${video.url != null}">
+                        <source th:src="${video.url}" type="video/mp4">
+                        您的浏览器不支持视频播放。
+                    </video>
+                    <div th:if="${video.url == null}" class="d-flex align-items-center justify-content-center h-100 text-muted">
+                        <div class="text-center">
+                            <i class="fas fa-video fa-3x mb-3"></i>
+                            <p>视频暂时无法播放</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频信息 -->
+            <div class="video-info-section">
+                <h1 class="video-title" th:text="${video.title}">视频标题</h1>
+
+                <div class="video-meta">
+                    <div class="video-stats">
+                        <span><i class="fas fa-eye"></i> <span th:text="${video.viewCount}">0</span> 次观看</span>
+                        <span><i class="fas fa-calendar"></i> <span th:text="${#temporals.format(video.createdAt, 'yyyy-MM-dd')}">2024-01-01</span></span>
+                        <span th:if="${video.category}"><i class="fas fa-folder"></i> <span th:text="${video.category}">分类</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 上传者信息 -->
+            <div class="uploader-section">
+                <div class="uploader-info">
+                    <img th:src="${video.user.avatar != null ? video.user.avatar : '/images/default-avatar.png'}"
+                         alt="用户头像" class="uploader-avatar">
+                    <div class="uploader-details">
+                        <h5 th:text="${video.user.username}">用户名</h5>
+                        <p th:text="${video.user.bio != null ? video.user.bio : '这个用户很懒，什么都没有留下'}">用户简介</p>
+                    </div>
+                </div>
+
+                <div class="user-actions" sec:authorize="isAuthenticated()" th:if="${currentUser != null and currentUser.id != video.user.id}">
+                    <button class="btn-follow" th:class="${isFollowing ? 'btn-follow following' : 'btn-follow'}"
+                            onclick="toggleFollow(this)" th:data-user-id="${video.user.id}">
+                        <i th:class="${isFollowing ? 'fas fa-user-check me-2' : 'fas fa-user-plus me-2'}"></i>
+                        <span th:text="${isFollowing ? '已关注' : '关注'}">关注</span>
+                    </button>
+                    <a th:href="@{'/messages?user=' + ${video.user.id} + '&username=' + ${video.user.username}}"
+                       class="btn-message">
+                        <i class="fas fa-envelope me-2"></i>私信
+                    </a>
+                </div>
+            </div>
+
+            <!-- 互动按钮 -->
+            <div class="interaction-section">
+                <button class="interaction-btn" th:class="${isLiked ? 'interaction-btn active' : 'interaction-btn'}"
+                        onclick="toggleLike(this)" th:data-video-id="${video.id}" sec:authorize="isAuthenticated()">
+                    <i class="fas fa-thumbs-up"></i>
+                    <span class="like-count" th:text="${video.likeCount}">0</span>
+                </button>
+
+                <button class="interaction-btn" th:class="${isFavorited ? 'interaction-btn active' : 'interaction-btn'}"
+                        onclick="toggleFavorite(this)" th:data-video-id="${video.id}" sec:authorize="isAuthenticated()">
+                    <i class="fas fa-star"></i>
+                    <span th:text="${isFavorited ? '已收藏' : '收藏'}">收藏</span>
+                </button>
+
+                <button class="interaction-btn" onclick="shareVideo()">
+                    <i class="fas fa-share"></i>
+                    分享
+                </button>
+
+                <button class="interaction-btn" onclick="reportVideo()" th:data-video-id="${video.id}">
+                    <i class="fas fa-flag"></i>
+                    举报
+                </button>
+            </div>
+
+            <!-- 标签 -->
+            <div class="tags-section" th:if="${video.tagsString != null and !#strings.isEmpty(video.tagsString)}">
+                <div class="tags-container">
+                    <a th:each="tag : ${#strings.listSplit(video.tagsString, ',')}"
+                       th:href="@{'/search?q=' + ${tag}}"
+                       class="video-tag"
+                       th:text="${tag}">标签</a>
+                </div>
+            </div>
+
+            <!-- 内容块 -->
+            <div class="content-blocks-section" th:if="${video.content != null and !video.content.isEmpty()}">
+                <div th:each="contentBlock, iterStat : ${contentBlocks}" class="content-block">
+                    <div class="content-block-title" th:text="${contentBlock.type}">内容类型</div>
+                    <div class="content-block-content">
+                        <!-- 根据内容类型显示不同内容 -->
+                        <div th:if="${contentBlock.type == 'TEXT'}" th:text="${contentBlock.data}"></div>
+                        <div th:if="${contentBlock.type == 'RICH_TEXT'}" th:utext="${contentBlock.data}"></div>
+                        <div th:if="${contentBlock.type == 'HTML'}" th:utext="${contentBlock.data}"></div>
+                        <img th:if="${contentBlock.type == 'IMAGE'}" th:src="${contentBlock.data}" alt="内容图片" class="img-fluid">
+                        <video th:if="${contentBlock.type == 'VIDEO'}" controls class="w-100">
+                            <source th:src="${contentBlock.data}" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 评论区 -->
+            <div class="comments-section">
+                <h3 class="comments-title">
+                    <i class="fas fa-comments"></i>
+                    评论 (<span th:text="${comments != null ? comments.size() : 0}">0</span>)
+                </h3>
+
+                <!-- 评论输入框 -->
+                <div sec:authorize="isAuthenticated()" class="mb-4">
+                    <div class="d-flex gap-3">
+                        <img th:src="${currentUser != null and currentUser.avatar != null ? currentUser.avatar : '/images/default-avatar.png'}"
+                             alt="我的头像" class="uploader-avatar" style="width: 45px; height: 45px;">
+                        <div class="flex-grow-1">
+                            <textarea class="form-control" id="commentInput" rows="3"
+                                      placeholder="写下你的评论..."></textarea>
+                            <div class="d-flex justify-content-end mt-2">
+                                <button class="btn btn-primary" onclick="submitComment()">
+                                    <i class="fas fa-paper-plane me-2"></i>发表评论
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 评论列表 -->
+                <div id="commentsList">
+                    <div th:each="comment : ${comments}" class="comment-item mb-4">
+                        <div class="d-flex gap-3">
+                            <img th:src="${comment.user.avatar != null ? comment.user.avatar : '/images/default-avatar.png'}"
+                                 alt="用户头像" class="uploader-avatar" style="width: 45px; height: 45px;">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <strong th:text="${comment.user.username}">用户名</strong>
+                                    <small class="text-muted" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">时间</small>
+                                </div>
+                                <p class="mb-2" th:text="${comment.content}">评论内容</p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            onclick="likeComment(this)"
+                                            th:data-comment-id="${comment.id}">
+                                        <i class="fas fa-thumbs-up me-1"></i>
+                                        <span th:text="${comment.likeCount}">0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            onclick="replyToComment(this)"
+                                            th:data-comment-id="${comment.id}">
+                                        <i class="fas fa-reply me-1"></i>回复
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧相关视频 -->
+        <div class="col-lg-4">
+            <div class="related-videos-section">
+                <h3 class="related-videos-title">
+                    <i class="fas fa-list"></i>
+                    相关视频
+                </h3>
+
+                <div th:each="relatedVideo : ${relatedVideos}">
+                    <a th:href="@{/video/{id}(id=${relatedVideo.id})}" class="related-video-card">
+                        <img th:src="${relatedVideo.thumbnail != null ? relatedVideo.thumbnail : '/images/default-thumbnail.jpg'}"
+                             alt="视频缩略图" class="related-video-thumbnail">
+                        <div class="related-video-info">
+                            <h6 th:text="${relatedVideo.title}">相关视频标题</h6>
+                            <div class="related-video-meta">
+                                <div th:text="${relatedVideo.user.username}">上传者</div>
+                                <div><span th:text="${relatedVideo.viewCount}">0</span> 次观看</div>
+                                <div th:text="${#temporals.format(relatedVideo.createdAt, 'yyyy-MM-dd')}">上传时间</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/smart-pet.js"></script>
+
+<script>
+// 全局变量
+let currentVideoId = /*[[${video.id}]]*/ 0;
+let currentUserId = /*[[${currentUser != null ? currentUser.id : null}]]*/ null;
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initializeVideoPlayer();
+    initializeComments();
+    updateViewCount();
+});
+
+// 初始化视频播放器
+function initializeVideoPlayer() {
+    const videoPlayer = document.querySelector('.video-player');
+    if (videoPlayer) {
+        // 监听视频播放事件
+        videoPlayer.addEventListener('play', function() {
+            console.log('视频开始播放');
+        });
+
+        // 监听视频暂停事件
+        videoPlayer.addEventListener('pause', function() {
+            console.log('视频暂停播放');
+        });
+
+        // 监听视频结束事件
+        videoPlayer.addEventListener('ended', function() {
+            console.log('视频播放结束');
+            // 可以在这里推荐下一个视频
+        });
+    }
+}
+
+// 更新观看次数
+function updateViewCount() {
+    if (currentVideoId) {
+        fetch(`/api/videos/${currentVideoId}/view`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).catch(error => {
+            console.error('更新观看次数失败:', error);
+        });
+    }
+}
+
+// 关注/取消关注功能
+function toggleFollow(button) {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const userId = button.getAttribute('data-user-id');
+    const isFollowing = button.classList.contains('following');
+
+    // 禁用按钮防止重复点击
+    button.disabled = true;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>处理中...';
+
+    fetch(`/api/follow/user/${userId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('网络请求失败');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            if (data.isFollowing) {
+                button.innerHTML = '<i class="fas fa-user-check me-2"></i>已关注';
+                button.classList.add('following');
+            } else {
+                button.innerHTML = '<i class="fas fa-user-plus me-2"></i>关注';
+                button.classList.remove('following');
+            }
+        } else {
+            alert('操作失败：' + data.message);
+            button.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('关注操作失败:', error);
+        alert('操作失败，请稍后重试');
+        button.innerHTML = originalText;
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
+}
+
+// 点赞功能
+function toggleLike(button) {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const videoId = button.getAttribute('data-video-id');
+    const isLiked = button.classList.contains('active');
+
+    fetch(`/api/videos/${videoId}/like`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.likeCount !== undefined) {
+            const likeCountSpan = button.querySelector('.like-count');
+            likeCountSpan.textContent = data.likeCount;
+
+            if (data.liked) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('点赞操作失败:', error);
+        alert('操作失败，请稍后重试');
+    });
+}
+
+// 收藏功能
+function toggleFavorite(button) {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const videoId = button.getAttribute('data-video-id');
+    const isFavorited = button.classList.contains('active');
+
+    fetch(`/api/videos/${videoId}/favorite`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.favorited !== undefined) {
+            const span = button.querySelector('span');
+
+            if (data.favorited) {
+                button.classList.add('active');
+                span.textContent = '已收藏';
+            } else {
+                button.classList.remove('active');
+                span.textContent = '收藏';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('收藏操作失败:', error);
+        alert('操作失败，请稍后重试');
+    });
+}
+
+// 分享功能
+function shareVideo() {
+    const url = window.location.href;
+    const title = document.querySelector('.video-title').textContent;
+
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            url: url
+        }).catch(error => {
+            console.error('分享失败:', error);
+            copyToClipboard(url);
+        });
+    } else {
+        copyToClipboard(url);
+    }
+}
+
+// 复制到剪贴板
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('链接已复制到剪贴板');
+    }).catch(error => {
+        console.error('复制失败:', error);
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('链接已复制到剪贴板');
+    });
+}
+
+// 举报功能
+function reportVideo() {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const reason = prompt('请输入举报原因：');
+    if (reason && reason.trim()) {
+        fetch(`/api/videos/${currentVideoId}/report`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                reason: reason.trim()
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('举报已提交，我们会尽快处理');
+            } else {
+                alert('举报失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('举报失败:', error);
+            alert('举报失败，请稍后重试');
+        });
+    }
+}
+
+// 初始化评论功能
+function initializeComments() {
+    // 可以在这里添加评论相关的初始化代码
+}
+
+// 提交评论
+function submitComment() {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const commentInput = document.getElementById('commentInput');
+    const content = commentInput.value.trim();
+
+    if (!content) {
+        alert('请输入评论内容');
+        return;
+    }
+
+    fetch(`/api/videos/${currentVideoId}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 清空输入框
+            commentInput.value = '';
+            // 重新加载评论列表
+            location.reload();
+        } else {
+            alert('评论失败：' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('评论失败:', error);
+        alert('评论失败，请稍后重试');
+    });
+}
+
+// 点赞评论
+function likeComment(button) {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const commentId = button.getAttribute('data-comment-id');
+
+    fetch(`/api/comments/${commentId}/like`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.likeCount !== undefined) {
+            const likeCountSpan = button.querySelector('span');
+            likeCountSpan.textContent = data.likeCount;
+
+            if (data.liked) {
+                button.classList.add('btn-primary');
+                button.classList.remove('btn-outline-primary');
+            } else {
+                button.classList.add('btn-outline-primary');
+                button.classList.remove('btn-primary');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('点赞评论失败:', error);
+        alert('操作失败，请稍后重试');
+    });
+}
+
+// 回复评论
+function replyToComment(button) {
+    if (!currentUserId) {
+        alert('请先登录');
+        return;
+    }
+
+    const commentId = button.getAttribute('data-comment-id');
+    // 这里可以实现回复功能，比如显示回复输入框
+    alert('回复功能正在开发中...');
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', function(e) {
+    const videoPlayer = document.querySelector('.video-player');
+    if (!videoPlayer) return;
+
+    // 如果焦点在输入框中，不处理快捷键
+    if (document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    switch(e.key) {
+        case ' ':
+            e.preventDefault();
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+            } else {
+                videoPlayer.pause();
+            }
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+            break;
+        case 'ArrowRight':
+            e.preventDefault();
+            videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+            break;
+        case 'ArrowUp':
+            e.preventDefault();
+            videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
+            break;
+        case 'ArrowDown':
+            e.preventDefault();
+            videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+            break;
+        case 'f':
+        case 'F':
+            e.preventDefault();
+            if (videoPlayer.requestFullscreen) {
+                videoPlayer.requestFullscreen();
+            }
+            break;
+    }
+});
+</script>
+
+</body>
+</html>

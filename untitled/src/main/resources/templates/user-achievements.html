@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的成就 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/achievements.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .achievement-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .achievement-card.unlocked {
+            border-color: #28a745;
+        }
+
+        .achievement-card.locked {
+            opacity: 0.6;
+            border-color: #6c757d;
+        }
+
+        .achievement-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+
+        .progress-container {
+            margin-top: 0.5rem;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+
+        .leaderboard-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .rank-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); }
+        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #A0A0A0); }
+        .rank-3 { background: linear-gradient(45deg, #CD7F32, #B8860B); }
+        .rank-other { background: linear-gradient(45deg, #6c757d, #495057); }
+
+        .tab-content {
+            margin-top: 1rem;
+        }
+
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+
+        .achievement-icon.unlocked {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .achievement-icon.locked {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 0.5rem;
+        }
+
+        .navbar-dark {
+            background: rgba(0,0,0,0.1) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .rarity-common { border-left: 4px solid #6c757d; }
+        .rarity-rare { border-left: 4px solid #007bff; }
+        .rarity-epic { border-left: 4px solid #6f42c1; }
+        .rarity-legendary { border-left: 4px solid #fd7e14; }
+
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+        }
+
+        .progress-ring-circle {
+            stroke: #e9ecef;
+            stroke-width: 8;
+            fill: transparent;
+            r: 52;
+            cx: 60;
+            cy: 60;
+        }
+
+        .progress-ring-progress {
+            stroke: #007bff;
+            stroke-width: 8;
+            stroke-linecap: round;
+            fill: transparent;
+            r: 52;
+            cx: 60;
+            cy: 60;
+            stroke-dasharray: 326.73;
+            stroke-dashoffset: 326.73;
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link" href="/profile">
+                    <i class="fas fa-user me-1"></i>个人中心
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="text-white text-center mb-4">
+                    <i class="fas fa-trophy me-2"></i>我的成就
+                </h1>
+            </div>
+        </div>
+
+        <!-- 成就统计 -->
+        <div class="row mb-4" id="achievementStats">
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="unlockedCount">0</div>
+                    <div class="text-muted">已解锁</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalCount">0</div>
+                    <div class="text-muted">可获得成就</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="completionRate">0%</div>
+                    <div class="text-muted">完成率</div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stats-card">
+                    <div class="stats-number" id="totalPoints">0</div>
+                    <div class="text-muted">成就点数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 标签页导航 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <ul class="nav nav-tabs justify-content-center" id="achievementTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="achievements-tab" data-bs-toggle="tab" data-bs-target="#achievements" type="button" role="tab">
+                            <i class="fas fa-trophy me-1"></i>我的成就
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="progress-tab" data-bs-toggle="tab" data-bs-target="#progress" type="button" role="tab">
+                            <i class="fas fa-chart-line me-1"></i>成就进度
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="leaderboard-tab" data-bs-toggle="tab" data-bs-target="#leaderboard" type="button" role="tab">
+                            <i class="fas fa-crown me-1"></i>排行榜
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 标签页内容 -->
+        <div class="tab-content" id="achievementTabContent">
+            <!-- 成就列表标签页 -->
+            <div class="tab-pane fade show active" id="achievements" role="tabpanel">
+                <!-- 成就过滤器 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center">
+                            <div class="btn-group" role="group" aria-label="成就过滤器">
+                                <button type="button" class="btn btn-primary active" id="filterAll" onclick="filterAchievements('all')">
+                                    <i class="fas fa-list me-1"></i>全部成就
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="filterUnlocked" onclick="filterAchievements('unlocked')">
+                                    <i class="fas fa-trophy me-1"></i>已获得
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="filterLocked" onclick="filterAchievements('locked')">
+                                    <i class="fas fa-lock me-1"></i>未获得
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成就列表 -->
+                <div class="row" id="achievementsList">
+                    <!-- 成就将在这里动态加载 -->
+                </div>
+            </div>
+
+            <!-- 成就进度标签页 -->
+            <div class="tab-pane fade" id="progress" role="tabpanel">
+                <div class="row" id="progressList">
+                    <!-- 进度将在这里动态加载 -->
+                </div>
+            </div>
+
+            <!-- 排行榜标签页 -->
+            <div class="tab-pane fade" id="leaderboard" role="tabpanel">
+                <!-- 我的排名 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="leaderboard-card">
+                            <h5 class="mb-3"><i class="fas fa-user me-2"></i>我的排名</h5>
+                            <div id="myRanking">
+                                <!-- 我的排名信息将在这里显示 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 排行榜选项 -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-primary active" onclick="loadLeaderboard('overall')">
+                                    <i class="fas fa-trophy me-1"></i>总排行榜
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="loadLeaderboard('recent')">
+                                    <i class="fas fa-clock me-1"></i>最近解锁
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 排行榜列表 -->
+                <div class="row" id="leaderboardList">
+                    <!-- 排行榜将在这里动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成就解锁通知模板 -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="achievementToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">🎉 成就解锁！</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="achievementToastBody">
+                <!-- 通知内容 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/achievements.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let allAchievementsData = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAchievements();
+            loadMyRanking();
+
+            // 标签页切换事件
+            document.getElementById('progress-tab').addEventListener('click', function() {
+                loadAchievementProgress();
+            });
+
+            document.getElementById('leaderboard-tab').addEventListener('click', function() {
+                loadLeaderboard('overall');
+            });
+        });
+
+        // 加载成就数据
+        function loadAchievements(filter = 'all') {
+            fetch(`/api/achievement-data/all?filter=${filter}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (filter === 'all') {
+                        allAchievementsData = data.data;
+                        updateStats(data.data);
+                    }
+                    displayAchievements(data.data);
+                } else {
+                    console.error('加载成就失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载成就失败:', error);
+            });
+        }
+
+        // 过滤成就
+        function filterAchievements(filter) {
+            currentFilter = filter;
+
+            // 更新按钮状态
+            document.querySelectorAll('.btn-group .btn').forEach(btn => {
+                btn.classList.remove('btn-primary', 'active');
+                btn.classList.add('btn-outline-primary');
+            });
+
+            const activeBtn = document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-outline-primary');
+                activeBtn.classList.add('btn-primary', 'active');
+            }
+
+            // 重新加载成就数据
+            loadAchievements(filter);
+        }
+
+        // 显示成就列表
+        function displayAchievements(achievements) {
+            const container = document.getElementById('achievementsList');
+            container.innerHTML = '';
+
+            if (!achievements || achievements.length === 0) {
+                container.innerHTML = '<div class="col-12"><div class="text-center text-white"><p>暂无成就数据</p></div></div>';
+                return;
+            }
+
+            achievements.forEach(achievement => {
+                const achievementHtml = createAchievementCard(achievement);
+                container.innerHTML += achievementHtml;
+            });
+        }
+
+        // 创建成就卡片
+        function createAchievementCard(achievement) {
+            const isUnlocked = achievement.unlocked || false;
+            const statusClass = isUnlocked ? 'unlocked' : 'locked';
+            const iconClass = isUnlocked ? 'unlocked' : 'locked';
+
+            // 根据稀有度设置样式
+            let rarityClass = '';
+            let rarityBadgeClass = 'bg-secondary';
+            if (achievement.rarity) {
+                const rarity = achievement.rarity.toLowerCase();
+                if (rarity.includes('普通')) {
+                    rarityClass = 'rarity-common';
+                    rarityBadgeClass = 'bg-secondary';
+                } else if (rarity.includes('不常见')) {
+                    rarityClass = 'rarity-uncommon';
+                    rarityBadgeClass = 'bg-success';
+                } else if (rarity.includes('稀有')) {
+                    rarityClass = 'rarity-rare';
+                    rarityBadgeClass = 'bg-primary';
+                } else if (rarity.includes('史诗')) {
+                    rarityClass = 'rarity-epic';
+                    rarityBadgeClass = 'bg-warning';
+                } else if (rarity.includes('传奇')) {
+                    rarityClass = 'rarity-legendary';
+                    rarityBadgeClass = 'bg-danger';
+                }
+            }
+
+            let unlockedDate = '';
+            if (isUnlocked && achievement.achievedAt) {
+                const date = new Date(achievement.achievedAt);
+                unlockedDate = date.toLocaleDateString('zh-CN');
+            }
+
+            // 处理图标
+            let iconClass_final = achievement.icon || 'fa-trophy';
+            if (!iconClass_final.startsWith('fa-')) {
+                iconClass_final = 'fa-' + iconClass_final;
+            }
+
+            return `
+                <div class="col-lg-6 mb-3">
+                    <div class="achievement-card ${statusClass} ${rarityClass}">
+                        <div class="d-flex align-items-center">
+                            <div class="achievement-icon ${iconClass}">
+                                <i class="fas ${iconClass_final}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">${achievement.name}</h5>
+                                <p class="text-muted mb-1">${achievement.description}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge ${rarityBadgeClass}">${achievement.rarity || '普通'}</span>
+                                    <span class="text-muted small">
+                                        ${isUnlocked ? `解锁于 ${unlockedDate}` : '未解锁'}
+                                    </span>
+                                </div>
+                                ${achievement.points ? `<small class="text-primary">+${achievement.points} 点数</small>` : ''}
+                                ${achievement.category ? `<small class="text-info d-block">${achievement.category}</small>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 更新统计信息
+        function updateStats(achievements) {
+            const unlockedCount = achievements.filter(a => a.unlocked).length;
+            const totalCount = achievements.length;
+            const completionRate = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+            const totalPoints = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + (a.points || 0), 0);
+
+            document.getElementById('unlockedCount').textContent = unlockedCount;
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('completionRate').textContent = completionRate + '%';
+            document.getElementById('totalPoints').textContent = totalPoints;
+        }
+
+        // 加载成就进度
+        function loadAchievementProgress() {
+            fetch('/api/achievement-progress', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayAchievementProgress(data.data.achievements);
+                } else {
+                    console.error('加载成就进度失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载成就进度失败:', error);
+            });
+        }
+
+        // 显示成就进度
+        function displayAchievementProgress(achievements) {
+            const progressList = document.getElementById('progressList');
+            progressList.innerHTML = '';
+
+            achievements.forEach(achievement => {
+                const progressHtml = `
+                    <div class="col-md-6 mb-3">
+                        <div class="achievement-card">
+                            <div class="d-flex align-items-center">
+                                <div class="achievement-icon" style="background: ${getRarityColor(achievement.rarity)}">
+                                    ${achievement.icon}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">${achievement.name}</h6>
+                                    <p class="text-muted mb-2 small">${achievement.description}</p>
+                                    <div class="progress-container">
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: ${achievement.progress}%; background-color: ${getRarityColor(achievement.rarity)}"></div>
+                                        </div>
+                                        <div class="progress-text">
+                                            ${achievement.progressDescription || `${achievement.currentValue}/${achievement.targetValue}`}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-secondary">${achievement.points} 分</span>
+                                    ${achievement.unlocked ? '<i class="fas fa-check-circle text-success ms-2"></i>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                progressList.innerHTML += progressHtml;
+            });
+        }
+
+        // 加载排行榜
+        function loadLeaderboard(type) {
+            let url = '';
+            if (type === 'overall') {
+                url = '/api/achievement-leaderboard';
+            } else if (type === 'recent') {
+                url = '/api/achievement-leaderboard/recent';
+            }
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (type === 'overall') {
+                        displayLeaderboard(data.leaderboard);
+                    } else if (type === 'recent') {
+                        displayRecentAchievements(data.recentAchievements);
+                    }
+                } else {
+                    console.error('加载排行榜失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载排行榜失败:', error);
+            });
+        }
+
+        // 显示排行榜
+        function displayLeaderboard(leaderboard) {
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+
+            leaderboard.forEach(user => {
+                const rankClass = user.rank <= 3 ? `rank-${user.rank}` : 'rank-other';
+                const leaderboardHtml = `
+                    <div class="col-12 mb-3">
+                        <div class="leaderboard-card">
+                            <div class="d-flex align-items-center">
+                                <div class="rank-badge ${rankClass}">
+                                    ${user.rank}
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">${user.username}</h6>
+                                    <div class="text-muted small">
+                                        ${user.achievementCount} 个成就 • ${user.totalPoints} 积分 • ${user.completionRate.toFixed(1)}% 完成率
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-primary fw-bold">${user.totalPoints}</div>
+                                    <div class="text-muted small">积分</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                leaderboardList.innerHTML += leaderboardHtml;
+            });
+        }
+
+        // 显示最近解锁成就
+        function displayRecentAchievements(achievements) {
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+
+            achievements.forEach(achievement => {
+                const timeAgo = getTimeAgo(new Date(achievement.unlockedAt));
+                const achievementHtml = `
+                    <div class="col-12 mb-3">
+                        <div class="leaderboard-card">
+                            <div class="d-flex align-items-center">
+                                <div class="achievement-icon" style="background: #007bff">
+                                    ${achievement.achievementIcon}
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <h6 class="mb-1">${achievement.username}</h6>
+                                    <div class="text-muted small">
+                                        解锁了「${achievement.achievementName}」• ${timeAgo}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-primary fw-bold">+${achievement.achievementPoints}</div>
+                                    <div class="text-muted small">积分</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                leaderboardList.innerHTML += achievementHtml;
+            });
+        }
+
+        // 加载我的排名
+        function loadMyRanking() {
+            fetch('/api/achievement-ranking', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayMyRanking(data);
+                } else {
+                    console.error('加载我的排名失败:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('加载我的排名失败:', error);
+            });
+        }
+
+        // 显示我的排名
+        function displayMyRanking(ranking) {
+            const myRanking = document.getElementById('myRanking');
+            const rankClass = ranking.rank <= 3 ? `rank-${ranking.rank}` : 'rank-other';
+
+            myRanking.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="rank-badge ${rankClass}">
+                        ${ranking.rank}
+                    </div>
+                    <div class="ms-3 flex-grow-1">
+                        <h6 class="mb-1">${ranking.username}</h6>
+                        <div class="text-muted small">
+                            ${ranking.achievementCount} 个成就 • ${ranking.totalPoints} 积分 • ${ranking.completionRate.toFixed(1)}% 完成率
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="text-primary fw-bold">${ranking.totalPoints}</div>
+                        <div class="text-muted small">积分</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 获取稀有度颜色
+        function getRarityColor(rarity) {
+            const colors = {
+                'COMMON': '#6c757d',
+                'UNCOMMON': '#28a745',
+                'RARE': '#007bff',
+                'EPIC': '#6f42c1',
+                'LEGENDARY': '#fd7e14'
+            };
+            return colors[rarity] || '#6c757d';
+        }
+
+        // 获取时间差描述
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (days > 0) return `${days}天前`;
+            if (hours > 0) return `${hours}小时前`;
+            if (minutes > 0) return `${minutes}分钟前`;
+            return '刚刚';
+        }
+
+        // 显示成就解锁通知
+        function showAchievementNotification(achievement) {
+            const toastBody = document.getElementById('achievementToastBody');
+            toastBody.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <div class="achievement-icon me-3" style="background: ${getRarityColor(achievement.rarity)}; width: 40px; height: 40px; font-size: 1rem;">
+                        ${achievement.icon}
+                    </div>
+                    <div>
+                        <strong>${achievement.name}</strong><br>
+                        <small class="text-muted">+${achievement.points} 积分</small>
+                    </div>
+                </div>
+            `;
+
+            const toast = new bootstrap.Toast(document.getElementById('achievementToast'));
+            toast.show();
+        }
+
+    </script>
+</body>
+</html>

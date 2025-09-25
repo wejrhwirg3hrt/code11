@@ -1,0 +1,2793 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频网站 - 发现精彩视频</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+    <link href="/css/online-status.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 主容器居中 */
+        .main-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero-section {
+            background: #fff;
+            padding: 2rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-box {
+            background: #fff;
+            border-radius: 25px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+        }
+
+        .category-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .category-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .category-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .video-card .card-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-card .card-content {
+            flex: 1;
+        }
+
+        .video-card .card-footer-actions {
+            margin-top: auto;
+        }
+
+        .user-avatar-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            overflow: hidden;
+        }
+
+        .user-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .stats-badge {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin: 0 0.25rem;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .gradient-btn {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 50px;
+            height: 4px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        /* 导航栏优化样式 */
+        .nav-link-sm {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.6rem !important;
+            white-space: nowrap;
+        }
+
+        .btn-nav-sm {
+            font-size: 0.8rem !important;
+            padding: 0.3rem 0.6rem !important;
+        }
+
+        .navbar-text-sm {
+            font-size: 0.85rem !important;
+        }
+
+        .navbar-nav .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            transform: translateY(-1px);
+            color: #fff !important;
+        }
+
+        /* 导航栏三分布局 */
+        .navbar-left {
+            flex: 0 0 auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 1rem;
+            margin-right: 1rem;
+        }
+
+        .navbar-center {
+            flex: 0 0 auto;
+            padding: 0 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-right {
+            flex: 0 0 auto;
+            padding-left: 1rem;
+            margin-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 签到按钮特殊样式 */
+        #checkinBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        #checkinBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 1400px) {
+            .navbar-left, .navbar-center, .navbar-right {
+                padding: 0 0.5rem;
+                margin: 0 0.5rem;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .nav-link-sm {
+                font-size: 0.8rem !important;
+                padding: 0.3rem 0.4rem !important;
+            }
+
+            .btn-nav-sm {
+                font-size: 0.75rem !important;
+                padding: 0.25rem 0.5rem !important;
+            }
+
+            .navbar-left, .navbar-center, .navbar-right {
+                border: none;
+                padding: 0 0.25rem;
+                margin: 0 0.25rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .navbar-left, .navbar-center, .navbar-right {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .announcement-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+
+        .announcement-modern .alert-heading {
+            color: white;
+        }
+
+        .btn-close-white {
+            filter: invert(1);
+        }
+
+        /* 导航栏搜索样式 */
+        .navbar-search {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .navbar-search-input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 25px 0 0 25px;
+        }
+
+        .navbar-search-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .navbar-search-input:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.3);
+            color: white;
+            box-shadow: none;
+        }
+
+        .navbar-search .btn {
+            border-radius: 0 25px 25px 0;
+            border-left: none;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-search {
+                max-width: 200px;
+            }
+        }
+
+        /* 现代化页脚样式 */
+        .footer-modern {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 4rem 0 2rem;
+            margin-top: 5rem;
+        }
+
+        .footer-brand h5 {
+            color: white;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .footer-description {
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .footer-title {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 0.5rem;
+        }
+
+        .footer-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 2px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+
+        .footer-section {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 0 1rem;
+            text-align: center;
+        }
+
+        .footer-links {
+            flex: 1;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.75rem;
+            text-align: center;
+        }
+
+        .footer-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            padding: 0.25rem 0;
+        }
+
+        .footer-links a:hover {
+            color: #f093fb;
+            transform: translateY(-2px);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .stat-item i {
+            font-size: 1.2rem;
+        }
+
+        .stat-number {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .footer-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 3rem;
+            padding-top: 2rem;
+        }
+
+        .copyright-text {
+            color: rgba(255,255,255,0.8);
+            margin: 0;
+        }
+
+        .footer-badges .badge {
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+        }
+
+        /* 最近成就样式 */
+        .recent-achievements-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .achievement-item-recent {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .achievement-item-recent:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .achievement-item-recent.unlocked {
+            border-left-color: #28a745;
+        }
+
+        .achievement-icon-recent {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 1rem;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .achievement-info-recent {
+            flex-grow: 1;
+        }
+
+        .achievement-name-recent {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            color: #333;
+        }
+
+        .achievement-desc-recent {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .achievement-status-recent {
+            font-size: 0.75rem;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .footer-modern {
+                padding: 3rem 0 1.5rem;
+            }
+
+            .social-links {
+                justify-content: center;
+                margin-top: 1rem;
+            }
+
+            .footer-stats {
+                flex-direction: row;
+                justify-content: space-around;
+                flex-wrap: wrap;
+            }
+
+            .stat-item {
+                flex-direction: column;
+                text-align: center;
+                gap: 4px;
+            }
+        }
+
+        /* 紧凑版Hero Section */
+        .hero-section-compact {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+
+        .hero-title-compact {
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .hero-subtitle-compact {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .hero-actions-compact .btn {
+            border-radius: 25px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 500;
+        }
+
+        .search-box-compact {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input-compact {
+            background: transparent;
+            border: none;
+            color: white;
+            border-radius: 25px;
+        }
+
+        .search-input-compact::placeholder {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .search-input-compact:focus {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            box-shadow: none;
+        }
+
+        .search-btn-compact {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+        }
+
+        .search-btn-compact:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        /* 视频导航样式 */
+        .video-nav-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .video-nav-container {
+            color: white;
+        }
+
+        .video-nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sort-dropdown select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 8px;
+            padding: 8px 15px;
+        }
+
+        .sort-dropdown select option {
+            background: #333;
+            color: white;
+        }
+
+        .category-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .category-tag {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .category-tag:hover,
+        .category-tag.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* 视频网格样式 */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 0;
+        }
+
+        .video-item {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+
+        .video-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .video-thumbnail-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-thumbnail-modern {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .video-item:hover .video-thumbnail-modern {
+            transform: scale(1.05);
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .video-views {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-item:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .video-info-modern {
+            padding: 15px;
+        }
+
+        .video-title-modern {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .video-title-modern a {
+            color: #333;
+            text-decoration: none;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-title-modern a:hover {
+            color: #007bff;
+        }
+
+        .video-author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .author-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .author-name {
+            font-size: 0.85rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .video-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .video-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .video-tag {
+            background: #f8f9fa;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            border: 1px solid #e9ecef;
+        }
+
+        /* 搜索框样式 */
+        .search-box-compact {
+            margin-top: 20px;
+        }
+
+        .search-input-compact {
+            border-radius: 25px;
+            padding: 12px 20px;
+            border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.98);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .search-input-compact::placeholder {
+            color: #555;
+            font-weight: 600;
+            opacity: 1;
+            font-size: 15px;
+        }
+
+        .search-input-compact:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background: white;
+            color: #333;
+        }
+
+        .search-input-compact:focus::placeholder {
+            color: #999;
+            opacity: 0.8;
+        }
+
+        .search-btn-compact {
+            border-radius: 25px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn-compact:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+
+
+        /* 搜索建议下拉框样式 */
+        .search-input-container {
+            position: relative;
+        }
+
+        .search-suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-suggestion-item:hover,
+        .search-suggestion-item.active {
+            background-color: #f8f9fa;
+        }
+
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-suggestion-icon {
+            margin-right: 10px;
+            color: #6c757d;
+            width: 16px;
+        }
+
+        .search-suggestion-text {
+            flex-grow: 1;
+            color: #333;
+        }
+
+        .search-suggestion-type {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+
+        /* 推荐区域样式 */
+        .recommendation-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .recommendation-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .video-thumbnail-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .author-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .default-avatar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .author-name {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .video-author {
+            margin-bottom: 8px;
+        }
+
+        .video-time {
+            margin-top: 8px;
+        }
+
+        .recommendation-card:hover .video-thumbnail {
+            transform: scale(1.05);
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .recommendation-card:hover .video-overlay {
+            opacity: 1;
+        }
+
+        .play-btn {
+            background: rgba(255,255,255,0.9);
+            color: #667eea;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .play-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .recommendation-info {
+            padding: 1rem;
+        }
+
+        .recommendation-info .video-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #333;
+        }
+
+        .video-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .video-meta span {
+            display: flex;
+            align-items: center;
+        }
+
+        /* 现代化分页样式 */
+        .pagination-modern-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 40px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid #f0f0f0;
+        }
+
+        .pagination-modern {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .pagination-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .pagination-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .pagination-btn.disabled {
+            background: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .pagination-numbers {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pagination-number {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            color: #495057;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+
+        .pagination-number:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-1px);
+        }
+
+        .pagination-number.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .pagination-ellipsis {
+            padding: 0 8px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .pagination-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .pagination-stats {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .stats-text strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .pagination-jump {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .jump-input {
+            width: 60px;
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .jump-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        .jump-btn {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .jump-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .hero-section-compact {
+                padding: 1.5rem 0;
+            }
+
+            .hero-title-compact {
+                font-size: 1.5rem;
+            }
+
+            .hero-subtitle-compact {
+                font-size: 1rem;
+            }
+
+            .search-box-compact {
+                margin-top: 1rem;
+            }
+
+            .video-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 15px;
+            }
+
+            .video-nav-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+
+            .category-tags {
+                justify-content: center;
+            }
+        }
+
+        /* 现代化分页样式 - 紧凑版本 */
+        .pagination-container {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            margin: 1.5rem auto 1rem auto;
+            max-width: 100%;
+        }
+
+        .pagination-modern {
+            gap: 8px;
+        }
+
+        .pagination-modern .page-link {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #6c757d;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            min-width: 44px;
+            text-align: center;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .pagination-modern .page-link:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pagination-modern .page-item.active .page-link {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .pagination-modern .page-item.disabled .page-link {
+            background: #f8f9fa;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .pagination-modern .page-prev,
+        .pagination-modern .page-next {
+            padding: 12px 20px;
+            font-weight: 600;
+        }
+
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .pagination-info strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .page-size-selector .form-select {
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            padding: 8px 12px;
+            font-size: 14px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .page-size-selector .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background-color: white;
+        }
+
+        /* 响应式分页 */
+        @media (max-width: 768px) {
+            .pagination-container .d-flex {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .pagination-modern .page-link {
+                padding: 10px 12px;
+                min-width: 40px;
+                font-size: 14px;
+            }
+
+            .pagination-modern {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .pagination-modern .page-link {
+                padding: 8px 10px;
+                min-width: 36px;
+                font-size: 13px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+
+
+
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center w-100">
+            <!-- 登录状态下显示 -->
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center w-100 justify-content-between"
+                 data-current-user-id="${#authentication.principal.id}"
+                 data-current-username="${#authentication.principal.username}">
+                <!-- 左侧功能区 -->
+                <div class="d-flex flex-row align-items-center navbar-left">
+                    <!-- 在线用户统计 -->
+                    <div class="online-stats me-3">
+                        <i class="fas fa-circle online-icon"></i>
+                        <span class="online-count">0</span> 在线
+                    </div>
+
+                    <a class="nav-link me-2 nav-link-sm" href="/chat">
+                        <i class="fas fa-comments me-1"></i>聊天
+                        <span class="badge bg-danger ms-1" id="chatUnreadBadge" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/upload">
+                        <i class="fas fa-upload me-1"></i>上传
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/music">
+                        <i class="fas fa-music me-1"></i>音乐
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/posts">
+                        <i class="fas fa-heart me-1"></i>动态
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/private-album">
+                        <i class="fas fa-lock me-1"></i>私密相册
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/voice-clone">
+                        <i class="fas fa-microphone me-1"></i>语音克隆
+                    </a>
+                </div>
+
+                <!-- 中间签到区 -->
+                <div class="navbar-center">
+                    <button class="btn btn-outline-light btn-sm btn-nav-sm" id="checkinBtn" onclick="dailyCheckin()">
+                        <i class="fas fa-calendar-check me-1"></i>签到
+                    </button>
+                </div>
+
+                <!-- 右侧用户区 -->
+                <div class="d-flex flex-row align-items-center navbar-right">
+                    <a class="nav-link me-2 nav-link-sm notification-bell" href="/notifications">
+                        <i class="fas fa-bell me-1"></i>通知
+                        <span class="badge bg-danger notification-badge" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/profile" id="userProfileLink">
+                        <i class="fas fa-user me-1"></i>我的主页
+                        <span id="userLevelBadge" class="badge bg-primary ms-1" style="display: none;"></span>
+                    </a>
+                    <span class="navbar-text me-2 navbar-text-sm">
+                        <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button class="btn btn-outline-light btn-sm btn-nav-sm" type="submit">退出</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 未登录状态下显示 -->
+            <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-2 nav-link-sm" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>登录
+                </a>
+                <a class="nav-link nav-link-sm" href="/register">
+                    <i class="fas fa-user-plus me-1"></i>注册
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section - 紧凑版 -->
+<section class="hero-section-compact">
+    <div class="container">
+        <div class="row align-items-center py-4">
+            <div class="col-lg-8">
+                <div class="hero-content-compact">
+                    <h2 class="hero-title-compact mb-2">发现精彩视频</h2>
+                    <p class="hero-subtitle-compact mb-3">探索无限可能，分享美好时光</p>
+                    <div class="hero-actions-compact">
+                        <a href="/upload" class="btn btn-primary me-2" sec:authorize="isAuthenticated()">
+                            <i class="fas fa-upload me-1"></i>上传视频
+                        </a>
+                        <a href="/register" class="btn btn-outline-primary" sec:authorize="!isAuthenticated()">
+                            <i class="fas fa-user-plus me-1"></i>立即注册
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="col-lg-4">
+                <div class="search-box-compact">
+                    <form action="/search" method="get" class="d-flex position-relative">
+                        <div class="search-input-container position-relative flex-grow-1">
+                            <input type="text"
+                                   id="searchInput"
+                                   name="q"
+                                   class="form-control search-input-compact"
+                                   placeholder="搜索视频..."
+                                   th:value="${param.q}"
+                                   autocomplete="off">
+                            <!-- 搜索建议下拉框 -->
+                            <div id="searchSuggestions" class="search-suggestions-dropdown"></div>
+                        </div>
+                        <button type="submit" class="btn search-btn-compact ms-2">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<div class="main-container mt-5">
+    <!-- 个性化推荐区域 -->
+    <div th:if="${hasRecommendations}" class="container mb-5">
+        <div class="recommendation-section">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h3 class="section-title">
+                    <i class="fas fa-magic me-2"></i>
+                    <span th:text="${isPersonalized ? '为您推荐' : '热门推荐'}">为您推荐</span>
+                </h3>
+                <small class="text-muted" th:if="${isPersonalized}">
+                    基于您的观看历史和偏好
+                </small>
+            </div>
+            <div class="row g-4">
+                <div th:each="video : ${recommendedVideos}" class="col-lg-2 col-md-4 col-sm-6">
+                    <div class="recommendation-card">
+                        <div class="video-thumbnail-container">
+                            <img th:src="${video.thumbnail != null and !#strings.isEmpty(video.thumbnail) ? video.thumbnail : (video.thumbnailPath != null and !#strings.isEmpty(video.thumbnailPath) ? video.thumbnailPath : '/images/default-thumbnail.jpg')}"
+                                 class="video-thumbnail"
+                                 th:alt="${video.title}"
+                                 onerror="this.src='/images/default-thumbnail.jpg'">
+                            <div class="video-overlay">
+                                <a th:href="@{/video/{id}(id=${video.id})}"
+                                   class="play-btn">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                            </div>
+                            <!-- 视频时长 -->
+                            <div class="video-duration" th:if="${video.duration != null and !#strings.isEmpty(video.duration)}">
+                                <span th:text="${video.duration}">00:00</span>
+                            </div>
+                        </div>
+                        <div class="recommendation-info">
+                            <h6 class="video-title" th:text="${#strings.abbreviate(video.title, 50)}">视频标题</h6>
+                            <!-- 用户信息 -->
+                            <div class="video-author" th:if="${video.user != null}">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="author-avatar me-2" th:if="${video.user.avatar != null and !#strings.isEmpty(video.user.avatar)}">
+                                        <img th:src="${video.user.avatar}"
+                                             th:alt="${video.user.username}"
+                                             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;default-avatar&quot;>👤</div>'">
+                                    </div>
+                                    <div class="author-avatar me-2 default-avatar" th:unless="${video.user.avatar != null and !#strings.isEmpty(video.user.avatar)}">👤</div>
+                                    <span class="author-name" th:text="${video.user.nickname != null and !#strings.isEmpty(video.user.nickname) ? video.user.nickname : video.user.username}">用户名</span>
+                                </div>
+                            </div>
+                            <div class="video-meta">
+                                <span class="views">
+                                    <i class="fas fa-eye me-1"></i>
+                                    <span th:text="${#numbers.formatInteger(video.viewCount != null ? video.viewCount : 0, 0, 'COMMA')}">0</span>
+                                </span>
+                                <span class="likes">
+                                    <i class="fas fa-heart me-1"></i>
+                                    <span th:text="${#numbers.formatInteger(video.likeCount != null ? video.likeCount : 0, 0, 'COMMA')}">0</span>
+                                </span>
+                            </div>
+                            <!-- 发布时间 -->
+                            <div class="video-time" th:if="${video.createdAt != null}">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span th:text="${#temporals.format(video.createdAt, 'MM-dd HH:mm')}">时间</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 公告区域 -->
+    <div th:if="${announcements != null and !#lists.isEmpty(announcements)}" class="mb-5">
+        <div th:each="announcement : ${announcements}" class="alert announcement-modern alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-bullhorn me-3 mt-1" style="font-size: 1.2rem;"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-2 fw-bold" th:text="${announcement.title}">公告标题</h6>
+                    <div th:utext="${announcement.content}" class="mb-2">公告内容</div>
+                    <small class="opacity-75">
+                        <i class="fas fa-clock me-1"></i>
+                        发布时间：<span th:text="${#temporals.format(announcement.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
+                    </small>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="关闭"></button>
+        </div>
+    </div>
+
+
+
+    <!-- 视频分类导航 -->
+    <section class="video-nav-section mb-4">
+        <div class="video-nav-container">
+            <div class="video-nav-header">
+                <h2 class="section-title">
+                    <i class="fas fa-fire me-2 text-danger"></i>最新视频
+                </h2>
+                <div class="sort-dropdown">
+                    <select class="form-select" id="sortSelect" onchange="changeSortOrder()">
+                        <option value="latest">最新的</option>
+                        <option value="popular">最热门</option>
+                        <option value="views">观看最多</option>
+                        <option value="likes">点赞最多</option>
+                    </select>
+                </div>
+            </div>
+
+
+        </div>
+    </section>
+
+    <!-- 视频网格 -->
+    <section class="video-grid-section mb-5">
+        <div class="video-grid">
+            <div th:each="video : ${videos}" class="video-item">
+                <div class="video-card-modern">
+                    <!-- 视频缩略图 -->
+                    <div class="video-thumbnail-container">
+                        <a th:href="@{/video/{id}(id=${video.id})}">
+                            <img th:src="${video.thumbnail != null ? video.thumbnail : 'https://via.placeholder.com/320x180'}"
+                                 class="video-thumbnail-modern" alt="视频缩略图">
+                        </a>
+
+                        <!-- 视频时长 -->
+                        <div class="video-duration">
+                            <span th:text="${video.duration != null ? video.duration : '00:00'}">00:00</span>
+                        </div>
+
+                        <!-- 观看次数 -->
+                        <div class="video-views">
+                            <i class="fas fa-eye"></i>
+                            <span th:text="${video.viewCount != null ? video.viewCount : 0}">0</span>
+                        </div>
+
+                        <!-- 播放按钮 -->
+                        <div class="play-overlay">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+
+                    <!-- 视频信息 -->
+                    <div class="video-info-modern">
+                        <h3 class="video-title-modern">
+                            <a th:href="@{/video/{id}(id=${video.id})}" th:text="${video.title}">视频标题</a>
+                        </h3>
+
+                        <!-- 用户信息 -->
+                        <div class="video-author" th:attr="data-user-id=${video.user != null ? video.user.id : null}">
+                            <div class="author-avatar user-avatar-container">
+                                <img th:if="${video.user != null and video.user.avatar != null and !#strings.isEmpty(video.user.avatar)}"
+                                     th:src="${video.user.avatar}"
+                                     alt="用户头像"
+                                     onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=&quot;default-avatar&quot;>👤</div>'">
+                                <div th:unless="${video.user != null and video.user.avatar != null and !#strings.isEmpty(video.user.avatar)}"
+                                     class="default-avatar">👤</div>
+                                <!-- 在线状态指示器 -->
+                                <div th:if="${video.user != null}" class="online-indicator offline"></div>
+                            </div>
+                            <div class="author-info">
+                                <span class="author-name" th:text="${video.user != null ? video.user.username : '匿名用户'}">用户名</span>
+                                <div th:if="${video.user != null}" class="online-status offline">离线</div>
+                            </div>
+                        </div>
+
+                        <!-- 视频统计 -->
+                        <div class="video-stats">
+                            <span class="stat-item">
+                                <i class="fas fa-heart"></i>
+                                <span th:text="${video.likeCount != null ? video.likeCount : 0}">0</span>
+                            </span>
+                            <span class="stat-item">
+                                <i class="fas fa-calendar"></i>
+                                <span th:text="${#temporals.format(video.createdAt, 'MM-dd')}">日期</span>
+                            </span>
+                        </div>
+
+                        <!-- 视频标签 -->
+                        <div th:if="${video.tagsString}" class="video-tags">
+                            <span th:each="tag : ${#strings.listSplit(video.tagsString, ',')}"
+                                  class="video-tag" th:text="${tag}">标签</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 现代化分页导航 -->
+    <div th:if="${!#lists.isEmpty(videos)}" class="pagination-container mt-5 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <!-- 分页信息 -->
+            <div class="pagination-info">
+                <span class="text-muted">
+                    显示第 <strong th:text="${currentPage * size + 1}">1</strong> -
+                    <strong th:text="${currentPage * size + #lists.size(videos)}">12</strong> 条，
+                    共 <strong th:text="${totalResults}">0</strong> 条结果
+                </span>
+            </div>
+
+            <!-- 分页导航 -->
+            <nav aria-label="主页分页">
+                <ul class="pagination pagination-modern mb-0">
+                    <!-- 上一页 -->
+                    <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                        <a class="page-link page-prev"
+                           th:href="${currentPage > 0 ? '?page=' + (currentPage - 1) + '&size=' + size + (currentCategory != null ? '&category=' + currentCategory : '') + (currentSort != null ? '&sort=' + currentSort : '') : '#'}"
+                           aria-label="上一页">
+                            <i class="fas fa-chevron-left"></i>
+                            <span class="d-none d-sm-inline ms-1">上一页</span>
+                        </a>
+                    </li>
+
+                    <!-- 页码 -->
+                    <th:block th:each="pageNum : ${#numbers.sequence(startPage, endPage)}">
+                        <li class="page-item" th:classappend="${pageNum == currentPage ? 'active' : ''}">
+                            <a class="page-link"
+                               th:href="'?page=' + ${pageNum} + '&size=' + ${size} + ${currentCategory != null ? '&category=' + currentCategory : ''} + ${currentSort != null ? '&sort=' + currentSort : ''}"
+                               th:text="${pageNum + 1}">1</a>
+                        </li>
+                    </th:block>
+
+                    <!-- 省略号 -->
+                    <li class="page-item disabled" th:if="${endPage < totalPages - 1}">
+                        <span class="page-link">...</span>
+                    </li>
+
+                    <!-- 最后一页 -->
+                    <li class="page-item" th:if="${endPage < totalPages - 1}">
+                        <a class="page-link"
+                           th:href="'?page=' + ${totalPages - 1} + '&size=' + ${size} + ${currentCategory != null ? '&category=' + currentCategory : ''} + ${currentSort != null ? '&sort=' + currentSort : ''}"
+                           th:text="${totalPages}">最后</a>
+                    </li>
+
+                    <!-- 下一页 -->
+                    <li class="page-item" th:classappend="${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+                        <a class="page-link page-next"
+                           th:href="${currentPage < totalPages - 1 ? '?page=' + (currentPage + 1) + '&size=' + size + (currentCategory != null ? '&category=' + currentCategory : '') + (currentSort != null ? '&sort=' + currentSort : '') : '#'}"
+                           aria-label="下一页">
+                            <span class="d-none d-sm-inline me-1">下一页</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- 每页显示数量选择 -->
+            <div class="page-size-selector">
+                <select class="form-select form-select-sm" onchange="changePageSizeHome(this.value)" style="width: auto;">
+                    <option th:value="12" th:selected="${size == 12}">12条/页</option>
+                    <option th:value="24" th:selected="${size == 24}">24条/页</option>
+                    <option th:value="48" th:selected="${size == 48}">48条/页</option>
+                    <option th:value="96" th:selected="${size == 96}">96条/页</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 浮动操作按钮 -->
+<div class="floating-action" sec:authorize="isAuthenticated()">
+    <a href="/upload" class="btn gradient-btn rounded-circle" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-plus fa-lg"></i>
+    </a>
+</div>
+
+<!-- 页脚 -->
+<footer class="footer-modern">
+    <div class="container">
+        <div class="row g-4 align-items-start">
+            <!-- 品牌信息 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-brand">
+                    <h5 class="fw-bold mb-3">
+                        <i class="fas fa-video me-2 text-primary"></i>视频网站
+                    </h5>
+                    <p class="footer-description">
+                        发现精彩视频，分享美好时光。在这里找到你喜欢的内容，与世界分享你的创意。
+                    </p>
+                    <div class="social-links">
+                        <a href="https://github.com" target="_blank" class="social-link" title="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="https://www.bilibili.com" target="_blank" class="social-link" title="哔哩哔哩"><i class="fas fa-tv"></i></a>
+                        <a href="https://y.qq.com" target="_blank" class="social-link" title="QQ音乐"><i class="fas fa-music"></i></a>
+                        <a href="https://www.xiaohongshu.com" target="_blank" class="social-link" title="小红书"><i class="fas fa-book-open"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快速链接 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-section">
+                    <h6 class="footer-title">快速链接</h6>
+                    <ul class="footer-links">
+                        <li><a href="/"><i class="fas fa-home me-2"></i>首页</a></li>
+                        <li><a href="/search"><i class="fas fa-search me-2"></i>搜索</a></li>
+                        <li><a href="/upload"><i class="fas fa-upload me-2"></i>上传</a></li>
+                        <li><a href="/profile"><i class="fas fa-user me-2"></i>个人中心</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 视频分类 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-section">
+                    <h6 class="footer-title">热门分类</h6>
+                    <ul class="footer-links" id="dynamic-categories">
+                        <!-- 动态加载的分类将在这里显示 -->
+                        <li><a href="/search?category=tech"><i class="fas fa-laptop-code me-2"></i>科技</a></li>
+                        <li><a href="/search?category=entertainment"><i class="fas fa-smile me-2"></i>娱乐</a></li>
+                        <li><a href="/search?category=education"><i class="fas fa-graduation-cap me-2"></i>教育</a></li>
+                        <li><a href="/search?category=music"><i class="fas fa-music me-2"></i>音乐</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 帮助支持 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-section">
+                    <h6 class="footer-title">帮助支持</h6>
+                    <ul class="footer-links">
+                        <li><a href="/help"><i class="fas fa-question-circle me-2"></i>帮助中心</a></li>
+                        <li><a href="#" onclick="showPrivacyPolicy()"><i class="fas fa-shield-alt me-2"></i>隐私政策</a></li>
+                        <li><a href="#" onclick="showTermsOfService()"><i class="fas fa-file-contract me-2"></i>服务条款</a></li>
+                        <li><a href="#" onclick="showContactInfo()"><i class="fas fa-envelope me-2"></i>联系我们</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 关于我们 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-section">
+                    <h6 class="footer-title">关于我们</h6>
+                    <ul class="footer-links">
+                        <li><a href="/about"><i class="fas fa-info-circle me-2"></i>公司介绍</a></li>
+                        <li><a href="/team"><i class="fas fa-users me-2"></i>团队介绍</a></li>
+                        <li><a href="/careers"><i class="fas fa-briefcase me-2"></i>招聘信息</a></li>
+                        <li><a href="/news"><i class="fas fa-newspaper me-2"></i>新闻动态</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="col-lg-2 col-md-6">
+                <div class="footer-section">
+                    <h6 class="footer-title">网站统计</h6>
+                    <div class="footer-stats" id="dynamic-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-video text-primary"></i>
+                            <div>
+                                <div class="stat-number" id="stat-videos">1,234</div>
+                                <div class="stat-label">视频总数</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-users text-success"></i>
+                            <div>
+                                <div class="stat-number" id="stat-users">5,678</div>
+                                <div class="stat-label">注册用户</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-eye text-info"></i>
+                            <div>
+                                <div class="stat-number" id="stat-views">98.7K</div>
+                                <div class="stat-label">总观看量</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部版权 -->
+        <div class="footer-bottom">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="copyright-text">
+                        &copy; 2026 视频网站. 保留所有权利.
+                        <span class="text-primary">Made with 落雨❤️</span>
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="footer-badges">
+                        <span class="badge bg-success me-2">
+                            <i class="fas fa-shield-alt me-1"></i>安全认证
+                        </span>
+                        <span class="badge bg-primary">
+                            <i class="fas fa-award me-1"></i>优质服务
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- 隐私政策模态框 -->
+<div class="modal fade" id="privacyPolicyModal" tabindex="-1" aria-labelledby="privacyPolicyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="privacyPolicyModalLabel">
+                    <i class="fas fa-shield-alt me-2"></i>隐私政策
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="privacy-content">
+                    <h6>1. 信息收集</h6>
+                    <p>我们收集您在使用我们服务时提供的信息，包括但不限于：</p>
+                    <ul>
+                        <li>注册信息：用户名、邮箱地址、密码</li>
+                        <li>个人资料：头像、个人简介、兴趣爱好</li>
+                        <li>使用数据：观看历史、搜索记录、互动行为</li>
+                        <li>设备信息：IP地址、浏览器类型、操作系统</li>
+                    </ul>
+
+                    <h6>2. 信息使用</h6>
+                    <p>我们使用收集的信息用于：</p>
+                    <ul>
+                        <li>提供和改进我们的服务</li>
+                        <li>个性化内容推荐</li>
+                        <li>用户身份验证和账户安全</li>
+                        <li>客户支持和技术维护</li>
+                        <li>法律合规和安全保护</li>
+                    </ul>
+
+                    <h6>3. 信息共享</h6>
+                    <p>我们不会向第三方出售、交易或转让您的个人信息，除非：</p>
+                    <ul>
+                        <li>获得您的明确同意</li>
+                        <li>法律法规要求</li>
+                        <li>保护我们的权利和安全</li>
+                        <li>与可信的服务提供商合作（在严格的保密协议下）</li>
+                    </ul>
+
+                    <h6>4. 数据安全</h6>
+                    <p>我们采用行业标准的安全措施保护您的信息：</p>
+                    <ul>
+                        <li>数据加密传输和存储</li>
+                        <li>访问控制和权限管理</li>
+                        <li>定期安全审计和漏洞修复</li>
+                        <li>员工隐私培训和保密协议</li>
+                    </ul>
+
+                    <h6>5. 您的权利</h6>
+                    <p>您有权：</p>
+                    <ul>
+                        <li>访问和更新您的个人信息</li>
+                        <li>删除您的账户和相关数据</li>
+                        <li>控制信息的使用和共享</li>
+                        <li>选择退出某些数据收集</li>
+                    </ul>
+
+                    <h6>6. Cookie使用</h6>
+                    <p>我们使用Cookie和类似技术来改善用户体验，包括记住登录状态、个性化设置和分析网站使用情况。您可以通过浏览器设置管理Cookie偏好。</p>
+
+                    <h6>7. 政策更新</h6>
+                    <p>我们可能会不时更新此隐私政策。重大变更将通过网站通知或邮件形式告知用户。继续使用我们的服务即表示您同意更新后的政策。</p>
+
+                    <h6>8. 联系我们</h6>
+                    <p>如果您对此隐私政策有任何疑问，请通过以下方式联系我们：</p>
+                    <ul>
+                        <li>邮箱：privacy@videosite.com</li>
+                        <li>电话：400-123-4567</li>
+                        <li>地址：北京市朝阳区科技园区123号</li>
+                    </ul>
+
+                    <p class="text-muted mt-4"><small>最后更新时间：2026年1月1日</small></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="acceptPrivacyPolicy()">我已阅读并同意</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 联系我们模态框 -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="contactModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="contactModalLabel">
+                    <i class="fas fa-envelope me-2"></i>联系我们
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="contact-info">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="contact-item">
+                                <h6><i class="fas fa-envelope text-primary me-2"></i>邮箱支持</h6>
+                                <p class="mb-1">support@videosite.com</p>
+                                <small class="text-muted">工作时间：周一至周五 9:00-18:00</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="contact-item">
+                                <h6><i class="fas fa-phone text-success me-2"></i>电话支持</h6>
+                                <p class="mb-1">400-123-4567</p>
+                                <small class="text-muted">7x24小时在线服务</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="contact-item">
+                                <h6><i class="fas fa-map-marker-alt text-info me-2"></i>公司地址</h6>
+                                <p class="mb-1">北京市朝阳区科技园区123号</p>
+                                <small class="text-muted">邮编：100000</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="contact-item">
+                                <h6><i class="fas fa-clock text-warning me-2"></i>工作时间</h6>
+                                <p class="mb-1">周一至周五：9:00-18:00</p>
+                                <small class="text-muted">周末及节假日：10:00-16:00</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="social-contact">
+                        <h6><i class="fas fa-share-alt text-primary me-2"></i>社交媒体</h6>
+                        <div class="d-flex gap-3">
+                            <a href="https://github.com" target="_blank" class="btn btn-outline-dark btn-sm">
+                                <i class="fab fa-github me-1"></i>GitHub
+                            </a>
+                            <a href="https://www.bilibili.com" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-tv me-1"></i>哔哩哔哩
+                            </a>
+                            <a href="https://y.qq.com" target="_blank" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-music me-1"></i>QQ音乐
+                            </a>
+                            <a href="https://www.xiaohongshu.com" target="_blank" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-book-open me-1"></i>小红书
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <a href="/help" class="btn btn-primary">访问帮助中心</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 服务条款模态框 -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">
+                    <i class="fas fa-file-contract me-2"></i>服务条款
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="terms-content">
+                    <h6>1. 服务说明</h6>
+                    <p>本网站是一个视频分享平台，为用户提供视频上传、观看、分享和互动服务。使用本服务即表示您同意遵守以下条款。</p>
+
+                    <h6>2. 用户责任</h6>
+                    <p>用户在使用本服务时应当：</p>
+                    <ul>
+                        <li>提供真实、准确的注册信息</li>
+                        <li>保护账户安全，不与他人共享登录信息</li>
+                        <li>遵守相关法律法规和社区规范</li>
+                        <li>不上传违法、有害或侵权内容</li>
+                        <li>尊重其他用户的权利和隐私</li>
+                    </ul>
+
+                    <h6>3. 内容规范</h6>
+                    <p>禁止上传以下类型的内容：</p>
+                    <ul>
+                        <li>违反法律法规的内容</li>
+                        <li>侵犯他人知识产权的内容</li>
+                        <li>包含暴力、色情、恐怖主义的内容</li>
+                        <li>虚假信息或误导性内容</li>
+                        <li>垃圾信息或恶意软件</li>
+                    </ul>
+
+                    <h6>4. 知识产权</h6>
+                    <p>用户上传的内容应确保拥有相应的权利。用户授予本平台在全球范围内使用、展示、传播其上传内容的权利。</p>
+
+                    <h6>5. 服务变更</h6>
+                    <p>我们保留随时修改、暂停或终止服务的权利。重大变更将提前通知用户。</p>
+
+                    <h6>6. 免责声明</h6>
+                    <p>本平台不对用户上传的内容承担责任，不保证服务的连续性和完整性。用户使用服务的风险由其自行承担。</p>
+
+                    <h6>7. 争议解决</h6>
+                    <p>因使用本服务产生的争议，应首先通过友好协商解决。协商不成的，提交至本公司所在地人民法院解决。</p>
+
+                    <p class="text-muted mt-4"><small>最后更新时间：2024年1月1日</small></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="acceptTerms()">我已阅读并同意</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript files -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- WebSocket相关库 -->
+<script src="/lib/sockjs.min.js"></script>
+<script src="/lib/stomp.min.js"></script>
+<!-- 全局来电弹窗 -->
+<script src="/js/global-call-popup.js"></script>
+<!-- WebRTC客户端 -->
+<script src="/js/webrtc-client.js"></script>
+<!-- 全局WebRTC管理器 -->
+<script src="/js/global-webrtc-manager.js"></script>
+<!-- 在线状态管理 -->
+<script src="/js/online-status.js"></script>
+<!-- 错误监控暂时禁用 -->
+<!-- <script src="/js/error-monitor.js"></script> -->
+<!-- 智能助手功能已禁用 -->
+<!-- <script src="/js/pet-themes.js"></script> -->
+<!-- <script src="/js/smart-pet.js"></script> -->
+<!-- <script src="/js/ai-assistant.js"></script> -->
+<script>
+    // 设置全局用户信息
+    window.currentUser = /*[[${currentUser}]]*/ null;
+    window.isAuthenticated = /*[[${isAuthenticated}]]*/ false;
+
+    // 如果用户已登录，设置用户信息
+    if (window.currentUser) {
+        console.log('✅ 用户已登录:', window.currentUser.username);
+    } else {
+        console.log('ℹ️ 用户未登录');
+    }
+
+    // 初始化WebRTC客户端（如果用户已登录）
+    document.addEventListener('DOMContentLoaded', function() {
+        // 通过API获取用户信息并初始化WebRTC
+        initializeWebRTCForHomePageWithAPI();
+    });
+
+    // 通过API获取用户信息并初始化WebRTC
+    async function initializeWebRTCForHomePageWithAPI() {
+        try {
+            const response = await fetch('/api/chat/user', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const userData = await response.json();
+                const userId = userData.id.toString();
+                console.log('主页获取用户信息成功:', userData);
+                initializeWebRTCForHomePage(userId);
+            } else {
+                console.log('主页用户未登录，跳过WebRTC初始化');
+            }
+        } catch (error) {
+            console.warn('主页获取用户信息失败:', error);
+        }
+    }
+
+    // 为主页初始化WebRTC
+    async function initializeWebRTCForHomePage(userId) {
+        try {
+            // 检查必要的库是否加载
+            if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
+                console.warn('WebSocket库未加载，跳过WebRTC初始化');
+                return;
+            }
+
+            if (typeof GlobalWebRTCManager === 'undefined') {
+                console.warn('GlobalWebRTCManager未加载，跳过WebRTC初始化');
+                return;
+            }
+
+            if (!userId) {
+                console.warn('用户ID为空，跳过WebRTC初始化');
+                return;
+            }
+
+            // 创建全局WebRTC管理器实例
+            if (!window.globalWebRTCManager) {
+                window.globalWebRTCManager = new GlobalWebRTCManager('home');
+                console.log('主页全局WebRTC管理器已创建');
+
+                // 初始化管理器
+                await window.globalWebRTCManager.initialize();
+                console.log('主页全局WebRTC管理器初始化成功');
+            }
+        } catch (error) {
+            console.error('主页WebRTC初始化失败:', error);
+        }
+    }
+
+    // 加载网站统计数据
+    function loadWebsiteStatistics() {
+        fetch('/api/statistics/basic', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 更新统计数字
+            const statVideos = document.getElementById('stat-videos');
+            const statUsers = document.getElementById('stat-users');
+            const statViews = document.getElementById('stat-views');
+
+            if (statVideos) statVideos.textContent = data.totalVideos || '1,234';
+            if (statUsers) statUsers.textContent = data.totalUsers || '5,678';
+            if (statViews) statViews.textContent = data.totalViews || '98.7K';
+        })
+        .catch(error => {
+            console.error('获取网站统计数据失败:', error);
+        });
+    }
+
+    // 加载动态分类
+    function loadDynamicCategories() {
+        fetch('/api/categories/popular?limit=4', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const categoriesContainer = document.getElementById('dynamic-categories');
+            if (categoriesContainer && data.length > 0) {
+                let html = '';
+                data.forEach(category => {
+                    const categoryName = category.name;
+                    const categoryIcon = category.icon || 'fas fa-video';
+                    const categoryId = category.id > 0 ? category.id : categoryName.toLowerCase();
+
+                    html += `
+                        <li>
+                            <a href="/search?category=${categoryId}" title="${category.description || categoryName}">
+                                <i class="${categoryIcon} me-2"></i>${categoryName}
+                            </a>
+                        </li>
+                    `;
+                });
+                categoriesContainer.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('获取动态分类失败:', error);
+        });
+    }
+
+    // 添加一些交互效果
+    document.addEventListener('DOMContentLoaded', function() {
+
+
+        // 加载网站统计数据和动态分类
+        loadWebsiteStatistics();
+        loadDynamicCategories();
+
+        // 分类卡片点击效果
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', function() {
+                console.log('点击了分类:', this.querySelector('h5').textContent);
+            });
+        });
+
+        // 搜索框焦点效果
+        const searchInput = document.querySelector('.search-box input');
+        if (searchInput) {
+            searchInput.addEventListener('focus', function() {
+                this.parentElement.parentElement.style.transform = 'scale(1.02)';
+                this.parentElement.parentElement.style.transition = 'all 0.3s ease';
+            });
+
+            searchInput.addEventListener('blur', function() {
+                this.parentElement.parentElement.style.transform = 'scale(1)';
+            });
+        }
+
+        // 跳转页面功能初始化
+        const jumpInput = document.getElementById('jumpToPage');
+        if (jumpInput) {
+            jumpInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    jumpToPage();
+                }
+            });
+        }
+    });
+
+    // 排序功能
+    function changeSortOrder() {
+        const sortSelect = document.getElementById('sortSelect');
+        const sortValue = sortSelect.value;
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('sort', sortValue);
+        currentUrl.searchParams.delete('page'); // 重置到第一页
+        window.location.href = currentUrl.toString();
+    }
+
+    // 分页跳转功能
+    function jumpToPage() {
+        const jumpInput = document.getElementById('jumpToPage');
+        const pageNumber = parseInt(jumpInput.value);
+        const maxPages = parseInt(jumpInput.getAttribute('max'));
+
+        if (pageNumber >= 1 && pageNumber <= maxPages) {
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('page', pageNumber - 1); // 后端使用0开始的页码
+            window.location.href = currentUrl.toString();
+        } else {
+            alert(`请输入1到${maxPages}之间的页码`);
+            jumpInput.value = '';
+        }
+    }
+
+    // 回车键跳转功能已移至主DOMContentLoaded事件中
+
+    // 搜索建议功能
+    let searchTimeout;
+    let currentSuggestionIndex = -1;
+    let suggestions = [];
+
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsDropdown = document.getElementById('searchSuggestions');
+
+    if (searchInput && suggestionsDropdown) {
+        // 输入事件监听
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+
+            clearTimeout(searchTimeout);
+
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetchSearchSuggestions(query);
+            }, 300);
+        });
+
+        // 键盘导航
+        searchInput.addEventListener('keydown', function(e) {
+            if (suggestions.length === 0) return;
+
+            switch(e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+                    updateSuggestionSelection();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+                    updateSuggestionSelection();
+                    break;
+                case 'Enter':
+                    if (currentSuggestionIndex >= 0) {
+                        e.preventDefault();
+                        selectSuggestion(suggestions[currentSuggestionIndex]);
+                    }
+                    break;
+                case 'Escape':
+                    hideSuggestions();
+                    break;
+            }
+        });
+
+        // 失去焦点时隐藏建议
+        searchInput.addEventListener('blur', function() {
+            setTimeout(() => {
+                hideSuggestions();
+            }, 200);
+        });
+    }
+
+    // 获取搜索建议
+    function fetchSearchSuggestions(query) {
+        fetch(`/api/search/suggestions-enhanced?q=${encodeURIComponent(query)}&limit=8`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.suggestions) {
+                    suggestions = data.suggestions;
+                    displaySuggestions(suggestions);
+                }
+            })
+            .catch(error => {
+                console.error('获取搜索建议失败:', error);
+            });
+    }
+
+    // 显示搜索建议
+    function displaySuggestions(suggestionList) {
+        if (suggestionList.length === 0) {
+            hideSuggestions();
+            return;
+        }
+
+        let html = '';
+        suggestionList.forEach((suggestion, index) => {
+            html += `
+                <div class="search-suggestion-item" data-index="${index}" onclick="selectSuggestion('${suggestion}')">
+                    <i class="fas fa-search search-suggestion-icon"></i>
+                    <span class="search-suggestion-text">${suggestion}</span>
+                </div>
+            `;
+        });
+
+        suggestionsDropdown.innerHTML = html;
+        suggestionsDropdown.style.display = 'block';
+        currentSuggestionIndex = -1;
+    }
+
+    // 隐藏搜索建议
+    function hideSuggestions() {
+        suggestionsDropdown.style.display = 'none';
+        currentSuggestionIndex = -1;
+        suggestions = [];
+    }
+
+    // 更新建议选择状态
+    function updateSuggestionSelection() {
+        const items = suggestionsDropdown.querySelectorAll('.search-suggestion-item');
+        items.forEach((item, index) => {
+            if (index === currentSuggestionIndex) {
+                item.classList.add('active');
+                searchInput.value = suggestions[index];
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    // 选择建议
+    function selectSuggestion(suggestion) {
+        searchInput.value = suggestion;
+        hideSuggestions();
+        // 自动提交搜索
+        searchInput.closest('form').submit();
+    }
+
+    // 显示隐私政策
+    function showPrivacyPolicy() {
+        const modal = new bootstrap.Modal(document.getElementById('privacyPolicyModal'));
+        modal.show();
+    }
+
+    // 显示联系信息
+    function showContactInfo() {
+        const modal = new bootstrap.Modal(document.getElementById('contactModal'));
+        modal.show();
+    }
+
+    // 显示服务条款
+    function showTermsOfService() {
+        const modal = new bootstrap.Modal(document.getElementById('termsModal'));
+        modal.show();
+    }
+
+    // 接受隐私政策
+    function acceptPrivacyPolicy() {
+        // 可以在这里添加记录用户同意的逻辑
+        localStorage.setItem('privacyPolicyAccepted', 'true');
+        const modal = bootstrap.Modal.getInstance(document.getElementById('privacyPolicyModal'));
+        modal.hide();
+
+        // 显示成功提示
+        showNotification('感谢您阅读并同意我们的隐私政策！', 'success');
+    }
+
+    // 接受服务条款
+    function acceptTerms() {
+        // 可以在这里添加记录用户同意的逻辑
+        localStorage.setItem('termsAccepted', 'true');
+        const modal = bootstrap.Modal.getInstance(document.getElementById('termsModal'));
+        modal.hide();
+
+        // 显示成功提示
+        showNotification('感谢您阅读并同意我们的服务条款！', 'success');
+    }
+
+    // 显示通知
+    function showNotification(message, type = 'info') {
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+
+    // 签到功能
+    function dailyCheckin() {
+        const checkinBtn = document.getElementById('checkinBtn');
+        const originalText = checkinBtn.innerHTML;
+
+        // 显示加载状态
+        checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>签到中...';
+        checkinBtn.disabled = true;
+
+        fetch('/api/checkin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 签到成功
+                const message = `签到成功！获得 ${data.reward} 经验值\n连续签到 ${data.consecutiveDays} 天，总计签到 ${data.totalDays} 天`;
+                showNotification(message, 'success');
+                checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays}天)`;
+                checkinBtn.classList.remove('btn-outline-light');
+                checkinBtn.classList.add('btn-success');
+
+                // 更新用户等级显示
+                if (data.currentLevel) {
+                    const levelBadge = document.getElementById('userLevelBadge');
+                    if (levelBadge) {
+                        levelBadge.textContent = 'Lv.' + data.currentLevel;
+                        levelBadge.style.display = 'inline';
+                    }
+                }
+            } else {
+                // 签到失败
+                if (data.alreadyCheckedIn) {
+                    const message = `今天已经签到过了\n连续签到 ${data.consecutiveDays || 0} 天，总计签到 ${data.totalDays || 0} 天`;
+                    showNotification(message, 'info');
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                } else {
+                    showNotification(data.message || '签到失败', 'error');
+                    // 即使签到失败，也要更新按钮显示当前签到状态
+                    if (data.consecutiveDays !== undefined && data.totalDays !== undefined) {
+                        if (data.totalDays > 0) {
+                            checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                        } else {
+                            checkinBtn.innerHTML = originalText;
+                        }
+                    } else {
+                        checkinBtn.innerHTML = originalText;
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('签到失败:', error);
+            showNotification('签到失败，请稍后重试', 'error');
+            checkinBtn.innerHTML = originalText;
+        })
+        .finally(() => {
+            checkinBtn.disabled = false;
+        });
+    }
+
+    // 页面加载时检查签到状态
+    document.addEventListener('DOMContentLoaded', function() {
+        // 检查用户是否已登录
+        const userElement = document.querySelector('[data-current-user]');
+        if (userElement && userElement.dataset.username) {
+            checkCheckinStatus();
+            checkUnreadMessages();
+        }
+    });
+
+    function checkCheckinStatus() {
+        fetch('/api/checkin/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const checkinBtn = document.getElementById('checkinBtn');
+                if (data.hasCheckedInToday) {
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                    checkinBtn.disabled = true;
+                } else {
+                    // 如果还没签到，显示总签到天数
+                    if (data.totalDays > 0) {
+                        checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                    }
+                }
+
+                // 更新用户等级显示
+                if (data.currentLevel) {
+                    const levelBadge = document.getElementById('userLevelBadge');
+                    if (levelBadge) {
+                        levelBadge.textContent = 'Lv.' + data.currentLevel;
+                        levelBadge.style.display = 'inline';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('检查签到状态失败:', error);
+        });
+    }
+
+    function checkUnreadMessages() {
+        fetch('/api/chat/unread-count')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.count > 0) {
+                const chatBadge = document.getElementById('chatUnreadBadge');
+                if (chatBadge) {
+                    chatBadge.textContent = data.count > 99 ? '99+' : data.count;
+                    chatBadge.style.display = 'inline';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取未读消息数量失败:', error);
+        });
+    }
+
+    // 定期检查未读消息数量
+    setInterval(checkUnreadMessages, 30000); // 每30秒检查一次
+
+    // 主页分页相关函数
+    function changePageSizeHome(newSize) {
+        const url = new URL(window.location);
+        url.searchParams.set('size', newSize);
+        url.searchParams.set('page', '0'); // 重置到第一页
+        window.location.href = url.toString();
+    }
+
+    // 跳转到指定页面
+    function goToPageHome(pageNum) {
+        const url = new URL(window.location);
+        url.searchParams.set('page', pageNum);
+        window.location.href = url.toString();
+    }
+
+    // 键盘导航支持
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'ArrowLeft') {
+                // Ctrl + 左箭头：上一页
+                const prevBtn = document.querySelector('.page-prev');
+                if (prevBtn && !prevBtn.closest('.page-item').classList.contains('disabled')) {
+                    e.preventDefault();
+                    prevBtn.click();
+                }
+            } else if (e.key === 'ArrowRight') {
+                // Ctrl + 右箭头：下一页
+                const nextBtn = document.querySelector('.page-next');
+                if (nextBtn && !nextBtn.closest('.page-item').classList.contains('disabled')) {
+                    e.preventDefault();
+                    nextBtn.click();
+                }
+            }
+        }
+    });
+
+    // 初始化在线状态功能
+    document.addEventListener('DOMContentLoaded', function() {
+        // 等待在线状态管理器初始化完成
+        setTimeout(function() {
+            if (window.onlineStatusManager) {
+                // 获取页面上所有用户ID
+                const userElements = document.querySelectorAll('[data-user-id]');
+                const userIds = new Set();
+
+                userElements.forEach(element => {
+                    const userId = element.getAttribute('data-user-id');
+                    if (userId && userId !== 'null') {
+                        userIds.add(parseInt(userId));
+                    }
+                });
+
+                // 批量检查用户在线状态
+                if (userIds.size > 0) {
+                    window.onlineStatusManager.checkUserStatus(userIds);
+                }
+
+                // 获取在线用户统计
+                window.onlineStatusManager.getOnlineUsers();
+            }
+        }, 1000);
+
+        // 更新聊天未读消息计数
+        updateChatUnreadCount();
+
+        // 定期更新聊天未读消息计数
+        setInterval(updateChatUnreadCount, 30000); // 30秒更新一次
+    });
+
+    // 更新聊天未读消息计数
+    function updateChatUnreadCount() {
+        fetch('/api/chat/unread-count')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('chatUnreadBadge');
+                if (badge) {
+                    const count = data.count || 0;
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('更新聊天未读消息计数失败:', error);
+            });
+    }
+
+</script>
+
+<!-- 用户数据 -->
+<div data-current-user
+     data-current-user-id="[[${#authentication.principal.id}]]"
+     data-current-username="[[${#authentication.name}]]"
+     style="display: none;"></div>
+
+<!-- 全局通知管理 - 暂时禁用以避免冲突 -->
+<!-- <script src="/js/global-notifications.js"></script> -->
+
+<!-- 全局智能助手功能已禁用 -->
+<!-- <script src="/js/global-smart-pet.js"></script> -->
+
+
+
+</body>
+</html>

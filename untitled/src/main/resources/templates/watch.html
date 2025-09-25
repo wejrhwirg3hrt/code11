@@ -1,0 +1,2273 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${video.title} + ' - 视频网站'">视频播放 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+
+    <!-- WebSocket库 -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+        <style>
+            /* 导航栏优化样式 */
+            .nav-link-sm {
+                font-size: 0.85rem !important;
+                padding: 0.4rem 0.6rem !important;
+                white-space: nowrap;
+            }
+
+            .btn-nav-sm {
+                font-size: 0.8rem !important;
+                padding: 0.3rem 0.6rem !important;
+            }
+
+            .navbar-text-sm {
+                font-size: 0.85rem !important;
+            }
+
+            .navbar-nav .nav-link {
+                transition: all 0.2s ease;
+            }
+
+            .navbar-nav .nav-link:hover {
+                transform: translateY(-1px);
+                color: #fff !important;
+            }
+
+            /* 导航栏三分布局 */
+            .navbar-left {
+                flex: 0 0 auto;
+                border-right: 1px solid rgba(255, 255, 255, 0.2);
+                padding-right: 1rem;
+                margin-right: 1rem;
+            }
+
+            .navbar-center {
+                flex: 0 0 auto;
+                padding: 0 1rem;
+                border-left: 1px solid rgba(255, 255, 255, 0.2);
+                border-right: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .navbar-right {
+                flex: 0 0 auto;
+                padding-left: 1rem;
+                margin-left: 1rem;
+                border-left: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            /* 聊天未读消息计数样式 */
+            .chat-unread-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background-color: #dc3545;
+                color: white;
+                border-radius: 50%;
+                font-size: 0.6rem;
+                padding: 2px 5px;
+                min-width: 16px;
+                text-align: center;
+                line-height: 1;
+            }
+
+            /* 视频播放器样式优化 */
+            .video-player-wrapper {
+                position: relative;
+                width: 100%;
+                background: #000;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                margin-bottom: 25px;
+            }
+
+            .enhanced-player-container {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16/9;
+                background: #000;
+            }
+
+            .default-player-wrapper {
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16/9;
+                background: #f8f9fa;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            .default-video-player {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                border-radius: 0;
+            }
+
+            .default-video-player:focus {
+                outline: none;
+            }
+
+            /* 播放器控制栏优化 */
+            .default-video-player::-webkit-media-controls-panel {
+                background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            }
+
+            .default-video-player::-webkit-media-controls-play-button,
+            .default-video-player::-webkit-media-controls-mute-button,
+            .default-video-player::-webkit-media-controls-fullscreen-button {
+                background-color: rgba(255,255,255,0.9);
+                border-radius: 50%;
+                margin: 0 5px;
+            }
+
+            .default-video-player::-webkit-media-controls-timeline {
+                background: rgba(255,255,255,0.3);
+                border-radius: 2px;
+                margin: 0 10px;
+            }
+
+            .default-video-player::-webkit-media-controls-current-time-display,
+            .default-video-player::-webkit-media-controls-time-remaining-display {
+                color: white;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            }
+
+            .emoji-picker {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .emoji-item {
+                font-size: 1.5em;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 5px;
+                transition: background-color 0.2s;
+            }
+            .emoji-item:hover {
+                background-color: #f8f9fa;
+            }
+            .comment-item:last-child {
+                border-bottom: none !important;
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            /* 内容显示样式 */
+            .content-image {
+                max-width: 100%;
+                height: auto;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+            }
+
+            .content-image:hover {
+                transform: scale(1.02);
+            }
+
+            .related-image {
+                max-width: 100%;
+                height: auto;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+            }
+
+            .related-image:hover {
+                transform: scale(1.05);
+            }
+
+            .content-block {
+                margin-bottom: 1.5rem;
+            }
+
+            .html-content, .rich-text-content, .plain-text-content {
+                line-height: 1.6;
+                color: #333;
+            }
+
+            .tag-item {
+                transition: all 0.3s ease;
+            }
+
+            .tag-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+
+            /* 自定义音乐播放器样式 */
+            .custom-music-player {
+                position: relative;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 16px;
+                padding: 24px;
+                color: white;
+                overflow: hidden;
+                box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            .custom-music-player:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+            }
+
+            .player-background {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 0;
+            }
+
+            .player-gradient {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: 
+                    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+                animation: gradientShift 8s ease-in-out infinite;
+            }
+
+            @keyframes gradientShift {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.8; }
+            }
+
+            .player-content {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+
+            .album-cover {
+                position: relative;
+                width: 80px;
+                height: 80px;
+                border-radius: 12px;
+                overflow: hidden;
+                flex-shrink: 0;
+            }
+
+            .cover-placeholder {
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: white;
+            }
+
+            .cover-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .album-cover:hover .cover-overlay {
+                opacity: 1;
+            }
+
+            .play-indicator {
+                width: 32px;
+                height: 32px;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #667eea;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .play-indicator:hover {
+                transform: scale(1.1);
+                background: white;
+            }
+
+            .music-info {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .song-title {
+                font-size: 18px;
+                font-weight: 600;
+                margin-bottom: 4px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .artist-name {
+                font-size: 14px;
+                opacity: 0.9;
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .album-name {
+                font-size: 12px;
+                opacity: 0.7;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .player-controls {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-shrink: 0;
+            }
+
+            .control-btn {
+                width: 40px;
+                height: 40px;
+                border: none;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                -webkit-backdrop-filter: blur(10px);
+                backdrop-filter: blur(10px);
+            }
+
+            .control-btn:hover {
+                background: rgba(255, 255, 255, 0.3);
+                transform: scale(1.1);
+            }
+
+            .play-btn {
+                width: 48px;
+                height: 48px;
+                background: rgba(255, 255, 255, 0.9);
+                color: #667eea;
+                font-size: 16px;
+            }
+
+            .play-btn:hover {
+                background: white;
+                transform: scale(1.05);
+            }
+
+            .progress-section {
+                position: relative;
+                z-index: 1;
+                margin-top: 20px;
+            }
+
+            .progress-container {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .progress-bar {
+                flex: 1;
+                height: 6px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 3px;
+                position: relative;
+                cursor: pointer;
+                overflow: hidden;
+            }
+
+            .progress-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+                border-radius: 3px;
+                width: 0%;
+                transition: width 0.1s ease;
+                position: relative;
+            }
+
+            .progress-handle {
+                position: absolute;
+                top: 50%;
+                left: 0%;
+                width: 16px;
+                height: 16px;
+                background: white;
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .progress-bar:hover .progress-handle {
+                opacity: 1;
+            }
+
+            .time-display {
+                display: flex;
+                gap: 8px;
+                font-size: 12px;
+                opacity: 0.8;
+                min-width: 80px;
+                justify-content: space-between;
+            }
+
+            /* 响应式设计 */
+            @media (max-width: 768px) {
+                .custom-music-player {
+                    padding: 16px;
+                }
+                
+                .player-content {
+                    flex-direction: column;
+                    gap: 16px;
+                    text-align: center;
+                }
+                
+                .album-cover {
+                    width: 60px;
+                    height: 60px;
+                }
+                
+                .player-controls {
+                    gap: 8px;
+                }
+                
+                .control-btn {
+                    width: 36px;
+                    height: 36px;
+                }
+                
+                .play-btn {
+                    width: 44px;
+                    height: 44px;
+                }
+            }
+
+            /* 对称操作按钮样式 */
+            .action-buttons-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                max-width: 300px;
+                margin-left: auto;
+            }
+
+            .action-btn-wrapper {
+                display: flex;
+                justify-content: center;
+            }
+
+            .action-btn {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 80px;
+                height: 80px;
+                border-radius: 16px;
+                border: 2px solid;
+                background: white;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .action-btn i {
+                font-size: 1.5rem;
+                margin-bottom: 4px;
+                transition: all 0.3s ease;
+            }
+
+            .action-btn .btn-label {
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-align: center;
+                line-height: 1;
+                transition: all 0.3s ease;
+            }
+
+            /* 关注按钮 */
+            .action-btn-follow {
+                border-color: #007bff;
+                color: #007bff;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .action-btn-follow::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .action-btn-follow:hover {
+                background: #007bff;
+                color: white;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(0, 123, 255, 0.4);
+            }
+
+            .action-btn-follow:hover::before {
+                left: 100%;
+            }
+
+            .action-btn-follow:active {
+                transform: translateY(-1px) scale(1.02);
+                transition: all 0.1s;
+            }
+
+            .action-btn-follow.following {
+                background: #28a745;
+                border-color: #28a745;
+                color: white;
+            }
+
+            .action-btn-follow.following:hover {
+                background: #20c997;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(40, 167, 69, 0.4);
+            }
+
+            /* 私信按钮 */
+            .action-btn-message {
+                border-color: #6f42c1;
+                color: #6f42c1;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .action-btn-message::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .action-btn-message:hover {
+                background: #6f42c1;
+                color: white;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(111, 66, 193, 0.4);
+            }
+
+            .action-btn-message:hover::before {
+                left: 100%;
+            }
+
+            .action-btn-message:active {
+                transform: translateY(-1px) scale(1.02);
+                transition: all 0.1s;
+            }
+
+            /* 喜欢按钮 */
+            .action-btn-like {
+                border-color: #dc3545;
+                color: #dc3545;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .action-btn-like::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .action-btn-like:hover {
+                background: #dc3545;
+                color: white;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(220, 53, 69, 0.4);
+            }
+
+            .action-btn-like:hover::before {
+                left: 100%;
+            }
+
+            .action-btn-like:active {
+                transform: translateY(-1px) scale(1.02);
+                transition: all 0.1s;
+            }
+
+            .action-btn-like.liked {
+                background: #dc3545;
+                border-color: #dc3545;
+                color: white;
+            }
+
+            .action-btn-like.liked:hover {
+                background: #c82333;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(220, 53, 69, 0.4);
+            }
+
+            /* 收藏按钮 */
+            .action-btn-favorite {
+                border-color: #ffc107;
+                color: #ffc107;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .action-btn-favorite::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+
+            .action-btn-favorite:hover {
+                background: #ffc107;
+                color: #212529;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(255, 193, 7, 0.4);
+            }
+
+            .action-btn-favorite:hover::before {
+                left: 100%;
+            }
+
+            .action-btn-favorite:active {
+                transform: translateY(-1px) scale(1.02);
+                transition: all 0.1s;
+            }
+
+            .action-btn-favorite.favorited {
+                background: #ffc107;
+                border-color: #ffc107;
+                color: #212529;
+            }
+
+            .action-btn-favorite.favorited:hover {
+                background: #e0a800;
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 12px 25px rgba(255, 193, 7, 0.4);
+            }
+
+            /* 响应式设计 */
+            @media (max-width: 768px) {
+                .action-buttons-grid {
+                    grid-template-columns: repeat(4, 1fr);
+                    max-width: 100%;
+                    gap: 8px;
+                }
+
+                .action-btn {
+                    width: 60px;
+                    height: 60px;
+                }
+
+                .action-btn i {
+                    font-size: 1.2rem;
+                }
+
+                .action-btn .btn-label {
+                    font-size: 0.65rem;
+                }
+            }
+
+            /* 视频详情页样式 */
+            .video-title {
+                font-size: 1.8rem;
+                font-weight: 700;
+                color: #2c3e50;
+                line-height: 1.3;
+            }
+
+            .video-info-section {
+                background: #f8f9fa;
+                border-radius: 12px;
+                padding: 20px;
+                border: 1px solid #e9ecef;
+            }
+
+            .user-avatar-container {
+                position: relative;
+            }
+
+            .user-avatar {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 3px solid #007bff;
+                transition: transform 0.3s ease;
+            }
+
+            .user-avatar:hover {
+                transform: scale(1.05);
+            }
+
+            .user-avatar-placeholder {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 1.5rem;
+                border: 3px solid #007bff;
+            }
+
+            .username a {
+                color: #2c3e50;
+                font-weight: 600;
+                transition: color 0.3s ease;
+            }
+
+            .username a:hover {
+                color: #007bff;
+            }
+
+            .video-meta {
+                font-size: 0.9rem;
+            }
+
+            .action-buttons .btn {
+                border-radius: 25px;
+                font-weight: 500;
+                padding: 8px 16px;
+                transition: all 0.3s ease;
+            }
+
+            .action-buttons .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+
+            .video-content-section {
+                background: white;
+                border-radius: 12px;
+                padding: 25px;
+                margin-bottom: 25px;
+                border: 1px solid #e9ecef;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            }
+
+            .content-block {
+                margin-bottom: 20px;
+            }
+
+            .content-block img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                margin: 10px 0;
+            }
+
+            .video-tags {
+                background: white;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid #e9ecef;
+            }
+
+            .tag-item {
+                display: inline-block;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 0.85rem;
+                font-weight: 500;
+                margin: 3px;
+                text-decoration: none;
+                transition: all 0.3s ease;
+            }
+
+            .tag-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                color: white;
+            }
+
+            /* 内容文本样式 */
+            .content-text {
+                font-size: 1rem;
+                line-height: 1.6;
+                color: #333;
+                margin-bottom: 15px;
+            }
+
+            .content-text p {
+                margin-bottom: 12px;
+            }
+
+            .content-text h1, .content-text h2, .content-text h3 {
+                color: #2c3e50;
+                margin-top: 20px;
+                margin-bottom: 15px;
+            }
+
+            /* 内容图片样式 */
+            .content-image {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                margin: 15px 0;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+            }
+
+            .content-image:hover {
+                transform: scale(1.02);
+            }
+
+            /* 相关图片样式 */
+            .image-card {
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease;
+            }
+
+            .image-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            }
+
+            .related-image {
+                width: 100%;
+                height: 200px;
+                object-fit: cover;
+                cursor: pointer;
+                transition: transform 0.3s ease;
+            }
+
+            .related-image:hover {
+                transform: scale(1.05);
+            }
+
+            /* 标签容器样式 */
+            .tags-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            @media (max-width: 768px) {
+                .video-player-wrapper {
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }
+
+                .video-info-section {
+                    padding: 15px;
+                }
+
+                .action-buttons {
+                    flex-direction: column;
+                    gap: 10px !important;
+                }
+
+                .user-avatar, .user-avatar-placeholder {
+                    width: 50px;
+                    height: 50px;
+                }
+
+                .video-title {
+                    font-size: 1.5rem;
+                }
+            }
+
+            /* 评论附件预览与内容渲染 */
+            .attachment-preview img { max-width: 160px; max-height: 100px; border-radius: 6px; margin-right: 8px; }
+            .attachment-preview video { max-width: 200px; max-height: 120px; border-radius: 6px; }
+            .comment-content img { max-width: 100%; border-radius: 8px; margin: 6px 0; }
+            .comment-content video { width: 100%; max-height: 360px; border-radius: 8px; margin: 6px 0; }
+        </style>
+</head>
+<script src="/js/desktop-pet.js"></script>
+</body>
+<body>
+
+<!-- 导航栏 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center w-100">
+            <!-- 登录状态下显示 -->
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center w-100 justify-content-between">
+                <!-- 左侧功能区 -->
+                <div class="d-flex flex-row align-items-center navbar-left">
+                    <a class="nav-link me-2 nav-link-sm" href="/upload">
+                        <i class="fas fa-upload me-1"></i>上传
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/music">
+                        <i class="fas fa-music me-1"></i>音乐
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/posts">
+                        <i class="fas fa-heart me-1"></i>动态
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/private-album">
+                        <i class="fas fa-lock me-1"></i>私密相册
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/voice-clone">
+                        <i class="fas fa-microphone me-1"></i>语音克隆
+                    </a>
+                </div>
+
+                <!-- 中间签到区 -->
+                <div class="navbar-center">
+                    <button class="btn btn-outline-light btn-sm btn-nav-sm" id="checkinBtn" onclick="dailyCheckin()">
+                        <i class="fas fa-calendar-check me-1"></i>签到
+                    </button>
+                </div>
+
+                <!-- 右侧用户区 -->
+                <div class="d-flex flex-row align-items-center navbar-right">
+                    <a class="nav-link me-2 nav-link-sm notification-bell" href="/notifications">
+                        <i class="fas fa-bell me-1"></i>通知
+                        <span class="badge bg-danger notification-badge" style="display: none;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/chat" style="position: relative;">
+                        <i class="fas fa-comments me-1"></i>聊天
+                        <span class="chat-unread-badge badge bg-danger" style="display: none; position: absolute; top: -5px; right: 5px; font-size: 0.6rem;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/profile" id="userProfileLink">
+                        <i class="fas fa-user me-1"></i>我的主页
+                        <span id="userLevelBadge" class="badge bg-primary ms-1" style="display: none;"></span>
+                    </a>
+                    <span class="navbar-text me-2 navbar-text-sm">
+                        <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button class="btn btn-outline-light btn-sm btn-nav-sm" type="submit">退出</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 未登录状态下显示 -->
+            <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-2 nav-link-sm" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>登录
+                </a>
+                <a class="nav-link nav-link-sm" href="/register">
+                    <i class="fas fa-user-plus me-1"></i>注册
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <!-- 用户信息和操作区域 - 移到最顶部 -->
+            <div class="card mb-3">
+                <div class="card-body">
+
+                    <div class="video-info-section">
+                        <div class="row align-items-center">
+                            <!-- 用户信息 -->
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-center">
+                                    <!-- 用户头像 -->
+                                    <div class="user-avatar-container me-3">
+                                        <!-- 根据用户ID决定点击行为：如果是当前用户跳转到个人资料页，否则显示操作菜单 -->
+                                        <a th:if="${video.user and #authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == video.user.username}" 
+                                           th:href="@{/profile}">
+                                            <img th:if="${video.user.avatar != null}"
+                                                 th:src="${video.user.avatar}"
+                                                 alt="用户头像"
+                                                 class="user-avatar">
+                                            <div th:unless="${video.user.avatar != null}" class="user-avatar-placeholder">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        </a>
+                                        <a th:if="${video.user and (#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != video.user.username)}" 
+                                           th:href="@{'/user/' + ${video.user.id}}">
+                                            <img th:if="${video.user.avatar != null}"
+                                                 th:src="${video.user.avatar}"
+                                                 alt="用户头像"
+                                                 class="user-avatar">
+                                            <div th:unless="${video.user.avatar != null}" class="user-avatar-placeholder">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                        </a>
+                                    </div>
+
+                                    <!-- 用户详情 -->
+                                    <div class="user-details">
+                                        <h5 class="username mb-1" th:if="${video.user}">
+                                            <!-- 根据用户ID决定点击行为：如果是当前用户跳转到个人资料页，否则显示操作菜单 -->
+                                            <a th:if="${#authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == video.user.username}" 
+                                               th:href="@{/profile}"
+                                               th:text="${video.user.username}"
+                                               class="text-decoration-none">上传者</a>
+                                            <a th:if="${#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != video.user.username}" 
+                                               th:href="@{'/user/' + ${video.user.id}}"
+                                               th:text="${video.user.username}"
+                                               class="text-decoration-none"
+                                               style="color: #007bff;">上传者</a>
+                                        </h5>
+                                        <div class="video-meta text-muted">
+                                            <span class="me-3">
+                                                <i class="fas fa-eye me-1"></i>
+                                                <span th:text="${video.viewCount ?: 0}">0</span> 次观看
+                                            </span>
+                                            <span>
+                                                <i class="fas fa-calendar me-1"></i>
+                                                <span th:text="${#temporals.format(video.createdAt, 'yyyy-MM-dd')}">发布时间</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 操作按钮 - 对称设计 -->
+                            <div class="col-md-4">
+                                <div class="action-buttons-grid">
+                                    <!-- 关注按钮 -->
+                                    <div sec:authorize="isAuthenticated()" th:if="${video.user}" class="action-btn-wrapper">
+                                        <button id="followBtn" class="action-btn action-btn-follow"
+                                                th:data-user-id="${video.user.id}"
+                                                type="button"
+                                                onclick="toggleFollow(this)">
+                                            <i class="fas fa-user-plus"></i>
+                                            <span class="btn-label">关注</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- 私信按钮 -->
+                                    <div sec:authorize="isAuthenticated()" th:if="${video.user}" class="action-btn-wrapper">
+                                        <button class="action-btn action-btn-message"
+                                                th:data-user-id="${video.user.id}"
+                                                th:data-username="${video.user.username}"
+                                                type="button"
+                                                onclick="startPrivateChat(this)">
+                                            <i class="fas fa-envelope"></i>
+                                            <span class="btn-label">私信</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- 喜欢按钮 -->
+                                    <div sec:authorize="isAuthenticated()" class="action-btn-wrapper">
+                                        <button class="action-btn action-btn-like" onclick="toggleLike()" type="button">
+                                            <i class="fas fa-heart"></i>
+                                            <span class="btn-label">
+                                                <span id="likeCount" th:text="${video.likeCount ?: 0}">0</span>
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    <!-- 收藏按钮 -->
+                                    <div sec:authorize="isAuthenticated()" class="action-btn-wrapper">
+                                        <button class="action-btn action-btn-favorite" onclick="toggleFavorite()" type="button">
+                                            <i class="fas fa-star"></i>
+                                            <span class="btn-label">
+                                                <span id="favoriteCount" th:text="${video.favoriteCount ?: 0}">0</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 视频标题 -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h1 class="video-title mb-0" th:text="${video.title}">视频标题</h1>
+                </div>
+            </div>
+
+            <!-- 视频播放器 -->
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <div id="video-player-container" class="video-player-wrapper">
+                        <!-- 增强视频播放器 -->
+                        <div id="enhanced-video-player"
+                             th:data-video-id="${video.id}"
+                             th:data-video-src="${video.url}"
+                             class="enhanced-player-container"
+                             style="display: none;">
+                            <!-- 播放器将在这里初始化 -->
+                        </div>
+
+                        <!-- 默认播放器 -->
+                        <div class="default-player-wrapper">
+                            <video id="default-player" controls class="w-100 default-video-player">
+                                <source th:src="${video.url}" type="video/mp4">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频描述和文本内容 -->
+            <div th:if="${video.description != null and not #strings.isEmpty(video.description)}" class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title"><i class="fas fa-align-left me-2"></i>视频描述</h6>
+                    <div class="content-text" th:utext="${video.description}">视频描述内容</div>
+                </div>
+            </div>
+
+            <!-- 从video_content表显示内容 -->
+            <div th:if="${videoContentList}">
+                <div class="card mb-3" style="background-color: #e7f3ff;">
+                    <div class="card-body">
+                        <h6 class="card-title">videoContentList 存在！</h6>
+                        <p>数量: <span th:text="${#lists.size(videoContentList)}"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div th:if="${videoContentList and not #lists.isEmpty(videoContentList)}">
+                <div th:each="content : ${videoContentList}" class="content-block mb-3">
+
+                    <!-- 调试信息 -->
+                    <div class="card mb-3" style="background-color: #f8f9fa;">
+                        <div class="card-body">
+                            <h6 class="card-title">调试信息</h6>
+                            <p>类型: <span th:text="${content.type}"></span></p>
+                            <p>数据: <span th:text="${content.data}"></span></p>
+                            <p>URL: <span th:text="${content.url}"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- 文字内容 -->
+                    <div th:if="${content.type.toString() == 'TEXT'}" class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-file-text me-2"></i>详细内容</h6>
+                            <div th:text="${content.data}" class="plain-text-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- 图片内容 -->
+                    <div th:if="${content.type.toString() == 'IMAGE'}" class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-image me-2"></i>图片内容</h6>
+                            <img th:src="${content.url ?: content.data}"
+                                 class="content-image img-fluid rounded shadow"
+                                 alt="内容图片"
+                                 style="max-width: 100%; height: auto; cursor: pointer;"
+                                 onclick="showImageModal(this.src)">
+                        </div>
+                    </div>
+
+                    <!-- 音频内容 -->
+                    <div th:if="${content.type.toString() == 'AUDIO'}" class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title text-center mb-4">
+                                <i class="fas fa-music me-2 text-primary"></i>音乐播放器
+                            </h6>
+                            
+                            <!-- 自定义音乐播放器 -->
+                            <div class="custom-music-player" th:data-audio-src="${content.url ?: content.data}">
+                                <!-- 播放器背景 -->
+                                <div class="player-background">
+                                    <div class="player-gradient"></div>
+                                </div>
+                                
+                                <!-- 播放器内容 -->
+                                <div class="player-content">
+                                    <!-- 左侧：专辑封面 -->
+                                    <div class="album-cover">
+                                        <div class="cover-placeholder">
+                                            <i class="fas fa-music"></i>
+                                        </div>
+                                        <div class="cover-overlay">
+                                            <div class="play-indicator" id="playIndicator">
+                                                <i class="fas fa-play"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 中间：音乐信息 -->
+                                    <div class="music-info">
+                                        <div class="song-title" id="songTitle">正在加载...</div>
+                                        <div class="artist-name" id="artistName">未知艺术家</div>
+                                        <div class="album-name" id="albumName">未知专辑</div>
+                                    </div>
+                                    
+                                    <!-- 右侧：控制按钮 -->
+                                    <div class="player-controls">
+                                        <button class="control-btn" id="prevBtn" title="上一首">
+                                            <i class="fas fa-step-backward"></i>
+                                        </button>
+                                        <button class="control-btn play-btn" id="playBtn" title="播放/暂停">
+                                            <i class="fas fa-play" id="playIcon"></i>
+                                        </button>
+                                        <button class="control-btn" id="nextBtn" title="下一首">
+                                            <i class="fas fa-step-forward"></i>
+                                        </button>
+                                        <button class="control-btn" id="volumeBtn" title="静音">
+                                            <i class="fas fa-volume-up" id="volumeIcon"></i>
+                                        </button>
+                                        <button class="control-btn" id="playlistBtn" title="播放列表">
+                                            <i class="fas fa-list"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 进度条 -->
+                                <div class="progress-section">
+                                    <div class="progress-container">
+                                        <div class="progress-bar" id="progressBar">
+                                            <div class="progress-fill" id="progressFill"></div>
+                                            <div class="progress-handle" id="progressHandle"></div>
+                                        </div>
+                                        <div class="time-display">
+                                            <span id="currentTime">0:00</span>
+                                            <span id="totalTime">0:00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 隐藏的音频元素 -->
+                                <audio id="audioElement" preload="metadata">
+                                    <source th:src="${content.url ?: content.data}" type="audio/mpeg">
+                                    <source th:src="${content.url ?: content.data}" type="audio/wav">
+                                    <source th:src="${content.url ?: content.data}" type="audio/ogg">
+                                    您的浏览器不支持音频播放。
+                                </audio>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 视频内容 -->
+                    <div th:if="${content.type.name() == 'VIDEO'}" class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-video me-2"></i>视频内容</h6>
+                            <video controls class="w-100" style="max-height: 400px;">
+                                <source th:src="${content.url ?: content.data}" type="video/mp4">
+                                <source th:src="${content.url ?: content.data}" type="video/webm">
+                                <source th:src="${content.url ?: content.data}" type="video/ogg">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 富文本内容显示（备用） -->
+            <div th:if="${videoContent != null and not #lists.isEmpty(videoContent)}">
+                <div th:each="contentBlock : ${videoContent}" class="content-block mb-3">
+
+                    <!-- 文字内容 -->
+                    <div th:if="${contentBlock.type == 'TEXT' or contentBlock.type == 'RICH_TEXT' or contentBlock.type == 'HTML'}"
+                         class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-file-text me-2"></i>详细内容</h6>
+                            <div th:if="${contentBlock.type == 'HTML'}"
+                                 th:utext="${contentBlock.data ?: contentBlock.content}"
+                                 class="html-content"></div>
+                            <div th:if="${contentBlock.type == 'RICH_TEXT'}"
+                                 th:utext="${contentBlock.data ?: contentBlock.content}"
+                                 class="rich-text-content"></div>
+                            <div th:if="${contentBlock.type == 'TEXT'}"
+                                 th:text="${contentBlock.data ?: contentBlock.content}"
+                                 class="plain-text-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图片内容 -->
+            <div th:if="${videoContent != null and not #lists.isEmpty(videoContent)}">
+                <div th:each="contentBlock : ${videoContent}" class="content-block mb-3">
+                    <div th:if="${contentBlock.type == 'IMAGE'}" class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-image me-2"></i>图片内容</h6>
+                            <img th:src="${contentBlock.url ?: contentBlock.data}"
+                                 class="content-image img-fluid rounded shadow"
+                                 alt="内容图片"
+                                 style="max-width: 100%; height: auto; cursor: pointer;"
+                                 onclick="showImageModal(this.src)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频内容 -->
+            <div th:if="${videoContent != null and not #lists.isEmpty(videoContent)}">
+                <div th:each="contentBlock : ${videoContent}" class="content-block mb-3">
+                    <div th:if="${contentBlock.type == 'VIDEO'}" class="card mb-3">
+                        <div class="card-body text-center">
+                            <h6 class="card-title"><i class="fas fa-video me-2"></i>视频内容</h6>
+                            <div class="ratio ratio-16x9">
+                                <video controls class="rounded shadow">
+                                    <source th:src="${contentBlock.url ?: contentBlock.data}" type="video/mp4">
+                                    您的浏览器不支持视频播放。
+                                </video>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频相关图片 -->
+            <div th:if="${video.images != null and not #strings.isEmpty(video.images)}" class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title"><i class="fas fa-images me-2"></i>相关图片</h6>
+                    <div class="row justify-content-center">
+                        <div th:each="imageUrl : ${#strings.listSplit(video.images, ',')}" class="col-md-4 col-sm-6 mb-3">
+                            <div class="image-card text-center">
+                                <img th:src="${imageUrl}"
+                                     class="related-image img-fluid rounded shadow"
+                                     alt="视频相关图片"
+                                     style="max-width: 100%; height: auto; cursor: pointer;"
+                                     onclick="showImageModal(this.src)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 标签区域 -->
+            <div th:if="${video.tagsString}" class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title"><i class="fas fa-tags me-2"></i>标签</h6>
+                    <div class="tags-container d-flex justify-content-center flex-wrap gap-2">
+                        <a th:each="tag : ${#strings.listSplit(video.tagsString, ',')}"
+                           href="#"
+                           class="tag-item badge bg-primary text-decoration-none"
+                           th:text="${tag}">标签</a>
+                    </div>
+                </div>
+            </div>
+
+    </div>
+</div>
+
+<!-- 评论区域 - 放在页面最底部 -->
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card">
+    <div class="card-header">
+        <h5><i class="fas fa-comments me-2"></i>评论</h5>
+    </div>
+    <div class="card-body">
+        <!-- 发表评论 -->
+        <div sec:authorize="isAuthenticated()" class="mb-4">
+            <form th:action="@{/video/{id}/comment(id=${video.id})}" method="post">
+                <div class="mb-3">
+                    <textarea class="form-control" name="content" rows="3"
+                              placeholder="写下你的评论...（可通过下方按钮先上传图片/视频，再插入到评论）" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">表情包</label>
+                    <div class="emoji-picker">
+                        <span class="emoji-item" onclick="addEmoji('😀')">😀</span>
+                        <span class="emoji-item" onclick="addEmoji('😂')">😂</span>
+                        <span class="emoji-item" onclick="addEmoji('😍')">😍</span>
+                        <span class="emoji-item" onclick="addEmoji('🤔')">🤔</span>
+                        <span class="emoji-item" onclick="addEmoji('👍')">👍</span>
+                        <span class="emoji-item" onclick="addEmoji('👎')">👎</span>
+                        <span class="emoji-item" onclick="addEmoji('❤️')">❤️</span>
+                        <span class="emoji-item" onclick="addEmoji('🔥')">🔥</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">添加附件（先上传再发送）</label>
+                    <div class="attachment-tools d-flex align-items-center gap-2">
+                        <input id="commentImageInput" type="file" accept="image/*" hidden>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnUploadCommentImage" title="上传图片">
+                            <i class="fas fa-image me-1"></i>图片
+                        </button>
+                        <input id="commentVideoInput" type="file" accept="video/*" hidden>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnUploadCommentVideo" title="上传视频">
+                            <i class="fas fa-video me-1"></i>视频
+                        </button>
+                        <span id="uploadingStatus" class="text-muted small d-none">
+                            <i class="fas fa-spinner fa-spin me-1"></i>正在上传...
+                        </span>
+                    </div>
+                    <div id="attachmentPreview" class="attachment-preview mt-2"></div>
+                    <div class="form-text">图片/视频不会直接随表单提交，系统会把文件先保存到本地 /uploads，然后向评论内容插入占位标记，发送后再在页面安全加载。</div>
+                </div>
+                <button id="commentSubmitBtn" type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-1"></i>发表评论
+                </button>
+            </form>
+        </div>
+
+        <!-- 评论列表 -->
+        <div class="comments-list">
+            <div th:if="${#lists.isEmpty(comments)}" class="text-center text-muted py-4">
+                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                <p>暂无评论，快来抢沙发吧！</p>
+            </div>
+
+            <div th:each="comment : ${comments}" class="comment-item border-bottom pb-3 mb-3">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-circle fa-2x text-muted"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h6 class="mb-1" th:text="${comment.username != null ? comment.username : '匿名用户'}">用户名</h6>
+                            <small class="text-muted" th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">时间</small>
+                        </div>
+                        <div class="mb-1 comment-content" th:text="${comment.content}">评论内容</div>
+                        <div class="comment-attachments" th:if="${#strings.containsIgnoreCase(comment.content,'[img]') or #strings.containsIgnoreCase(comment.content,'[video]')}"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    function toggleLike() {
+        const videoId = /*[[${video.id}]]*/ 0;
+        const likeBtn = document.querySelector('.action-btn-like');
+        const likeCountSpan = document.getElementById('likeCount');
+
+        // 禁用按钮防止重复点击
+        likeBtn.disabled = true;
+
+        fetch('/api/video/' + videoId + '/like', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // 更新点赞数量
+                if (data.likeCount !== undefined) {
+                    likeCountSpan.textContent = data.likeCount;
+                }
+
+                // 切换按钮状态
+                if (data.liked) {
+                    likeBtn.classList.add('liked');
+                    likeBtn.querySelector('i').className = 'fas fa-heart';
+                    showToast('点赞成功', 'success');
+                } else {
+                    likeBtn.classList.remove('liked');
+                    likeBtn.querySelector('i').className = 'far fa-heart';
+                    showToast('取消点赞', 'info');
+                }
+            } else {
+                showToast('操作失败: ' + (data.message || '未知错误'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('点赞操作失败:', error);
+            showToast('点赞操作失败，请稍后重试', 'error');
+        })
+        .finally(() => {
+            likeBtn.disabled = false;
+        });
+    }
+
+    function toggleFavorite() {
+        const videoId = /*[[${video.id}]]*/ 0;
+        const favoriteBtn = document.querySelector('.action-btn-favorite');
+        const favoriteCountSpan = document.getElementById('favoriteCount');
+
+        // 禁用按钮防止重复点击
+        favoriteBtn.disabled = true;
+
+        fetch('/api/video/' + videoId + '/favorite', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // 更新收藏数量
+                if (data.favoriteCount !== undefined) {
+                    favoriteCountSpan.textContent = data.favoriteCount;
+                }
+
+                // 切换按钮状态
+                if (data.favorited) {
+                    favoriteBtn.classList.add('favorited');
+                    favoriteBtn.querySelector('i').className = 'fas fa-star';
+                    showToast('收藏成功', 'success');
+                } else {
+                    favoriteBtn.classList.remove('favorited');
+                    favoriteBtn.querySelector('i').className = 'far fa-star';
+                    showToast('取消收藏', 'info');
+                }
+            } else {
+                showToast('操作失败: ' + (data.message || '未知错误'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('收藏操作失败:', error);
+            showToast('收藏操作失败，请稍后重试', 'error');
+        })
+        .finally(() => {
+            favoriteBtn.disabled = false;
+        });
+    }
+        function addEmoji(emoji) {
+        const textarea = document.querySelector('textarea[name="content"]');
+        const cursorPos = textarea.selectionStart;
+        const textBefore = textarea.value.substring(0, cursorPos);
+        const textAfter = textarea.value.substring(cursorPos);
+        textarea.value = textBefore + emoji + textAfter;
+        textarea.focus();
+        textarea.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+    }
+
+    // 重复的函数定义已移除，使用上面正确格式的函数
+
+    function showImageModal(imageSrc) {
+        const modalImage = document.getElementById('modalImage');
+        modalImage.src = imageSrc;
+        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        imageModal.show();
+    }
+
+    // 关注/取消关注功能
+    function toggleFollow(button) {
+        const userId = button.dataset.userId;
+
+        // 禁用按钮防止重复点击
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>处理中...';
+
+        fetch(`/api/follow/user/${userId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('网络请求失败');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (data.isFollowing) {
+                    // 已关注状态
+                    button.classList.add('following');
+                    button.innerHTML = '<i class="fas fa-user-check"></i><span class="btn-label">已关注</span>';
+                } else {
+                    // 未关注状态
+                    button.classList.remove('following');
+                    button.innerHTML = '<i class="fas fa-user-plus"></i><span class="btn-label">关注</span>';
+                }
+
+                // 显示成功消息
+                showToast(data.message || (data.isFollowing ? '关注成功' : '取消关注成功'), 'success');
+            } else {
+                // 恢复原始状态
+                button.innerHTML = originalText;
+                showToast('操作失败: ' + (data.message || '未知错误'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('关注操作失败:', error);
+            button.innerHTML = originalText;
+            showToast('操作失败，请稍后重试', 'error');
+        })
+        .finally(() => {
+            // 重新启用按钮
+            button.disabled = false;
+        });
+    }
+
+    // 简单的提示消息函数
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+
+    // 开始私聊
+    function startPrivateChat(button) {
+        const userId = button.dataset.userId;
+        const username = button.dataset.username;
+
+        if (!userId) {
+            showToast('用户信息获取失败', 'error');
+            return;
+        }
+
+        // 跳转到私聊页面
+        window.location.href = `/chat/private?userId=${userId}`;
+    }
+
+    // 初始化关注状态
+    function initFollowStatus() {
+        const followBtn = document.getElementById('followBtn');
+        if (followBtn) {
+            const userId = followBtn.dataset.userId;
+
+            fetch(`/api/user/${userId}/follow/status`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.following) {
+                    followBtn.classList.add('following');
+                    followBtn.innerHTML = '<i class="fas fa-user-check"></i><span class="btn-label">已关注</span>';
+                }
+            })
+            .catch(error => {
+                console.error('获取关注状态失败:', error);
+            });
+        }
+    }
+
+    // 初始化喜欢和收藏状态
+    function initLikeAndFavoriteStatus() {
+        const videoId = /*[[${video.id}]]*/ 0;
+        const isLiked = /*[[${isLiked}]]*/ false;
+        const isFavorited = /*[[${isFavorited}]]*/ false;
+
+        // 设置喜欢按钮状态
+        const likeBtn = document.querySelector('.action-btn-like');
+        if (likeBtn && isLiked) {
+            likeBtn.classList.add('liked');
+            likeBtn.querySelector('i').className = 'fas fa-heart';
+        }
+
+        // 设置收藏按钮状态
+        const favoriteBtn = document.querySelector('.action-btn-favorite');
+        if (favoriteBtn && isFavorited) {
+            favoriteBtn.classList.add('favorited');
+            favoriteBtn.querySelector('i').className = 'fas fa-star';
+        }
+    }
+
+
+
+    // 初始化视频播放器
+    document.addEventListener('DOMContentLoaded', function() {
+        const enhancedContainer = document.getElementById('enhanced-video-player');
+        const defaultPlayer = document.getElementById('default-player');
+
+        // 尝试初始化增强播放器
+        if (enhancedContainer && typeof EnhancedVideoPlayer !== 'undefined') {
+            try {
+                window.enhancedPlayer = new EnhancedVideoPlayer(enhancedContainer, {
+                    src: enhancedContainer.dataset.videoSrc,
+                    videoId: enhancedContainer.dataset.videoId,
+                    autoplay: false,
+                    controls: true,
+                    danmaku: true,
+                    qualitySwitch: true,
+                    speedControl: true,
+                    fullscreen: true
+                });
+
+                // 隐藏默认播放器，显示增强播放器
+                defaultPlayer.style.display = 'none';
+                enhancedContainer.style.display = 'block';
+                console.log('增强视频播放器初始化成功');
+            } catch (error) {
+                console.error('增强视频播放器初始化失败:', error);
+                // 使用默认播放器
+                enhancedContainer.style.display = 'none';
+                defaultPlayer.style.display = 'block';
+            }
+        } else {
+            // 使用默认播放器
+            console.log('使用默认HTML5播放器');
+            enhancedContainer.style.display = 'none';
+            defaultPlayer.style.display = 'block';
+        }
+
+        // 初始化关注状态
+        initFollowStatus();
+
+        // 初始化喜欢和收藏状态
+        initLikeAndFavoriteStatus();
+
+        // 初始化弹幕WebSocket连接
+        initDanmakuWebSocket();
+    });
+
+    // 初始化弹幕WebSocket连接
+    function initDanmakuWebSocket() {
+        if (typeof realtimeFeatures !== 'undefined') {
+            const videoId = /*[[${video.id}]]*/ 0;
+
+            // 连接WebSocket
+            realtimeFeatures.connect();
+
+            // 订阅弹幕频道
+            realtimeFeatures.subscribeToDanmaku(videoId, function(danmaku) {
+                // 如果使用增强播放器，添加弹幕到播放器
+                if (window.enhancedPlayer) {
+                    window.enhancedPlayer.addDanmaku(danmaku.content, danmaku.time);
+                }
+            });
+        }
+    }
+    // 评论附件：上传 -> 生成占位 -> 预览
+    (function initCommentAttachments(){
+        const imgBtn = document.getElementById('btnUploadCommentImage');
+        const imgInput = document.getElementById('commentImageInput');
+        const videoBtn = document.getElementById('btnUploadCommentVideo');
+        const videoInput = document.getElementById('commentVideoInput');
+        const uploading = document.getElementById('uploadingStatus');
+        const preview = document.getElementById('attachmentPreview');
+        const textarea = document.querySelector('textarea[name="content"]');
+
+        function insertAtCursor(text){
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const before = textarea.value.substring(0, start);
+            const after = textarea.value.substring(end);
+            textarea.value = before + text + after;
+            const pos = start + text.length;
+            textarea.focus();
+            textarea.setSelectionRange(pos, pos);
+        }
+
+        function upload(file, kind){
+            if(!file){return;}
+            uploading.classList.remove('d-none');
+            const form = new FormData();
+            form.append('file', file);
+            const url = kind === 'image' ? '/api/upload/content/image' : '/api/upload/content/video';
+            fetch(url, { method: 'POST', body: form })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.success && data.url){
+                        // 插入占位：[img:/uploads/...]
+                        const placeholder = kind === 'image' ? `[img:${data.url}]` : `[video:${data.url}]`;
+                        insertAtCursor(placeholder + " ");
+                        // 预览
+                        const el = document.createElement(kind === 'image' ? 'img' : 'video');
+                        el.src = data.url;
+                        if(kind === 'video'){ el.controls = true; }
+                        preview.appendChild(el);
+                    } else {
+                        alert('上传失败：' + (data.message || '未知错误'));
+                    }
+                })
+                .catch(err => alert('上传失败：' + err))
+                .finally(() => uploading.classList.add('d-none'));
+        }
+
+        if(imgBtn && imgInput){
+            imgBtn.addEventListener('click', () => imgInput.click());
+            imgInput.addEventListener('change', () => upload(imgInput.files[0], 'image'));
+        }
+        if(videoBtn && videoInput){
+            videoBtn.addEventListener('click', () => videoInput.click());
+            videoInput.addEventListener('change', () => upload(videoInput.files[0], 'video'));
+        }
+    })();
+
+    // 将评论中的占位标记渲染为HTML
+    (function renderCommentPlaceholders(){
+        document.querySelectorAll('.comment-item').forEach(item => {
+            const contentEl = item.querySelector('.comment-content');
+            const attachEl = item.querySelector('.comment-attachments');
+            if(!contentEl){return;}
+            const raw = contentEl.textContent || '';
+            // 简单转义
+            let html = raw
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            // 把 [img:/path] 和 [video:/path] 单独渲染到附件容器
+            const imgMatches = [...raw.matchAll(/\[img:([^\]]+)\]/g)];
+            const videoMatches = [...raw.matchAll(/\[video:([^\]]+)\]/g)];
+            if(attachEl && (imgMatches.length || videoMatches.length)){
+                attachEl.innerHTML = '';
+                imgMatches.forEach(m => {
+                    const el = document.createElement('img');
+                    el.src = m[1];
+                    el.alt = '评论图片';
+                    attachEl.appendChild(el);
+                });
+                videoMatches.forEach(m => {
+                    const el = document.createElement('video');
+                    el.src = m[1];
+                    el.controls = true;
+                    attachEl.appendChild(el);
+                });
+            }
+            // 把占位从文本里去掉
+            html = html.replace(/\[(img|video):[^\]]+\]/g, '').trim();
+            contentEl.innerHTML = html.replace(/\n/g, '<br>');
+        });
+    })();
+</script>
+
+<!-- 引入增强播放器和实时功能 -->
+<script src="/js/enhanced-video-player.js"></script>
+<script src="/js/realtime-features.js"></script>
+
+<!-- 用户数据 -->
+<div data-current-user
+     data-username="[[${#authentication.name}]]"
+     data-avatar="[[${currentUser?.avatar ?: '/uploads/avatars/default.svg'}]]"
+     class="d-none"></div>
+
+<!-- 视频数据 -->
+<div data-video-id="[[${video.id}]]" class="d-none"></div>
+
+<!-- 图片查看模态框 -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">查看图片</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="图片">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/pet-themes.js"></script>
+<script src="/js/smart-pet.js"></script>
+
+<!-- 全局通知管理 -->
+<script src="/js/global-notifications.js"></script>
+
+<!-- 全局智能助手 -->
+<script src="/js/global-smart-pet.js"></script>
+
+<script>
+    // 签到功能
+    function dailyCheckin() {
+        const checkinBtn = document.getElementById('checkinBtn');
+        if (!checkinBtn) return;
+
+        checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>签到中...';
+        checkinBtn.disabled = true;
+
+        fetch('/api/checkin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                checkinBtn.innerHTML = '<i class="fas fa-check me-1"></i>已签到';
+                checkinBtn.classList.remove('btn-outline-light');
+                checkinBtn.classList.add('btn-success');
+                showToast(`签到成功！获得 ${data.reward || data.points || 0} 积分`, 'success');
+            } else {
+                // 签到失败处理
+                if (data.alreadyCheckedIn) {
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                    showToast(`今天已经签到过了\n连续签到 ${data.consecutiveDays || 0} 天，总计签到 ${data.totalDays || 0} 天`, 'info');
+                } else {
+                    // 即使签到失败，也要更新按钮显示当前签到状态
+                    if (data.consecutiveDays !== undefined && data.totalDays !== undefined && data.totalDays > 0) {
+                        checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                    } else {
+                        checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+                    }
+                    checkinBtn.disabled = false;
+                    showToast(data.message || '签到失败', 'error');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('签到失败:', error);
+            checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+            checkinBtn.disabled = false;
+            showToast('签到失败，请稍后重试', 'error');
+        });
+    }
+
+    // 更新聊天未读消息计数
+    function updateChatUnreadCount() {
+        fetch('/api/chat/unread-count', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const totalCount = data.count || 0;
+            const chatBadge = document.querySelector('.chat-unread-badge');
+
+            if (chatBadge) {
+                if (totalCount > 0) {
+                    chatBadge.textContent = totalCount > 99 ? '99+' : totalCount;
+                    chatBadge.style.display = 'inline-block';
+                } else {
+                    chatBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取聊天未读消息计数失败:', error);
+        });
+    }
+
+    // 检查签到状态
+    function checkCheckinStatus() {
+        fetch('/api/checkin/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const checkinBtn = document.getElementById('checkinBtn');
+                if (data.hasCheckedInToday) {
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                    checkinBtn.disabled = true;
+                } else {
+                    // 如果还没签到，显示总签到天数
+                    if (data.totalDays > 0) {
+                        checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('检查签到状态失败:', error);
+        });
+    }
+
+    // 发起私聊
+    function startPrivateChat(button) {
+        const targetUserId = button.getAttribute('data-user-id');
+        const targetUsername = button.getAttribute('data-username');
+
+        if (!targetUserId) {
+            alert('用户信息获取失败');
+            return;
+        }
+
+        // 禁用按钮防止重复点击
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span class="btn-label">处理中...</span>';
+
+        // 检查聊天权限
+        fetch(`/api/chat/permission/${targetUserId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.allowed) {
+                    // 有权限，创建或获取私聊会话
+                    return fetch('/api/chat/conversations/private', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: `targetUserId=${targetUserId}`
+                    });
+                } else {
+                    throw new Error(data.reason || '无法发起聊天');
+                }
+            } else {
+                throw new Error(data.message || '检查权限失败');
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 跳转到聊天页面，并打开对应的会话
+                window.location.href = `/chat?conversationId=${data.conversation.id}`;
+            } else {
+                throw new Error(data.message || '创建会话失败');
+            }
+        })
+        .catch(error => {
+            console.error('发起私聊失败:', error);
+            alert('发起私聊失败: ' + error.message);
+        })
+        .finally(() => {
+            // 恢复按钮状态
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化聊天未读消息计数
+        updateChatUnreadCount();
+
+        // 检查签到状态
+        checkCheckinStatus();
+
+        // 定期更新聊天未读消息计数（每30秒）
+        setInterval(updateChatUnreadCount, 30000);
+
+        // 初始化音乐播放器
+        initMusicPlayer();
+    });
+
+    // 音乐播放器功能
+    function initMusicPlayer() {
+        const player = document.querySelector('.custom-music-player');
+        if (!player) return;
+
+        const audio = player.querySelector('#audioElement');
+        const playBtn = player.querySelector('#playBtn');
+        const playIcon = player.querySelector('#playIcon');
+        const playIndicator = player.querySelector('#playIndicator');
+        const progressBar = player.querySelector('#progressBar');
+        const progressFill = player.querySelector('#progressFill');
+        const progressHandle = player.querySelector('#progressHandle');
+        const currentTimeSpan = player.querySelector('#currentTime');
+        const totalTimeSpan = player.querySelector('#totalTime');
+        const volumeBtn = player.querySelector('#volumeBtn');
+        const volumeIcon = player.querySelector('#volumeIcon');
+        const songTitle = player.querySelector('#songTitle');
+        const artistName = player.querySelector('#artistName');
+        const albumName = player.querySelector('#albumName');
+
+        let isDragging = false;
+        let isMuted = false;
+        let previousVolume = 0.5;
+
+        // 初始化音频
+        audio.volume = 0.5;
+
+        // 播放/暂停功能
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playIcon.className = 'fas fa-pause';
+                    playIndicator.innerHTML = '<i class="fas fa-pause"></i>';
+                }).catch(error => {
+                    console.error('播放失败:', error);
+                    alert('音频播放失败，请检查音频文件');
+                });
+            } else {
+                audio.pause();
+                playIcon.className = 'fas fa-play';
+                playIndicator.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+
+        // 绑定播放按钮事件
+        playBtn.addEventListener('click', togglePlay);
+        playIndicator.addEventListener('click', togglePlay);
+
+        // 音量控制
+        function toggleVolume() {
+            if (isMuted) {
+                audio.volume = previousVolume;
+                volumeIcon.className = 'fas fa-volume-up';
+                isMuted = false;
+            } else {
+                previousVolume = audio.volume;
+                audio.volume = 0;
+                volumeIcon.className = 'fas fa-volume-mute';
+                isMuted = true;
+            }
+        }
+
+        volumeBtn.addEventListener('click', toggleVolume);
+
+        // 进度条控制
+        function updateProgress() {
+            if (audio.duration) {
+                const progress = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = progress + '%';
+                progressHandle.style.left = progress + '%';
+                currentTimeSpan.textContent = formatTime(audio.currentTime);
+            }
+        }
+
+        function seekTo(event) {
+            if (!audio.duration) return;
+            
+            const rect = progressBar.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const width = rect.width;
+            const percentage = clickX / width;
+            audio.currentTime = percentage * audio.duration;
+        }
+
+        // 进度条事件
+        progressBar.addEventListener('click', seekTo);
+        progressBar.addEventListener('mousedown', () => isDragging = true);
+        document.addEventListener('mouseup', () => isDragging = false);
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                seekTo(e);
+            }
+        });
+
+        // 音频事件监听
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('loadedmetadata', () => {
+            totalTimeSpan.textContent = formatTime(audio.duration);
+            // 尝试从文件名获取音乐信息
+            const audioSrc = audio.querySelector('source').src;
+            const fileName = audioSrc.split('/').pop().replace(/\.[^/.]+$/, '');
+            songTitle.textContent = fileName || '未知歌曲';
+        });
+        audio.addEventListener('ended', () => {
+            playIcon.className = 'fas fa-play';
+            playIndicator.innerHTML = '<i class="fas fa-play"></i>';
+            progressFill.style.width = '0%';
+            progressHandle.style.left = '0%';
+        });
+
+        // 时间格式化
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return minutes + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        // 其他控制按钮
+        const prevBtn = player.querySelector('#prevBtn');
+        const nextBtn = player.querySelector('#nextBtn');
+        const playlistBtn = player.querySelector('#playlistBtn');
+
+        prevBtn.addEventListener('click', () => {
+            alert('上一首功能待实现');
+        });
+
+        nextBtn.addEventListener('click', () => {
+            alert('下一首功能待实现');
+        });
+
+        playlistBtn.addEventListener('click', () => {
+            alert('播放列表功能待实现');
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlay();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    audio.currentTime = Math.max(0, audio.currentTime - 10);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+                    break;
+                case 'KeyM':
+                    e.preventDefault();
+                    toggleVolume();
+                    break;
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

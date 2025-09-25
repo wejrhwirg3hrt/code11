@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最小化WebSocket测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 12px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🔧 最小化WebSocket测试</h1>
+    
+    <div>
+        <button onclick="testConnection()">测试连接</button>
+        <button onclick="testJoin()">测试加入</button>
+        <button onclick="testCall()">测试通话</button>
+        <button onclick="clearLog()">清空日志</button>
+    </div>
+    
+    <div>
+        <h3>测试日志</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/stomp.min.js"></script>
+
+    <script>
+        let client = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('log');
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logElement.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function testConnection() {
+            log('开始测试WebSocket连接...');
+            
+            try {
+                const socket = new SockJS('/ws');
+                client = Stomp.over(socket);
+                
+                // 禁用调试输出
+                client.debug = null;
+
+                client.connect({}, function(frame) {
+                    log('✅ WebSocket连接成功!', 'success');
+                    log('连接帧: ' + frame, 'success');
+                    
+                    // 订阅测试消息
+                    client.subscribe('/user/queue/webrtc/joined', function(message) {
+                        log('📨 收到加入成功消息: ' + message.body, 'success');
+                    });
+                    
+                    client.subscribe('/user/queue/webrtc/call-invitation', function(message) {
+                        log('📞 收到通话邀请: ' + message.body, 'success');
+                    });
+                    
+                    log('✅ 消息订阅完成', 'success');
+                    
+                }, function(error) {
+                    log('❌ 连接失败: ' + error, 'error');
+                });
+
+            } catch (error) {
+                log('❌ 连接异常: ' + error.message, 'error');
+            }
+        }
+
+        function testJoin() {
+            if (!client || !client.connected) {
+                log('❌ 请先连接WebSocket', 'error');
+                return;
+            }
+
+            log('发送加入消息...');
+            
+            try {
+                const joinMessage = {
+                    userId: '999'
+                };
+                
+                client.send('/app/webrtc/join', {}, JSON.stringify(joinMessage));
+                log('✅ 加入消息已发送: ' + JSON.stringify(joinMessage), 'success');
+                
+            } catch (error) {
+                log('❌ 发送加入消息失败: ' + error.message, 'error');
+            }
+        }
+
+        function testCall() {
+            if (!client || !client.connected) {
+                log('❌ 请先连接WebSocket', 'error');
+                return;
+            }
+
+            log('发送通话邀请...');
+            
+            try {
+                const callMessage = {
+                    callerId: '999',
+                    calleeId: '888',
+                    callType: 'video'
+                };
+                
+                client.send('/app/webrtc/call', {}, JSON.stringify(callMessage));
+                log('✅ 通话邀请已发送: ' + JSON.stringify(callMessage), 'success');
+                
+            } catch (error) {
+                log('❌ 发送通话邀请失败: ' + error.message, 'error');
+            }
+        }
+
+        // 页面加载时的提示
+        window.addEventListener('load', () => {
+            log('页面加载完成，请点击"测试连接"开始测试');
+        });
+    </script>
+</body>
+</html>

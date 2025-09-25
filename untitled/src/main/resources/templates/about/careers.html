@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>招聘信息 - 视频分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar-custom {
+            background: rgba(0,0,0,0.2) !important;
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: white !important;
+            font-weight: 500;
+        }
+
+        .navbar-custom .nav-link:hover {
+            color: #f093fb !important;
+        }
+
+        .hero-section {
+            background: rgba(255,255,255,0.1);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 4rem 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            color: white;
+        }
+
+        .content-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .job-card {
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .job-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border-color: #f093fb;
+        }
+
+        .job-title {
+            color: #667eea;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-department {
+            color: #f093fb;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .job-tags {
+            margin-bottom: 1rem;
+        }
+
+        .job-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            display: inline-block;
+        }
+
+        .benefits-section {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+        }
+
+        .benefit-item {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .benefit-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-apply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(240, 147, 251, 0.4);
+            color: white;
+        }
+
+        .filter-section {
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-btn {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .application-form {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            padding: 0.75rem 1rem;
+        }
+
+        .form-control:focus {
+            border-color: #f093fb;
+            box-shadow: 0 0 0 0.2rem rgba(240, 147, 251, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频分享平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" title="切换导航菜单">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i>首页
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">
+                            <i class="fas fa-info-circle me-1"></i>关于我们
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/team">
+                            <i class="fas fa-users me-1"></i>团队介绍
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/careers">
+                            <i class="fas fa-briefcase me-1"></i>招聘信息
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/news">
+                            <i class="fas fa-newspaper me-1"></i>新闻动态
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 英雄区域 -->
+        <div class="hero-section">
+            <h1 class="display-4 mb-4">
+                <i class="fas fa-briefcase me-3"></i>加入我们
+            </h1>
+            <p class="lead mb-4">与我们一起创造视频分享的未来</p>
+            <p class="mb-0">我们正在寻找充满激情和创造力的人才，共同打造全球领先的视频分享平台。</p>
+        </div>
+
+        <!-- 公司福利 -->
+        <div class="benefits-section">
+            <h2 class="text-center mb-5">
+                <i class="fas fa-gift me-2"></i>公司福利
+            </h2>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <h5>有竞争力的薪资</h5>
+                        <p>提供行业领先的薪资待遇和年终奖金</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-heartbeat"></i>
+                        </div>
+                        <h5>健康保险</h5>
+                        <p>全面的医疗保险和健康体检</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h5>学习发展</h5>
+                        <p>培训预算和职业发展机会</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h5>灵活工作</h5>
+                        <p>弹性工作时间和远程办公选项</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 职位筛选 -->
+        <div class="filter-section">
+            <h4 class="mb-3">筛选职位</h4>
+            <div class="mb-3">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="tech">技术</button>
+                <button class="filter-btn" data-filter="product">产品</button>
+                <button class="filter-btn" data-filter="design">设计</button>
+                <button class="filter-btn" data-filter="marketing">市场</button>
+                <button class="filter-btn" data-filter="operation">运营</button>
+            </div>
+        </div>
+
+        <!-- 招聘职位 -->
+        <div class="content-section">
+            <h2 class="text-center mb-5">
+                <i class="fas fa-search me-2"></i>招聘职位
+            </h2>
+            
+            <!-- 技术职位 -->
+            <div class="job-card" data-category="tech">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">高级前端工程师</h3>
+                        <div class="job-department">技术部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">React</span>
+                            <span class="job-tag">Vue.js</span>
+                            <span class="job-tag">TypeScript</span>
+                            <span class="job-tag">3-5年经验</span>
+                        </div>
+                        <p>负责平台前端架构设计和开发，优化用户体验，提升产品性能。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('高级前端工程师')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="job-card" data-category="tech">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">后端开发工程师</h3>
+                        <div class="job-department">技术部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Java</span>
+                            <span class="job-tag">Spring Boot</span>
+                            <span class="job-tag">MySQL</span>
+                            <span class="job-tag">2-4年经验</span>
+                        </div>
+                        <p>负责后端服务开发，数据库设计，API接口开发等工作。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('后端开发工程师')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="job-card" data-category="tech">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">AI算法工程师</h3>
+                        <div class="job-department">技术部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Python</span>
+                            <span class="job-tag">TensorFlow</span>
+                            <span class="job-tag">推荐算法</span>
+                            <span class="job-tag">3-6年经验</span>
+                        </div>
+                        <p>负责推荐算法优化，内容审核算法开发，提升平台智能化水平。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('AI算法工程师')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 产品职位 -->
+            <div class="job-card" data-category="product">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">产品经理</h3>
+                        <div class="job-department">产品部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">产品规划</span>
+                            <span class="job-tag">用户研究</span>
+                            <span class="job-tag">数据分析</span>
+                            <span class="job-tag">2-5年经验</span>
+                        </div>
+                        <p>负责产品功能规划，用户需求分析，产品路线图制定。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('产品经理')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设计职位 -->
+            <div class="job-card" data-category="design">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">UI/UX设计师</h3>
+                        <div class="job-department">设计部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">Figma</span>
+                            <span class="job-tag">Sketch</span>
+                            <span class="job-tag">用户研究</span>
+                            <span class="job-tag">2-4年经验</span>
+                        </div>
+                        <p>负责产品界面设计，用户体验优化，设计系统建设。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('UI/UX设计师')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 市场职位 -->
+            <div class="job-card" data-category="marketing">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">市场推广专员</h3>
+                        <div class="job-department">市场部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">品牌推广</span>
+                            <span class="job-tag">社交媒体</span>
+                            <span class="job-tag">内容营销</span>
+                            <span class="job-tag">1-3年经验</span>
+                        </div>
+                        <p>负责品牌推广，社交媒体运营，内容营销策略执行。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('市场推广专员')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 运营职位 -->
+            <div class="job-card" data-category="operation">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="job-title">内容运营专员</h3>
+                        <div class="job-department">运营部</div>
+                        <div class="job-tags">
+                            <span class="job-tag">内容策划</span>
+                            <span class="job-tag">用户运营</span>
+                            <span class="job-tag">数据分析</span>
+                            <span class="job-tag">1-3年经验</span>
+                        </div>
+                        <p>负责内容策划，用户运营，社区建设等工作。</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-apply" onclick="applyJob('内容运营专员')">
+                            <i class="fas fa-paper-plane me-2"></i>立即申请
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 申请表单 -->
+        <div class="application-form" id="applicationForm" style="display: none;">
+            <h2 class="text-center mb-4">
+                <i class="fas fa-edit me-2"></i>职位申请
+            </h2>
+            <form id="jobApplicationForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">姓名 *</label>
+                            <input type="text" class="form-control" id="name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">邮箱 *</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">电话</label>
+                            <input type="tel" class="form-control" id="phone">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="position" class="form-label">申请职位 *</label>
+                            <input type="text" class="form-control" id="position" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="experience" class="form-label">工作经验</label>
+                    <textarea class="form-control" id="experience" rows="3" placeholder="请简要描述您的工作经验..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="motivation" class="form-label">申请动机</label>
+                    <textarea class="form-control" id="motivation" rows="3" placeholder="请说明您为什么想加入我们..."></textarea>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-apply me-3">
+                        <i class="fas fa-paper-plane me-2"></i>提交申请
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeApplicationForm()">
+                        <i class="fas fa-times me-2"></i>取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 职位筛选功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const jobCards = document.querySelectorAll('.job-card');
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.getAttribute('data-filter');
+                    
+                    // 更新按钮状态
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 筛选职位卡片
+                    jobCards.forEach(card => {
+                        if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            // 表单提交处理
+            document.getElementById('jobApplicationForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('申请提交成功！我们会尽快与您联系。');
+                closeApplicationForm();
+            });
+        });
+
+        // 申请职位
+        function applyJob(position) {
+            document.getElementById('position').value = position;
+            document.getElementById('applicationForm').style.display = 'block';
+            document.getElementById('applicationForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 关闭申请表单
+        function closeApplicationForm() {
+            document.getElementById('applicationForm').style.display = 'none';
+            document.getElementById('jobApplicationForm').reset();
+        }
+
+        // 添加页面加载动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section, .hero-section, .benefits-section, .filter-section');
+            
+            sections.forEach((section, index) => {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    section.style.transition = 'all 0.6s ease-out';
+                    section.style.opacity = '1';
+                    section.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+
+            // 添加职位卡片动画
+            const jobCards = document.querySelectorAll('.job-card');
+            jobCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease-out';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 800 + index * 100);
+            });
+        });
+    </script>
+</body>
+</html> 

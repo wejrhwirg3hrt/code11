@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通知中心 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- WebSocket库 -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    
+    <style>
+        /* 导航栏优化样式 */
+        .nav-link-sm {
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.6rem !important;
+            white-space: nowrap;
+        }
+
+        .btn-nav-sm {
+            font-size: 0.8rem !important;
+            padding: 0.3rem 0.6rem !important;
+        }
+
+        .navbar-text-sm {
+            font-size: 0.85rem !important;
+        }
+
+        .navbar-nav .nav-link {
+            transition: all 0.2s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            transform: translateY(-1px);
+            color: #fff !important;
+        }
+
+        /* 导航栏三分布局 */
+        .navbar-left {
+            flex: 0 0 auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 1rem;
+            margin-right: 1rem;
+        }
+
+        .navbar-center {
+            flex: 0 0 auto;
+            padding: 0 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-right {
+            flex: 0 0 auto;
+            padding-left: 1rem;
+            margin-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 聊天未读消息计数样式 */
+        .chat-unread-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.6rem;
+            padding: 2px 5px;
+            min-width: 16px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        .notification-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .notification-item.unread {
+            background-color: #f8f9fa;
+            border-left-color: #007bff;
+        }
+        .notification-item:hover {
+            background-color: #e9ecef;
+        }
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .notification-icon.comment { background-color: #007bff; }
+        .notification-icon.like { background-color: #dc3545; }
+        .notification-icon.favorite { background-color: #ffc107; }
+        .notification-icon.follow { background-color: #28a745; }
+        .notification-icon.system { background-color: #6c757d; }
+        .notification-icon.announcement { background-color: #17a2b8; }
+        .notification-icon.achievement {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            animation: achievement-glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes achievement-glow {
+            from { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 导航栏 -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+        
+        <div class="navbar-nav ms-auto d-flex flex-row align-items-center w-100">
+            <!-- 登录状态下显示 -->
+            <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center w-100 justify-content-between">
+                <!-- 左侧功能区 -->
+                <div class="d-flex flex-row align-items-center navbar-left">
+                    <a class="nav-link me-2 nav-link-sm" href="/upload">
+                        <i class="fas fa-upload me-1"></i>上传
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/music">
+                        <i class="fas fa-music me-1"></i>音乐
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/posts">
+                        <i class="fas fa-heart me-1"></i>动态
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/private-album">
+                        <i class="fas fa-lock me-1"></i>私密相册
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/voice-clone">
+                        <i class="fas fa-microphone me-1"></i>语音克隆
+                    </a>
+                </div>
+
+                <!-- 中间签到区 -->
+                <div class="navbar-center">
+                    <button class="btn btn-outline-light btn-sm btn-nav-sm" id="checkinBtn" onclick="dailyCheckin()">
+                        <i class="fas fa-calendar-check me-1"></i>签到
+                    </button>
+                </div>
+
+                <!-- 右侧用户区 -->
+                <div class="d-flex flex-row align-items-center navbar-right">
+                    <a class="nav-link me-2 nav-link-sm notification-bell active" href="/notifications">
+                        <i class="fas fa-bell me-1"></i>通知
+                        <span class="badge bg-danger notification-badge" th:if="${unreadCount > 0}" th:text="${unreadCount}"></span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/chat" style="position: relative;">
+                        <i class="fas fa-comments me-1"></i>聊天
+                        <span class="chat-unread-badge badge bg-danger" style="display: none; position: absolute; top: -5px; right: 5px; font-size: 0.6rem;">0</span>
+                    </a>
+                    <a class="nav-link me-2 nav-link-sm" href="/profile" id="userProfileLink">
+                        <i class="fas fa-user me-1"></i>我的主页
+                        <span id="userLevelBadge" class="badge bg-primary ms-1" style="display: none;"></span>
+                    </a>
+                    <span class="navbar-text me-2 navbar-text-sm">
+                        <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button class="btn btn-outline-light btn-sm btn-nav-sm" type="submit">退出</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 未登录状态下显示 -->
+            <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                <a class="nav-link me-2 nav-link-sm" href="/login">
+                    <i class="fas fa-sign-in-alt me-1"></i>登录
+                </a>
+                <a class="nav-link nav-link-sm" href="/register">
+                    <i class="fas fa-user-plus me-1"></i>注册
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 主要内容 -->
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-bell me-2"></i>通知中心</h2>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="sendTestNotification()">
+                        <i class="fas fa-test-tube me-1"></i>发送测试通知
+                    </button>
+                    <button class="btn btn-outline-secondary mark-all-read" onclick="markAllAsRead()">
+                        <i class="fas fa-check-double me-1"></i>全部标记为已读
+                    </button>
+                </div>
+            </div>
+
+            <!-- 通知统计 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary" th:text="${unreadCount}">0</h5>
+                            <p class="card-text">未读通知</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-info" th:text="${notifications.totalElements}">0</h5>
+                            <p class="card-text">总通知数</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success" th:text="${notifications.totalPages}">0</h5>
+                            <p class="card-text">总页数</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning" th:text="${currentPage + 1}">1</h5>
+                            <p class="card-text">当前页</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 通知列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">通知列表</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div th:if="${#lists.isEmpty(notifications.content)}" class="text-center py-5">
+                        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">暂无通知</p>
+                    </div>
+                    
+                    <div th:each="notification : ${notifications.content}" 
+                         class="notification-item p-3 border-bottom"
+                         th:classappend="${!notification.isRead} ? 'unread' : ''"
+                         th:data-id="${notification.id}">
+                        <div class="d-flex">
+                            <div class="notification-icon me-3" 
+                                 th:classappend="${#strings.toLowerCase(notification.type)}">
+                                <i th:class="${notification.type == 'COMMENT' ? 'fas fa-comment' :
+                                             notification.type == 'LIKE' ? 'fas fa-heart' :
+                                             notification.type == 'FAVORITE' ? 'fas fa-star' :
+                                             notification.type == 'FOLLOW' ? 'fas fa-user-plus' :
+                                             notification.type == 'SYSTEM' ? 'fas fa-cog' :
+                                             notification.type == 'ANNOUNCEMENT' ? 'fas fa-bullhorn' :
+                                             notification.type == 'ACHIEVEMENT' ? 'fas fa-trophy' :
+                                             'fas fa-bell'}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="mb-1" th:text="${notification.title}">通知标题</h6>
+                                    <div class="d-flex align-items-center">
+                                        <small class="text-muted me-2" th:text="${#temporals.format(notification.createdAt, 'yyyy-MM-dd HH:mm')}">时间</small>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li th:if="${!notification.isRead}">
+                                                    <a class="dropdown-item" href="#" 
+                                                       th:onclick="'markAsRead(' + ${notification.id} + ')'">
+                                                        <i class="fas fa-check me-2"></i>标记为已读
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="#" 
+                                                       th:onclick="'deleteNotification(' + ${notification.id} + ')'">
+                                                        <i class="fas fa-trash me-2"></i>删除
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mb-1" th:text="${notification.content}">通知内容</p>
+                                <div th:if="${notification.fromUserId != null}" class="d-flex align-items-center">
+                                    <small class="text-muted">来自用户ID: </small>
+                                    <small class="text-primary ms-1" th:text="${notification.fromUserId}">用户ID</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <nav th:if="${notifications.totalPages > 1}" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link" th:href="@{/notifications(page=${currentPage - 1})}">上一页</a>
+                    </li>
+                    
+                    <li th:each="i : ${#numbers.sequence(0, notifications.totalPages - 1)}" 
+                        class="page-item" th:classappend="${i == currentPage} ? 'active'">
+                        <a class="page-link" th:href="@{/notifications(page=${i})}" th:text="${i + 1}">1</a>
+                    </li>
+                    
+                    <li class="page-item" th:classappend="${currentPage == notifications.totalPages - 1} ? 'disabled'">
+                        <a class="page-link" th:href="@{/notifications(page=${currentPage + 1})}">下一页</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- Toast容器 -->
+<div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+<!-- 用户数据 -->
+<div data-current-user 
+     data-username="[[${#authentication.name}]]"
+     style="display: none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/realtime-features.js"></script>
+
+<script>
+    // 标记单个通知为已读
+    function markAsRead(notificationId) {
+        fetch(`/api/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const notificationItem = document.querySelector(`[data-id="${notificationId}"]`);
+                if (notificationItem) {
+                    notificationItem.classList.remove('unread');
+                }
+                updateNotificationBadge();
+                showToast('成功', '通知已标记为已读', 'success');
+            } else {
+                showToast('错误', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('标记通知失败:', error);
+            showToast('错误', '操作失败', 'danger');
+        });
+    }
+
+    // 标记所有通知为已读
+    function markAllAsRead() {
+        fetch('/api/notifications/mark-all-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.querySelectorAll('.notification-item.unread').forEach(item => {
+                    item.classList.remove('unread');
+                });
+                updateNotificationBadge();
+                showToast('成功', '所有通知已标记为已读', 'success');
+            } else {
+                showToast('错误', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('标记所有通知失败:', error);
+            showToast('错误', '操作失败', 'danger');
+        });
+    }
+
+    // 删除通知
+    function deleteNotification(notificationId) {
+        if (!confirm('确定要删除这条通知吗？')) {
+            return;
+        }
+
+        fetch(`/api/notifications/${notificationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const notificationItem = document.querySelector(`[data-id="${notificationId}"]`);
+                if (notificationItem) {
+                    notificationItem.remove();
+                }
+                showToast('成功', '通知已删除', 'success');
+            } else {
+                showToast('错误', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('删除通知失败:', error);
+            showToast('错误', '操作失败', 'danger');
+        });
+    }
+
+    // 发送测试通知
+    function sendTestNotification() {
+        fetch('/api/notifications/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('成功', '测试通知已发送', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                showToast('错误', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('发送测试通知失败:', error);
+            showToast('错误', '操作失败', 'danger');
+        });
+    }
+
+    // 更新通知徽章
+    function updateNotificationBadge() {
+        fetch('/api/notifications/unread-count')
+            .then(response => response.json())
+            .then(count => {
+                const badge = document.querySelector('.notification-badge');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => console.error('更新通知徽章失败:', error));
+    }
+
+    // 显示Toast
+    function showToast(title, message, type = 'success') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong><br>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                        data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    // 签到功能
+    function dailyCheckin() {
+        const checkinBtn = document.getElementById('checkinBtn');
+        if (!checkinBtn) return;
+
+        checkinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>签到中...';
+        checkinBtn.disabled = true;
+
+        fetch('/api/checkin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                checkinBtn.innerHTML = '<i class="fas fa-check me-1"></i>已签到';
+                checkinBtn.classList.remove('btn-outline-light');
+                checkinBtn.classList.add('btn-success');
+                showToast(`签到成功！获得 ${data.points} 积分`, 'success');
+            } else {
+                checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+                checkinBtn.disabled = false;
+                showToast(data.message || '签到失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('签到失败:', error);
+            checkinBtn.innerHTML = '<i class="fas fa-calendar-check me-1"></i>签到';
+            checkinBtn.disabled = false;
+            showToast('签到失败，请稍后重试', 'error');
+        });
+    }
+
+    // 更新聊天未读消息计数
+    function updateChatUnreadCount() {
+        fetch('/api/chat/unread-count', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const totalCount = data.count || 0;
+            const chatBadge = document.querySelector('.chat-unread-badge');
+
+            if (chatBadge) {
+                if (totalCount > 0) {
+                    chatBadge.textContent = totalCount > 99 ? '99+' : totalCount;
+                    chatBadge.style.display = 'inline-block';
+                } else {
+                    chatBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取聊天未读消息计数失败:', error);
+        });
+    }
+
+    // 检查签到状态
+    function checkCheckinStatus() {
+        fetch('/api/checkin/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const checkinBtn = document.getElementById('checkinBtn');
+                if (data.hasCheckedInToday) {
+                    checkinBtn.innerHTML = `<i class="fas fa-check me-1"></i>已签到 (${data.totalDays || 0}天)`;
+                    checkinBtn.classList.remove('btn-outline-light');
+                    checkinBtn.classList.add('btn-success');
+                    checkinBtn.disabled = true;
+                } else {
+                    // 如果还没签到，显示总签到天数
+                    if (data.totalDays > 0) {
+                        checkinBtn.innerHTML = `<i class="fas fa-calendar-check me-1"></i>签到 (${data.totalDays}天)`;
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('检查签到状态失败:', error);
+        });
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化聊天未读消息计数
+        updateChatUnreadCount();
+
+        // 检查签到状态
+        checkCheckinStatus();
+
+        // 定期更新聊天未读消息计数（每30秒）
+        setInterval(updateChatUnreadCount, 30000);
+    });
+</script>
+
+</body>
+</html>

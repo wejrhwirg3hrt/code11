@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频通话 - 视频网站</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: #000;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-call-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 远程视频（主视频） */
+        .remote-video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #1a1a1a;
+        }
+
+        .remote-video-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 1;
+        }
+
+        .remote-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            margin: 0 auto 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .remote-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .remote-user-name {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .remote-status {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        /* 本地视频（小窗口） */
+        .local-video-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .local-video-container:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        #localVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* 镜像效果 */
+        }
+
+        .local-video-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* 视频切换按钮 */
+        .switch-video-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .switch-video-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: scale(1.1);
+        }
+
+        /* 通话信息 */
+        .call-info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: white;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .call-duration {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .call-status {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 连接状态 */
+        .connection-status {
+            position: absolute;
+            top: 90px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        .connection-status.connected {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+        }
+
+        .connection-status.connecting {
+            background: rgba(255, 152, 0, 0.9);
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+        }
+
+        /* 控制按钮 */
+        .controls-container {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .mute-btn {
+            background: rgba(76, 175, 80, 0.9);
+        }
+
+        .mute-btn.muted {
+            background: rgba(244, 67, 54, 0.9);
+        }
+
+        .camera-btn {
+            background: rgba(33, 150, 243, 0.9);
+        }
+
+        .camera-btn.camera-off {
+            background: rgba(255, 152, 0, 0.9);
+        }
+
+        .end-call-btn {
+            background: rgba(244, 67, 54, 0.9);
+            width: 70px;
+            height: 70px;
+            font-size: 28px;
+        }
+
+        .end-call-btn:hover {
+            background: rgba(211, 47, 47, 0.9);
+        }
+
+        /* 全屏模式 */
+        .fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .local-video-container {
+                width: 120px;
+                height: 90px;
+                top: 15px;
+                right: 15px;
+            }
+
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .end-call-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            .controls-container {
+                gap: 15px;
+                bottom: 30px;
+            }
+
+            .call-info {
+                padding: 8px 16px;
+            }
+
+            .call-duration {
+                font-size: 16px;
+            }
+
+            .call-status {
+                font-size: 12px;
+            }
+        }
+
+        /* 视频加载动画 */
+        .video-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            z-index: 5;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-call-container">
+        <!-- 远程视频容器 -->
+        <div class="remote-video-container" id="remoteVideoContainer">
+            <video id="remoteVideo" autoplay playsinline></video>
+            
+            <!-- 远程视频占位符 -->
+            <div class="remote-video-placeholder" id="remotePlaceholder">
+                <div class="remote-avatar" id="remoteAvatar">👤</div>
+                <div class="remote-user-name" id="remoteUserName" th:text="${otherUser != null ? otherUser.username : '对方用户'}">对方用户</div>
+                <div class="remote-status" id="remoteStatus">等待视频连接...</div>
+            </div>
+
+            <!-- 视频加载动画 -->
+            <div class="video-loading" id="videoLoading" style="display: none;">
+                <div class="loading-spinner"></div>
+                <div>正在连接视频...</div>
+            </div>
+        </div>
+
+        <!-- 本地视频容器 -->
+        <div class="local-video-container" id="localVideoContainer">
+            <video id="localVideo" autoplay playsinline muted></video>
+            <div class="local-video-placeholder" id="localPlaceholder">
+                <div>我的视频</div>
+            </div>
+        </div>
+
+        <!-- 视频切换按钮 -->
+        <button class="switch-video-btn" id="switchVideoBtn" title="切换主副视频">
+            🔄
+        </button>
+
+        <!-- 通话信息 -->
+        <div class="call-info">
+            <div class="call-duration" id="callDuration">00:00</div>
+            <div class="call-status">视频通话中</div>
+        </div>
+
+        <!-- 连接状态 -->
+        <div class="connection-status connecting" id="connectionStatus">连接中...</div>
+
+        <!-- 控制按钮 -->
+        <div class="controls-container">
+            <button class="control-btn mute-btn" id="muteBtn" title="静音/取消静音">
+                🎤
+            </button>
+            <button class="control-btn camera-btn" id="cameraBtn" title="开/关摄像头">
+                📹
+            </button>
+            <button class="control-btn end-call-btn" id="endCallBtn" title="结束通话">
+                📞
+            </button>
+        </div>
+    </div>
+
+    <script src="/js/webrtc-client.js"></script>
+    <script th:inline="javascript">
+        // 从Thymeleaf获取数据
+        const currentUser = /*[[${currentUser}]]*/ null;
+        const otherUser = /*[[${otherUser}]]*/ null;
+        const roomId = /*[[${roomId}]]*/ '';
+        const callType = 'video'; // 视频通话
+
+        console.log('视频通话页面数据:', { currentUser, otherUser, roomId, callType });
+
+        // 创建WebRTC客户端实例
+        const webrtcClient = new WebRTCClient();
+
+        // 页面元素
+        const remoteVideo = document.getElementById('remoteVideo');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideoContainer = document.getElementById('remoteVideoContainer');
+        const localVideoContainer = document.getElementById('localVideoContainer');
+        const remotePlaceholder = document.getElementById('remotePlaceholder');
+        const localPlaceholder = document.getElementById('localPlaceholder');
+        const remoteUserName = document.getElementById('remoteUserName');
+        const remoteAvatar = document.getElementById('remoteAvatar');
+        const remoteStatus = document.getElementById('remoteStatus');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const callDuration = document.getElementById('callDuration');
+        const videoLoading = document.getElementById('videoLoading');
+        const switchVideoBtn = document.getElementById('switchVideoBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const endCallBtn = document.getElementById('endCallBtn');
+
+        // 通话状态
+        let isCallActive = false;
+        let isMuted = false;
+        let isCameraOn = true;
+        let callStartTime = null;
+        let durationInterval = null;
+        let isVideoSwitched = false; // 是否切换了主副视频
+
+        // 初始化视频通话
+        async function initVideoCall() {
+            try {
+                console.log('初始化视频通话...');
+                
+                // 设置用户信息
+                if (otherUser) {
+                    remoteUserName.textContent = otherUser.username;
+                    if (otherUser.avatar) {
+                        remoteAvatar.innerHTML = `<img src="${otherUser.avatar}" alt="${otherUser.username}">`;
+                    }
+                }
+
+                // 显示加载动画
+                videoLoading.style.display = 'block';
+
+                // 初始化WebRTC客户端
+                console.log('🚀 开始初始化WebRTC客户端...');
+                updateConnectionStatus('connecting');
+
+                try {
+                    await webrtcClient.initialize(currentUser.id.toString());
+                    console.log('✅ WebRTC客户端初始化成功');
+
+                    // 设置WebRTC客户端属性
+                    webrtcClient.currentRoomId = roomId;
+                    webrtcClient.currentCallType = 'video';
+
+                    // 检查是否是发起方
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isInitiator = urlParams.get('initiator') === 'true';
+                    webrtcClient.isInitiator = isInitiator;
+
+                    console.log('📋 WebRTC初始化参数:', {
+                        userId: currentUser.id,
+                        roomId: roomId,
+                        isInitiator: isInitiator,
+                        otherUser: otherUser
+                    });
+
+                    // 设置通话数据
+                    if (otherUser) {
+                        webrtcClient.currentCallData = {
+                            callerId: isInitiator ? currentUser.id.toString() : otherUser.id.toString(),
+                            calleeId: isInitiator ? otherUser.id.toString() : currentUser.id.toString(),
+                            callType: 'video',
+                            roomId: roomId
+                        };
+                    }
+
+                    // 设置回调函数
+                    webrtcClient.onLocalStream = (stream) => {
+                        console.log('✅ 获取到本地视频流');
+                        localVideo.srcObject = stream;
+                        localPlaceholder.style.display = 'none';
+                        videoLoading.style.display = 'none';
+                        updateConnectionStatus('connected');
+                    };
+
+                    webrtcClient.onRemoteStream = (stream) => {
+                        console.log('✅ 获取到远程视频流');
+                        remoteVideo.srcObject = stream;
+                        remotePlaceholder.style.display = 'none';
+                        remoteStatus.textContent = '视频已连接';
+                        updateConnectionStatus('connected');
+                        startCall();
+                        videoLoading.style.display = 'none';
+                    };
+
+                    webrtcClient.onConnectionStateChange = (state) => {
+                        console.log('🔗 连接状态变化:', state);
+                        if (state === 'connected') {
+                            updateConnectionStatus('connected');
+                            startCall();
+                        } else if (state === 'disconnected' || state === 'failed') {
+                            updateConnectionStatus('disconnected');
+                        }
+                    };
+
+                    // 获取本地视频流
+                    console.log('📹 获取本地视频流...');
+                    await webrtcClient.getLocalStream('video');
+
+                    if (webrtcClient.localStream) {
+                        localVideo.srcObject = webrtcClient.localStream;
+                        localPlaceholder.style.display = 'none';
+                        console.log('✅ 本地视频流设置完成');
+                        updateConnectionStatus('connected');
+                        videoLoading.style.display = 'none';
+                    }
+
+                    // 简化的连接流程 - 直接建立P2P连接
+                    console.log('🔗 开始建立P2P连接...');
+                    await webrtcClient.createPeerConnection();
+
+                    if (isInitiator) {
+                        console.log('🚀 作为发起方，创建并发送Offer');
+                        setTimeout(async () => {
+                            try {
+                                await webrtcClient.createAndSendOffer();
+                                console.log('✅ Offer已发送');
+                            } catch (error) {
+                                console.error('❌ 发送Offer失败:', error);
+                            }
+                        }, 1000);
+                    } else {
+                        console.log('📞 作为接收方，等待Offer');
+                    }
+
+                } catch (error) {
+                    console.error('❌ WebRTC初始化失败:', error);
+                    updateConnectionStatus('disconnected');
+                    videoLoading.style.display = 'none';
+                }
+
+                    // 设置通话数据
+                    if (otherUser) {
+                        webrtcClient.currentCallData = {
+                            callerId: isInitiator ? currentUser.id.toString() : otherUser.id.toString(),
+                            calleeId: isInitiator ? otherUser.id.toString() : currentUser.id.toString(),
+                            callType: callType,
+                            roomId: roomId
+                        };
+                    }
+
+                    if (isInitiator) {
+                        console.log('作为发起方，创建并发送Offer');
+                        await webrtcClient.createAndSendOffer();
+                    } else {
+                        console.log('作为接收方，等待Offer');
+                    }
+
+                    videoLoading.style.display = 'none';
+                } else {
+                    console.error('WebRTC客户端未加载');
+                    updateConnectionStatus('disconnected');
+                    videoLoading.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('初始化视频通话失败:', error);
+                updateConnectionStatus('disconnected');
+                remoteStatus.textContent = '连接失败';
+                videoLoading.style.display = 'none';
+            }
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(status) {
+            connectionStatus.className = `connection-status ${status}`;
+            switch (status) {
+                case 'connected':
+                    connectionStatus.textContent = '已连接';
+                    break;
+                case 'connecting':
+                    connectionStatus.textContent = '连接中...';
+                    break;
+                case 'disconnected':
+                    connectionStatus.textContent = '已断开';
+                    break;
+            }
+        }
+
+        // 开始通话
+        function startCall() {
+            if (!isCallActive) {
+                isCallActive = true;
+                callStartTime = new Date();
+                startCallDurationTimer();
+            }
+        }
+
+        // 开始通话时长计时
+        function startCallDurationTimer() {
+            durationInterval = setInterval(() => {
+                if (callStartTime) {
+                    const duration = Math.floor((new Date() - callStartTime) / 1000);
+                    const minutes = Math.floor(duration / 60);
+                    const seconds = duration % 60;
+                    callDuration.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        // 切换主副视频
+        function switchVideos() {
+            isVideoSwitched = !isVideoSwitched;
+            
+            if (isVideoSwitched) {
+                // 将本地视频设为主视频，远程视频设为小窗口
+                const tempSrc = remoteVideo.srcObject;
+                remoteVideo.srcObject = localVideo.srcObject;
+                localVideo.srcObject = tempSrc;
+                
+                // 调整样式
+                localVideo.style.transform = 'none'; // 移除镜像效果
+                remoteVideo.style.transform = 'scaleX(-1)'; // 添加镜像效果
+            } else {
+                // 恢复原始布局
+                const tempSrc = remoteVideo.srcObject;
+                remoteVideo.srcObject = localVideo.srcObject;
+                localVideo.srcObject = tempSrc;
+                
+                // 恢复样式
+                localVideo.style.transform = 'scaleX(-1)'; // 恢复镜像效果
+                remoteVideo.style.transform = 'none'; // 移除镜像效果
+            }
+        }
+
+        // 控制按钮事件
+        switchVideoBtn.addEventListener('click', switchVideos);
+
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (webrtcClient && webrtcClient.localStream) {
+                const audioTrack = webrtcClient.localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = !isMuted;
+                }
+            }
+            
+            muteBtn.classList.toggle('muted', isMuted);
+            muteBtn.innerHTML = isMuted ? '🔇' : '🎤';
+            muteBtn.title = isMuted ? '取消静音' : '静音';
+        });
+
+        cameraBtn.addEventListener('click', () => {
+            isCameraOn = !isCameraOn;
+            if (webrtcClient && webrtcClient.localStream) {
+                const videoTrack = webrtcClient.localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = isCameraOn;
+                }
+            }
+            
+            cameraBtn.classList.toggle('camera-off', !isCameraOn);
+            cameraBtn.innerHTML = isCameraOn ? '📹' : '📷';
+            cameraBtn.title = isCameraOn ? '关闭摄像头' : '打开摄像头';
+            
+            // 显示/隐藏本地视频占位符
+            if (isCameraOn) {
+                localPlaceholder.style.display = 'none';
+            } else {
+                localPlaceholder.style.display = 'flex';
+                localPlaceholder.innerHTML = '<div>摄像头已关闭</div>';
+            }
+        });
+
+        endCallBtn.addEventListener('click', () => {
+            endCall();
+        });
+
+        // 双击本地视频切换主副视频
+        localVideoContainer.addEventListener('dblclick', switchVideos);
+
+        // 结束通话
+        function endCall() {
+            if (webrtcClient) {
+                webrtcClient.endCall();
+            }
+            
+            if (durationInterval) {
+                clearInterval(durationInterval);
+            }
+            
+            // 停止所有媒体流
+            if (webrtcClient && webrtcClient.localStream) {
+                webrtcClient.localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // 返回主页
+            window.location.href = '/';
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initVideoCall);
+
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', () => {
+            if (webrtcClient && webrtcClient.localStream) {
+                webrtcClient.localStream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'm':
+                case 'M':
+                    muteBtn.click();
+                    break;
+                case 'v':
+                case 'V':
+                    cameraBtn.click();
+                    break;
+                case 's':
+                case 'S':
+                    switchVideoBtn.click();
+                    break;
+                case 'Escape':
+                    endCallBtn.click();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>其他用户个人主页演示</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            margin: 2rem auto;
+            max-width: 800px;
+        }
+
+        .user-header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 2px solid #f8f9fa;
+            margin-bottom: 2rem;
+        }
+
+        .user-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #667eea;
+            margin: 0 auto 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .btn-custom {
+            padding: 12px 30px;
+            border-radius: 50px;
+            border: none;
+            font-weight: 600;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .btn-custom::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-custom:hover::before {
+            left: 100%;
+        }
+
+        .btn-follow {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-follow:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(40, 167, 69, 0.5);
+            color: white;
+        }
+
+        .btn-message {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            color: white;
+        }
+
+        .btn-message:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(23, 162, 184, 0.5);
+            color: white;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .video-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+
+        .video-info {
+            padding: 1rem;
+        }
+
+        .demo-links {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .demo-links a {
+            display: inline-block;
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-links a:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="demo-container">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-users me-3"></i>其他用户个人主页演示
+            </h1>
+
+            <!-- 用户信息头部 -->
+            <div class="user-header">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <h2>张三的频道</h2>
+                <p class="text-muted">热爱分享生活点滴的创作者 | 2024年1月加入</p>
+                
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <span class="stat-number">15</span>
+                        <div>发布视频</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">2.3k</span>
+                        <div>总观看</div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">156</span>
+                        <div>获得点赞</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-custom btn-follow" onclick="toggleFollow(this)">
+                        <i class="fas fa-user-plus me-2"></i>关注
+                    </button>
+                    <button class="btn-custom btn-message" onclick="sendMessage()">
+                        <i class="fas fa-comment me-2"></i>私信
+                    </button>
+                </div>
+            </div>
+
+            <!-- 视频列表 -->
+            <h4 class="mb-3"><i class="fas fa-video me-2"></i>发布的视频</h4>
+            <div class="video-grid">
+                <div class="video-card">
+                    <div class="video-thumbnail">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="video-info">
+                        <h6>我的第一个视频</h6>
+                        <p class="text-muted small">分享我的日常生活点滴...</p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                <i class="fas fa-eye me-1"></i>1.2k
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-heart me-1"></i>45
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-card">
+                    <div class="video-thumbnail">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="video-info">
+                        <h6>美食制作教程</h6>
+                        <p class="text-muted small">教你制作美味的家常菜...</p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                <i class="fas fa-eye me-1"></i>856
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-heart me-1"></i>32
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-card">
+                    <div class="video-thumbnail">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="video-info">
+                        <h6>旅行vlog</h6>
+                        <p class="text-muted small">记录我的旅行经历...</p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                <i class="fas fa-eye me-1"></i>234
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-heart me-1"></i>18
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 实际访问链接 -->
+            <div class="demo-links">
+                <h5><i class="fas fa-link me-2"></i>实际访问链接</h5>
+                <p class="mb-3">点击下面的链接访问真实的用户个人主页：</p>
+                <a href="/user/1" target="_blank">
+                    <i class="fas fa-external-link-alt me-1"></i>访问用户ID为1的主页
+                </a>
+                <a href="/user/profile/2" target="_blank">
+                    <i class="fas fa-external-link-alt me-1"></i>访问用户ID为2的主页
+                </a>
+                <a href="/user/3" target="_blank">
+                    <i class="fas fa-external-link-alt me-1"></i>访问用户ID为3的主页
+                </a>
+            </div>
+
+            <!-- 功能说明 -->
+            <div class="mt-4">
+                <h5><i class="fas fa-info-circle me-2"></i>功能说明</h5>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-check text-success me-2"></i>显示其他用户的基本信息（头像、昵称、简介）</li>
+                    <li><i class="fas fa-check text-success me-2"></i>展示用户的统计数据（视频数、观看量、点赞数）</li>
+                    <li><i class="fas fa-check text-success me-2"></i>提供关注和私信功能</li>
+                    <li><i class="fas fa-check text-success me-2"></i>展示用户发布的视频列表</li>
+                    <li><i class="fas fa-check text-success me-2"></i>精美的悬浮效果和动画</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleFollow(button) {
+            const icon = button.querySelector('i');
+            const text = button.textContent.trim();
+            
+            if (text.includes('关注')) {
+                icon.className = 'fas fa-user-check me-2';
+                button.innerHTML = '<i class="fas fa-user-check me-2"></i>已关注';
+                button.style.background = 'linear-gradient(45deg, #20c997, #28a745)';
+            } else {
+                icon.className = 'fas fa-user-plus me-2';
+                button.innerHTML = '<i class="fas fa-user-plus me-2"></i>关注';
+                button.style.background = 'linear-gradient(45deg, #28a745, #20c997)';
+            }
+        }
+
+        function sendMessage() {
+            alert('私信功能：在真实应用中会打开聊天窗口');
+        }
+
+        // 添加页面加载动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.stat-card, .video-card, .btn-custom');
+            elements.forEach((element, index) => {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    element.style.transition = 'all 0.6s ease';
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html> 

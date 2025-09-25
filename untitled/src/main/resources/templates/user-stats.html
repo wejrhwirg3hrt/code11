@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户统计 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景粒子效果 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            animation: float 6s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(1deg); }
+            66% { transform: translateY(-10px) rotate(-1deg); }
+        }
+
+        .stats-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 4rem 0;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+        }
+
+        .stats-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="white" opacity="0.1"><polygon points="0,100 1000,0 1000,100"/></svg>');
+            background-size: cover;
+            animation: wave 3s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-10px); }
+        }
+
+        .stats-header .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        .stats-header h1 {
+            animation: slideInLeft 1s ease-out;
+        }
+
+        .stats-header p {
+            animation: slideInRight 1s ease-out 0.3s both;
+        }
+
+        .stats-header .btn {
+            animation: fadeIn 1s ease-out 0.6s both;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 2rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.2);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 为不同的卡片添加延迟动画 */
+        .stats-card:nth-child(1) { animation-delay: 0.1s; }
+        .stats-card:nth-child(2) { animation-delay: 0.2s; }
+        .stats-card:nth-child(3) { animation-delay: 0.3s; }
+        .stats-card:nth-child(4) { animation-delay: 0.4s; }
+        .stats-card:nth-child(5) { animation-delay: 0.5s; }
+        .stats-card:nth-child(6) { animation-delay: 0.6s; }
+
+        .stat-item {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: scale(1.05);
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.3s ease;
+        }
+
+        .stat-number.counting {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* 进度条动画 */
+        .progress-bar {
+            animation: progressFill 2s ease-out forwards;
+            transform-origin: left;
+        }
+
+        @keyframes progressFill {
+            from {
+                transform: scaleX(0);
+            }
+            to {
+                transform: scaleX(1);
+            }
+        }
+
+        /* 等级徽章旋转动画 */
+        .level-badge {
+            animation: rotateIn 1s ease-out;
+        }
+
+        @keyframes rotateIn {
+            from {
+                opacity: 0;
+                transform: rotate(-180deg) scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: rotate(0deg) scale(1);
+            }
+        }
+
+        /* 成就图标弹跳动画 */
+        .achievement-icon i {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .stat-item:hover .stat-number {
+            -webkit-text-fill-color: white;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .stat-item:hover .stat-label {
+            color: white;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 2rem 0;
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-left: 1rem;
+        }
+
+        .trend-up {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .trend-down {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 可点击卡片样式 */
+        .clickable-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: 200px;
+        }
+
+        .clickable-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+        }
+
+        /* 等级卡片特殊样式 */
+        .level-card-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 成就卡片特殊样式 */
+        .achievement-card-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 等级徽章样式 */
+        .level-badge {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .level-badge.level-1, .level-badge.level-2 {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+        }
+
+        .level-badge.level-3, .level-badge.level-4 {
+            background: linear-gradient(135deg, #C0C0C0, #E5E5E5);
+        }
+
+        .level-badge.level-5, .level-badge.level-6 {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+        }
+
+        .level-badge.level-7, .level-badge.level-8 {
+            background: linear-gradient(135deg, #9370DB, #8A2BE2);
+        }
+
+        .level-badge.level-9, .level-badge.level-10 {
+            background: linear-gradient(135deg, #FF1493, #FF69B4);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(255, 20, 147, 0.5); }
+            to { box-shadow: 0 0 20px rgba(255, 20, 147, 0.8); }
+        }
+
+        .level-number {
+            font-size: 1.2rem;
+            margin-top: 2px;
+        }
+
+        .level-title {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        /* 成就样式 */
+        .achievement-list {
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .achievement-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .achievement-item:last-child {
+            border-bottom: none;
+        }
+
+        .achievement-icon {
+            width: 30px;
+            text-align: center;
+        }
+
+        .achievement-content h6 {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+
+        .achievement-content small {
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .level-badge {
+                width: 50px;
+                height: 50px;
+            }
+
+            .level-number {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-play-circle text-primary me-2"></i>
+                视频网站
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/profile">我的主页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/stats">统计数据</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown" sec:authorize="isAuthenticated()">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span sec:authentication="name">用户</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>个人主页</a></li>
+                            <li><a class="dropdown-item" href="/stats"><i class="fas fa-chart-bar me-2"></i>统计数据</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 统计页面头部 -->
+    <div class="stats-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-4 fw-bold mb-3">
+                        <i class="fas fa-chart-line me-3"></i>
+                        我的统计数据
+                    </h1>
+                    <p class="lead mb-0">查看您的视频表现和用户互动数据</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end flex-wrap">
+                        <button class="btn btn-primary btn-lg me-2 mb-2" type="button"
+                                onclick="autoDetectAchievements();"
+                                style="z-index: 9999; position: relative; pointer-events: auto;">
+                            <i class="fas fa-magic me-2"></i>自动检测
+                        </button>
+                        <button class="btn btn-success btn-lg me-2 mb-2" type="button"
+                                onclick="fixAchievements();"
+                                style="z-index: 9999; position: relative; pointer-events: auto;">
+                            <i class="fas fa-wrench me-2"></i>修复成就
+                        </button>
+                        <button class="btn btn-light btn-lg mb-2" type="button"
+                                onclick="window.refreshStats();"
+                                style="z-index: 9999; position: relative; pointer-events: auto;">
+                            <i class="fas fa-sync-alt me-2"></i>刷新
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" style="margin-top: 100px;">
+        <!-- 统计概览卡片 -->
+        <div class="row" id="statsOverview">
+            <div class="col-12">
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细统计图表 -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="stats-card">
+                    <h4 class="mb-4">
+                        <i class="fas fa-chart-area text-primary me-2"></i>
+                        观看量趋势
+                    </h4>
+                    <div class="chart-container">
+                        <canvas id="viewsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="stats-card">
+                    <h4 class="mb-4">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        视频状态分布
+                    </h4>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        console.log('JavaScript is loading...');
+        let viewsChart = null;
+        let statusChart = null;
+
+        // 数字计数动画
+        function animateNumber(element, start, end, duration = 2000) {
+            const startTime = performance.now();
+            const startValue = start;
+            const endValue = end;
+
+            function updateNumber(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // 使用缓动函数
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
+
+                if (element.textContent.includes('K') || element.textContent.includes('M')) {
+                    element.textContent = formatNumber(currentValue);
+                } else {
+                    element.textContent = currentValue.toLocaleString();
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                } else {
+                    element.classList.remove('counting');
+                }
+            }
+
+            element.classList.add('counting');
+            requestAnimationFrame(updateNumber);
+        }
+
+        // 启动所有数字动画
+        function startNumberAnimations() {
+            const statNumbers = document.querySelectorAll('.stat-number');
+            statNumbers.forEach((element, index) => {
+                setTimeout(() => {
+                    const text = element.textContent.replace(/[^\d]/g, '');
+                    const finalValue = parseInt(text) || 0;
+                    if (finalValue > 0) {
+                        animateNumber(element, 0, finalValue, 1500 + index * 200);
+                    }
+                }, index * 100);
+            });
+        }
+
+        // 页面加载时获取统计数据
+        // 服务器端预加载的数据
+        const preloadedData = {
+            userStats: /*[[${userStats}]]*/ null,
+            userLevel: /*[[${userLevel}]]*/ null,
+            achievementProgress: /*[[${achievementProgress}]]*/ null,
+            levelProgress: /*[[${levelProgress}]]*/ 0,
+            nextLevelExp: /*[[${nextLevelExp}]]*/ 0
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            console.log('预加载数据:', preloadedData);
+
+            // 如果有预加载数据，直接使用；否则通过API加载
+            if (preloadedData.userStats && preloadedData.userLevel) {
+                console.log('使用预加载数据');
+                displayPreloadedData();
+
+                // 等待Chart.js加载完成后初始化图表
+                if (typeof Chart !== 'undefined') {
+                    initializeChartsWithPreloadedData();
+                } else {
+                    setTimeout(() => {
+                        if (typeof Chart !== 'undefined') {
+                            initializeChartsWithPreloadedData();
+                        } else {
+                            showError('图表库加载失败，请刷新页面重试');
+                        }
+                    }, 1000);
+                }
+
+                // 启动数字动画
+                setTimeout(() => {
+                    startNumberAnimations();
+                }, 500);
+
+                // 页面加载完成后，自动进行成就检测（后台进行，不阻塞UI）
+                setTimeout(() => {
+                    console.log('🤖 开始后台自动成就检测...');
+                    autoDetectAchievementsInBackground();
+                }, 2000);
+
+            } else {
+                console.log('预加载数据不可用，使用API加载');
+                // 等待Chart.js加载完成
+                if (typeof Chart !== 'undefined') {
+                    loadUserStats();
+                } else {
+                    // 如果Chart.js还没加载，等待一下
+                    setTimeout(() => {
+                        if (typeof Chart !== 'undefined') {
+                            loadUserStats();
+                        } else {
+                            showError('图表库加载失败，请刷新页面重试');
+                        }
+                    }, 1000);
+                }
+
+                // 延迟启动数字动画，等待数据加载完成
+                setTimeout(() => {
+                    startNumberAnimations();
+                }, 1500);
+            }
+        });
+
+        // 后台自动成就检测（不显示UI，静默进行）
+        async function autoDetectAchievementsInBackground() {
+            try {
+                console.log('🔍 后台检测成就中...');
+
+                const response = await fetch('/api/auto-detect-achievements', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.newAchievements > 0) {
+                    console.log('🎉 后台检测到新成就:', data.newAchievements);
+
+                    // 显示小提示
+                    showNewAchievementNotification(data.newAchievements);
+                } else {
+                    console.log('✅ 后台检测完成，无新成就');
+                }
+
+            } catch (error) {
+                console.log('❌ 后台检测失败:', error.message);
+            }
+        }
+
+        // 显示新成就通知
+        function showNewAchievementNotification(count) {
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-trophy me-2"></i>
+                <strong>🎉 恭喜！</strong><br>
+                您获得了 ${count} 个新成就！
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(notification);
+
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // 显示预加载的数据
+        function displayPreloadedData() {
+            try {
+                const combinedData = {
+                    statistics: preloadedData.userStats,
+                    userLevel: preloadedData.userLevel,
+                    achievementProgress: preloadedData.achievementProgress
+                };
+
+                displayStatsOverview(combinedData);
+
+                // 异步加载最近成就
+                setTimeout(() => {
+                    loadRecentAchievements();
+                }, 500);
+
+            } catch (error) {
+                console.error('显示预加载数据失败:', error);
+                showError('数据显示失败，请刷新页面重试');
+            }
+        }
+
+        // 使用预加载数据初始化图表
+        function initializeChartsWithPreloadedData() {
+            try {
+                const combinedData = {
+                    statistics: preloadedData.userStats,
+                    userLevel: preloadedData.userLevel,
+                    achievementProgress: preloadedData.achievementProgress
+                };
+
+                initializeCharts(combinedData);
+            } catch (error) {
+                console.error('初始化图表失败:', error);
+                // 如果图表初始化失败，尝试加载趋势数据
+                loadTrendData();
+            }
+        }
+
+        // 加载用户统计数据
+        async function loadUserStats() {
+            console.log('loadUserStats() called');
+            try {
+                // 并行加载统计数据和用户活动数据
+                const [statsResponse, levelResponse, activityResponse] = await Promise.all([
+                    fetch('/api/statistics/overview', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch('/api/user-activity/level', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    fetch('/api/user-activity/stats', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                ]);
+
+                console.log('Response statuses:', statsResponse.status, levelResponse.status, activityResponse.status);
+
+                if (statsResponse.status === 401 || levelResponse.status === 401 || activityResponse.status === 401) {
+                    showError('请先登录后查看统计数据');
+                    return;
+                }
+
+                // 处理统计数据
+                let statsData = null;
+                if (statsResponse.ok) {
+                    const result = await statsResponse.json();
+                    console.log('Stats API response:', result);
+
+                    // 检查是否有success字段
+                    if (result.success !== undefined) {
+                        if (result.success) {
+                            statsData = result;
+                        } else {
+                            console.error('Stats API returned error:', result.message);
+                            statsData = getDefaultStatsData();
+                        }
+                    } else {
+                        // 直接使用返回的数据
+                        statsData = result;
+                    }
+                } else {
+                    console.error('Stats API failed with status:', statsResponse.status);
+                    statsData = getDefaultStatsData();
+                }
+
+                // 处理用户等级数据
+                let levelData = null;
+                if (levelResponse.ok) {
+                    const levelResult = await levelResponse.json();
+                    if (levelResult.success) {
+                        levelData = levelResult.data;
+                    }
+                }
+
+                // 处理用户活动数据
+                let activityData = null;
+                if (activityResponse.ok) {
+                    const activityResult = await activityResponse.json();
+                    if (activityResult.success) {
+                        activityData = activityResult.data;
+                    }
+                }
+
+                console.log('Received data:', { statsData, levelData, activityData });
+
+                // 合并数据并显示
+                const combinedData = {
+                    ...statsData,
+                    userLevel: levelData,
+                    userActivity: activityData
+                };
+
+                displayStatsOverview(combinedData);
+                initializeCharts(combinedData);
+
+                // 异步加载最近成就
+                setTimeout(() => {
+                    loadRecentAchievements();
+                }, 500);
+
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showError('网络错误，请稍后重试');
+            }
+        }
+
+        // 获取默认统计数据
+        function getDefaultStatsData() {
+            return {
+                totalVideos: 0,
+                totalViews: 0,
+                totalComments: 0,
+                totalLikes: 0,
+                approvedVideos: 0,
+                pendingVideos: 0,
+                rejectedVideos: 0,
+                videosTrend: 0,
+                viewsTrend: 0,
+                likesTrend: 0,
+                watchTimeTrend: 0
+            };
+        }
+
+        // 显示统计概览
+        function displayStatsOverview(data) {
+            console.log('displayStatsOverview called with data:', data);
+
+            // 使用从API获取的用户等级数据，如果没有则使用默认计算
+            const userLevel = data.userLevel || calculateUserLevel(data.totalViews || 0, data.totalVideos || 0);
+
+            const overviewHtml = `
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="stat-item">
+                        <div class="stat-number">${data.totalVideos || 0}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-video me-2"></i>总视频数
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+${data.videosTrend || 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="stat-item">
+                        <div class="stat-number">${formatNumber(data.totalViews || 0)}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-eye me-2"></i>总观看量
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+${data.viewsTrend || 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="stat-item">
+                        <div class="stat-number">${data.totalComments || 0}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-comments me-2"></i>总评论数
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+${data.commentsTrend || 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="stat-item">
+                        <div class="stat-number">${data.totalLikes || 0}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-heart me-2"></i>总点赞数
+                            <span class="trend-indicator trend-up">
+                                <i class="fas fa-arrow-up me-1"></i>+${data.likesTrend || 0}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 我的等级和最近成就卡片 -->
+                <div class="col-lg-6 col-md-12 mb-4">
+                    <div class="stats-card clickable-card h-100 d-flex flex-column" onclick="window.location.href='/user/level'">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-star text-warning me-2"></i>我的等级
+                            </h5>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
+                        <div class="flex-grow-1 d-flex align-items-center">
+                            <div class="row align-items-center w-100">
+                                <div class="col-auto">
+                                    <div class="level-badge level-${userLevel.level || 1}">
+                                        <i class="fas fa-crown"></i>
+                                        <span class="level-number">${userLevel.level || 1}</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <h6 class="level-title mb-2">${userLevel.levelName || userLevel.title || '新手'}</h6>
+                                    <div class="progress mb-2" style="height: 8px;">
+                                        <div class="progress-bar bg-warning" role="progressbar"
+                                             style="width: ${userLevel.progress || 0}%"
+                                             aria-valuenow="${userLevel.progress || 0}"
+                                             aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small class="text-muted">
+                                        ${userLevel.currentExp || 0}/${userLevel.expToNext ? (userLevel.currentExp || 0) + userLevel.expToNext : userLevel.nextLevelExp || 100} EXP
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 col-md-12 mb-4">
+                    <div class="stats-card clickable-card h-100 d-flex flex-column" onclick="window.location.href='/user/achievements'">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0">
+                                <i class="fas fa-trophy text-success me-2"></i>最近成就
+                            </h5>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
+                        <div class="flex-grow-1 d-flex flex-column justify-content-center">
+                            <div class="achievement-list">
+                                ${generateRecentAchievements(data)}
+                            </div>
+                        </div>
+                        <div class="text-center mt-auto">
+                            <small class="text-muted">查看全部</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            console.log('Setting innerHTML for statsOverview');
+            const statsElement = document.getElementById('statsOverview');
+            console.log('statsOverview element:', statsElement);
+            if (statsElement) {
+                statsElement.innerHTML = overviewHtml;
+                console.log('innerHTML updated successfully');
+            } else {
+                console.error('statsOverview element not found!');
+            }
+        }
+
+        // 初始化图表
+        function initializeCharts(data) {
+            // 检查Chart.js是否可用
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded');
+                return;
+            }
+
+            // 先加载趋势数据，然后初始化图表
+            loadTrendData().then(trendData => {
+                initializeViewsChart(trendData);
+                initializeStatusChart(data);
+            }).catch(error => {
+                console.error('加载趋势数据失败:', error);
+                // 如果加载失败，使用默认数据
+                initializeViewsChart(null);
+                initializeStatusChart(data);
+            });
+        }
+
+        // 加载趋势数据
+        async function loadTrendData() {
+            try {
+                const response = await fetch('/api/statistics/trend', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Trend API response status:', response.status);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Trend API response:', result);
+
+                    if (result.success) {
+                        return result.data;
+                    } else {
+                        console.warn('Trend API returned error:', result.message);
+                        return getDefaultTrendData();
+                    }
+                } else {
+                    console.warn('Trend API failed with status:', response.status);
+                    return getDefaultTrendData();
+                }
+            } catch (error) {
+                console.error('获取趋势数据失败:', error);
+                return getDefaultTrendData();
+            }
+        }
+
+        // 获取默认趋势数据
+        function getDefaultTrendData() {
+            return {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月'],
+                viewsData: [120, 190, 300, 500, 200, 300, 450],
+                likesData: [12, 19, 30, 50, 20, 30, 45],
+                commentsData: [5, 8, 12, 20, 8, 12, 18]
+            };
+        }
+
+        // 初始化观看量趋势图
+        function initializeViewsChart(trendData) {
+            const viewsCtx = document.getElementById('viewsChart').getContext('2d');
+            if (viewsChart) {
+                viewsChart.destroy();
+            }
+
+            // 使用真实数据或默认数据
+            const labels = trendData ? trendData.labels : ['1月', '2月', '3月', '4月', '5月', '6月', '7月'];
+            const viewsData = trendData ? trendData.viewsData : [0, 0, 0, 0, 0, 0, 0];
+            const likesData = trendData ? trendData.likesData : [0, 0, 0, 0, 0, 0, 0];
+            const commentsData = trendData ? trendData.commentsData : [0, 0, 0, 0, 0, 0, 0];
+
+            viewsChart = new Chart(viewsCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '观看量',
+                        data: viewsData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: '点赞量',
+                        data: likesData,
+                        borderColor: '#f093fb',
+                        backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.4
+                    }, {
+                        label: '评论量',
+                        data: commentsData,
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatNumber(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    },
+                    hover: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        // 初始化状态分布图
+        function initializeStatusChart(data) {
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            if (statusChart) {
+                statusChart.destroy();
+            }
+
+            const approvedCount = data.approvedVideos || 0;
+            const pendingCount = data.pendingVideos || 0;
+            const rejectedCount = data.rejectedVideos || 0;
+
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['已审核', '待审核', '已拒绝'],
+                    datasets: [{
+                        data: [approvedCount, pendingCount, rejectedCount],
+                        backgroundColor: [
+                            '#28a745',
+                            '#ffc107',
+                            '#dc3545'
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 5,
+                        hoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 14,
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 2,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            titleFont: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 14
+                            },
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuart'
+                    },
+                    hover: {
+                        animationDuration: 200
+                    }
+                }
+            });
+        }
+
+
+
+        // 格式化数字
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        // 计算用户等级
+        function calculateUserLevel(totalViews, totalVideos) {
+            const totalExp = Math.floor(totalViews / 100) + (totalVideos * 50);
+
+            const levels = [
+                { level: 1, title: "新手创作者", minExp: 0, maxExp: 500 },
+                { level: 2, title: "初级创作者", minExp: 500, maxExp: 1500 },
+                { level: 3, title: "进阶创作者", minExp: 1500, maxExp: 3000 },
+                { level: 4, title: "资深创作者", minExp: 3000, maxExp: 6000 },
+                { level: 5, title: "专业创作者", minExp: 6000, maxExp: 10000 },
+                { level: 6, title: "大师级创作者", minExp: 10000, maxExp: 20000 },
+                { level: 7, title: "传奇创作者", minExp: 20000, maxExp: 50000 },
+                { level: 8, title: "超级创作者", minExp: 50000, maxExp: 100000 },
+                { level: 9, title: "顶级创作者", minExp: 100000, maxExp: 200000 },
+                { level: 10, title: "创作之神", minExp: 200000, maxExp: Infinity }
+            ];
+
+            let currentLevel = levels[0];
+            for (let i = 0; i < levels.length; i++) {
+                if (totalExp >= levels[i].minExp && totalExp < levels[i].maxExp) {
+                    currentLevel = levels[i];
+                    break;
+                }
+            }
+
+            const isMaxLevel = currentLevel.level === 10;
+            const progress = isMaxLevel ? 100 :
+                Math.floor(((totalExp - currentLevel.minExp) / (currentLevel.maxExp - currentLevel.minExp)) * 100);
+
+            return {
+                level: currentLevel.level,
+                title: currentLevel.title,
+                currentExp: totalExp,
+                nextLevelExp: isMaxLevel ? totalExp : currentLevel.maxExp,
+                progress: progress,
+                isMaxLevel: isMaxLevel
+            };
+        }
+
+        // 生成最近成就
+        function generateRecentAchievements(data) {
+            // 返回占位符，实际数据将通过API异步加载
+            return `
+                <div id="recentAchievementsContainer" class="text-center">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <small class="text-muted ms-2">加载最近成就中...</small>
+                </div>
+            `;
+        }
+
+        // 异步加载最近成就
+        async function loadRecentAchievements() {
+            try {
+                const response = await fetch('/api/recent-achievements?limit=2', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Recent achievements response:', result);
+
+                const container = document.getElementById('recentAchievementsContainer');
+                if (!container) {
+                    console.error('Recent achievements container not found');
+                    return;
+                }
+
+                if (result.success && result.recentAchievements && result.recentAchievements.length > 0) {
+                    // 显示最近成就
+                    const achievementsHtml = result.recentAchievements.map(achievement => {
+                        const unlockedDate = new Date(achievement.unlockedAt);
+                        const timeAgo = getTimeAgo(unlockedDate);
+
+                        return `
+                            <div class="achievement-item d-flex align-items-center mb-2">
+                                <div class="achievement-icon me-3">
+                                    <i class="${achievement.icon || 'fas fa-trophy'} text-warning"></i>
+                                </div>
+                                <div class="achievement-content flex-grow-1">
+                                    <h6 class="mb-0">${achievement.name}</h6>
+                                    <small class="text-muted">${achievement.description}</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-success">
+                                        <i class="fas fa-check-circle me-1"></i>${timeAgo}
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    container.innerHTML = achievementsHtml;
+                } else {
+                    // 没有成就时显示默认信息
+                    container.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-medal fa-2x mb-2 text-secondary"></i>
+                            <p class="mb-1">暂无成就</p>
+                            <small>继续努力创作吧！</small>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载最近成就失败:', error);
+                const container = document.getElementById('recentAchievementsContainer');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
+                            <p class="mb-1">加载失败</p>
+                            <small>请刷新页面重试</small>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // 计算时间差的辅助函数
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+
+            if (diffInSeconds < 60) {
+                return '刚刚获得';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return `${minutes}分钟前`;
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return `${hours}小时前`;
+            } else if (diffInSeconds < 2592000) {
+                const days = Math.floor(diffInSeconds / 86400);
+                return `${days}天前`;
+            } else {
+                return '很久以前';
+            }
+        }
+
+        // 快速刷新统计数据
+        window.refreshStats = function() {
+            console.log('refreshStats() called - 快速刷新');
+
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>刷新中...';
+
+                // 使用快速刷新，只刷新必要部分
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500); // 短暂延迟，让用户看到加载状态
+
+            } catch (error) {
+                console.error('刷新失败:', error);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const isLoginError = message.includes('登录');
+            const buttonHtml = isLoginError
+                ? `<a href="/login" class="btn btn-primary mt-2">
+                     <i class="fas fa-sign-in-alt me-2"></i>前往登录
+                   </a>`
+                : `<button class="btn btn-outline-danger mt-2" onclick="loadUserStats()">
+                     <i class="fas fa-redo me-2"></i>重试
+                   </button>`;
+
+            document.getElementById('statsOverview').innerHTML = `
+                <div class="col-12">
+                    <div class="alert ${isLoginError ? 'alert-warning' : 'alert-danger'} text-center" role="alert">
+                        <i class="fas fa-${isLoginError ? 'user-lock' : 'exclamation-triangle'} me-2"></i>
+                        ${message}
+                        <br>
+                        ${buttonHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 自动检测成就
+        async function autoDetectAchievements() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>检测中...';
+
+                const response = await fetch('/api/auto-detect-achievements', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 显示检测结果
+                    showAutoDetectResult(data);
+
+                    // 如果有新成就，1秒后刷新页面
+                    if (data.newAchievements > 0) {
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                } else {
+                    throw new Error(data.message || '自动检测失败');
+                }
+
+            } catch (error) {
+                console.error('自动检测失败:', error);
+                alert('自动检测失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // 快速修复成就
+        async function fixAchievements() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>修复中...';
+
+                const response = await fetch('/api/fix-achievements', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 显示成功消息
+                    showFixResult(data);
+
+                    // 刷新页面以显示最新成就
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    throw new Error(data.message || '成就修复失败');
+                }
+
+            } catch (error) {
+                console.error('成就修复失败:', error);
+                alert('成就修复失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // 触发成就检查
+        async function triggerAchievements() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+
+            try {
+                // 显示加载状态
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>检查中...';
+
+                const response = await fetch('/api/trigger-achievements', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 显示成功消息
+                    showAchievementResult(data);
+
+                    // 刷新统计数据
+                    setTimeout(() => {
+                        loadUserStats();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || '成就检查失败');
+                }
+
+            } catch (error) {
+                console.error('触发成就检查失败:', error);
+                alert('成就检查失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+
+        // 显示自动检测结果
+        function showAutoDetectResult(data) {
+            const alertType = data.newAchievements > 0 ? 'alert-success' : 'alert-info';
+            const icon = data.newAchievements > 0 ? 'fas fa-trophy' : 'fas fa-info-circle';
+            const title = data.newAchievements > 0 ? '🎉 发现新成就！' : '✅ 检测完成';
+            const refreshText = data.newAchievements > 0 ? '<br>页面将在2秒后自动刷新...' : '';
+
+            const message = `
+                <div class="alert ${alertType} alert-dismissible fade show" role="alert">
+                    <i class="${icon} me-2"></i>
+                    <strong>${title}</strong><br>
+                    新获得成就: ${data.newAchievements} 个<br>
+                    ${data.stats}${refreshText}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // 在页面顶部显示结果
+            const container = document.querySelector('.container');
+            const alertDiv = document.createElement('div');
+            alertDiv.innerHTML = message;
+            container.insertBefore(alertDiv, container.firstChild);
+        }
+
+        // 显示成就修复结果
+        function showFixResult(data) {
+            const message = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-wrench me-2"></i>
+                    <strong>成就修复完成！</strong><br>
+                    ${data.stats}<br>
+                    页面将在2秒后自动刷新...
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // 在页面顶部显示结果
+            const container = document.querySelector('.container');
+            const alertDiv = document.createElement('div');
+            alertDiv.innerHTML = message;
+            container.insertBefore(alertDiv, container.firstChild);
+        }
+
+        // 显示成就检查结果
+        function showAchievementResult(data) {
+            const message = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-trophy me-2"></i>
+                    <strong>成就检查完成！</strong><br>
+                    总成就数: ${data.totalAchievements}<br>
+                    已解锁: ${data.unlockedAchievements}<br>
+                    完成率: ${data.completionRate.toFixed(1)}%
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // 在页面顶部显示结果
+            const container = document.querySelector('.container');
+            const alertDiv = document.createElement('div');
+            alertDiv.innerHTML = message;
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

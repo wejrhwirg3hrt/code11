@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的动态 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .moment-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .moment-header {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .moment-content {
+            padding: 15px;
+        }
+        .moment-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .moment-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .moment-actions {
+            padding: 10px 15px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .publish-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            border: none;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">视频网站</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/posts">动态</a>
+                <a class="nav-link" href="/music">音乐</a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span th:text="${currentUser.username}">用户</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><a class="dropdown-item active" href="/posts/my">我的动态</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="d-flex align-items-center mb-4">
+                    <a href="/posts" class="btn btn-outline-secondary me-3">
+                        <i class="fas fa-arrow-left"></i> 返回动态
+                    </a>
+                    <h2 class="mb-0">我的动态</h2>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="stats-card">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3 class="mb-0" th:text="${momentsPage.totalElements}">0</h3>
+                            <small>动态总数</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="mb-0" th:text="${#aggregates.sum(momentsPage.content.![likeCount])}">0</h3>
+                            <small>获得点赞</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="mb-0" th:text="${#aggregates.sum(momentsPage.content.![commentCount])}">0</h3>
+                            <small>收到评论</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 动态列表 -->
+                <div th:if="${momentsPage.hasContent()}">
+                    <div th:each="moment : ${momentsPage.content}" class="moment-card">
+                        <div class="moment-header">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <a th:href="@{/profile}" class="text-decoration-none">
+                                        <img th:src="${currentUser.avatar ?: '/uploads/avatars/default.svg'}"
+                                             class="user-avatar me-3" alt="我的头像" style="cursor: pointer;">
+                                    </a>
+                                    <div>
+                                        <a th:href="@{/profile}" class="text-decoration-none">
+                                            <h6 class="mb-0 text-dark" th:text="${currentUser.username}">我</h6>
+                                        </a>
+                                        <small class="text-muted" th:text="${#temporals.format(moment.createTime, 'yyyy-MM-dd HH:mm')}">时间</small>
+                                        <span th:if="${moment.location}" class="text-muted ms-2">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span th:text="${moment.location}">位置</span>
+                                        </span>
+                                        <span th:if="${!moment.isPublic}" class="badge bg-warning ms-2">
+                                            <i class="fas fa-lock"></i> 私密
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- 操作按钮 -->
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" th:href="@{'/posts/' + ${moment.id}}">
+                                            <i class="fas fa-eye"></i> 查看详情
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" 
+                                               th:onclick="'deleteMoment(' + ${moment.id} + ')'">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="moment-content">
+                            <p th:text="${moment.content}">动态内容</p>
+                            
+                            <!-- 图片展示 -->
+                            <div th:if="${moment.images}" class="moment-images">
+                                <div th:each="image : ${moment.imageList}" th:if="${image != null and !image.isEmpty()}">
+                                    <img th:src="@{'/' + ${image}}"
+                                         class="moment-image"
+                                         alt="动态图片"
+                                         onclick="showImageModal(this.src)">
+                                </div>
+                            </div>
+                            
+                            <div th:if="${moment.mood}" class="mt-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-smile"></i>
+                                    <span th:text="${moment.mood}">心情</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="moment-actions">
+                            <div>
+                                <span class="text-muted me-3">
+                                    <i class="fas fa-heart"></i>
+                                    <span th:text="${moment.likeCount}">0</span>
+                                </span>
+                                
+                                <a th:href="@{'/posts/' + ${moment.id}}" class="btn btn-link text-muted p-0">
+                                    <i class="fas fa-comment"></i>
+                                    <span th:text="${moment.commentCount}">0</span>
+                                </a>
+                            </div>
+                            
+                            <small class="text-muted" th:text="${#temporals.format(moment.createTime, 'MM-dd HH:mm')}">时间</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div th:unless="${momentsPage.hasContent()}" class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">还没有发布过动态</h5>
+                    <p class="text-muted">快来分享你的第一条动态吧！</p>
+                    <a href="/posts/publish" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 发布动态
+                    </a>
+                </div>
+                
+                <!-- 分页 -->
+                <nav th:if="${momentsPage.totalPages > 1}" aria-label="我的动态分页">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${momentsPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/posts/my(page=${momentsPage.number - 1})}">上一页</a>
+                        </li>
+
+                        <li th:each="i : ${#numbers.sequence(0, momentsPage.totalPages - 1)}"
+                            class="page-item"
+                            th:classappend="${i == momentsPage.number} ? 'active'">
+                            <a class="page-link" th:href="@{/posts/my(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${momentsPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/posts/my(page=${momentsPage.number + 1})}">下一页</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发布按钮 -->
+    <button class="publish-btn" onclick="location.href='/posts/publish'">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- 图片模态框 -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <img id="modalImage" src="" class="w-100" alt="图片">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function deleteMoment(momentId) {
+            if (confirm('确定要删除这条动态吗？删除后无法恢复。')) {
+                fetch('/posts/delete/' + momentId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }
+                })
+                .then(response => response.text())
+                .then(data => {
+                    const result = JSON.parse(data);
+                    if (result.success) {
+                        location.reload(); // 刷新页面
+                    } else {
+                        alert(result.message || '删除失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+
+        function showImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+    </script>
+</body>
+</html>

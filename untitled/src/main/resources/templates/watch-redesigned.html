@@ -1,0 +1,608 @@
+﻿
+
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${video.title} + ' - 视频网站'">视频详情</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .video-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .content-section {
+            border-bottom: 1px solid #eee;
+            padding: 1.5rem;
+        }
+        .content-section:last-child {
+            border-bottom: none;
+        }
+        .video-player {
+            width: 100%;
+            max-height: 500px;
+            border-radius: 8px;
+        }
+        .tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            text-decoration: none;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        .tag:hover {
+            color: white;
+            transform: translateY(-1px);
+        }
+        .related-video-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        .related-video-card:hover {
+            color: inherit;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .related-video-thumbnail {
+            width: 120px;
+            height: 68px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .comment-item {
+            border-bottom: 1px solid #eee;
+            padding: 1rem 0;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-avatar {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .content-item {
+            margin-bottom: 15px;
+        }
+
+        .image-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .audio-content audio {
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        .text-content {
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* 相关视频卡片样式 */
+        .related-videos .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .related-videos .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .related-videos .card-img-top {
+            height: 150px;
+            object-fit: cover;
+        }
+
+        /* 按钮样式优化 */
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 模态框样式 */
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #eee;
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .content-section {
+                padding: 15px;
+            }
+
+            .related-videos .col-md-6 {
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/profile" sec:authorize="isAuthenticated()">个人中心</a>
+                <a class="nav-link" href="/logout" sec:authorize="isAuthenticated()">退出</a>
+                <a class="nav-link" href="/login" sec:authorize="!isAuthenticated()">登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-6">
+                <div class="video-container">
+                    <!-- 1. 用户个人信息区域 -->
+                    <div class="content-section">
+                        <div class="d-flex align-items-center">
+                            <!-- 根据用户ID决定跳转目标：如果是当前用户跳转到个人资料页，否则跳转到用户主页 -->
+                            <a th:if="${#authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == video.user.username}" 
+                               th:href="@{/profile}" class="text-decoration-none">
+                                <img th:src="${video.user.avatar != null ? video.user.avatar : '/uploads/avatars/default.svg'}"
+                                     alt="用户头像" class="rounded-circle me-3 user-avatar" width="60" height="60">
+                            </a>
+                            <a th:if="${#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != video.user.username}" 
+                               th:href="@{'/user/' + ${video.user.id}}" class="text-decoration-none">
+                                <img th:src="${video.user.avatar != null ? video.user.avatar : '/uploads/avatars/default.svg'}"
+                                     alt="用户头像" class="rounded-circle me-3 user-avatar" width="60" height="60">
+                            </a>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <a th:if="${#authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == video.user.username}" 
+                                       th:href="@{/profile}" class="text-decoration-none">
+                                        <h5 class="mb-0 me-3" th:text="${video.user.username}">用户名</h5>
+                                    </a>
+                                    <a th:if="${#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != video.user.username}" 
+                                       th:href="@{'/user/' + ${video.user.id}}"
+                                       th:text="${video.user.username}"
+                                       class="text-decoration-none"
+                                       style="color: #007bff; margin-right: 0.75rem;">用户名</a>
+                                    <!-- 关注按钮 -->
+                                    <div sec:authorize="isAuthenticated()" th:if="${!isOwner}">
+                                        <button type="button" class="btn btn-primary btn-sm me-2" id="followBtn"
+                                                th:data-user-id="${video.user.id}"
+                                                th:data-username="${video.user.username}"
+                                                th:text="${isFollowing ? '已关注' : '关注'}"
+                                                onclick="toggleFollow(this)">关注</button>
+                                        <!-- 私信按钮 -->
+                                        <a th:href="@{'/chat?userId=' + ${video.user.id}}"
+                                           class="btn btn-outline-primary btn-sm me-2"
+                                           title="发送私信">
+                                            <i class="fas fa-comment me-1"></i>私信
+                                        </a>
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    发布于 <span th:text="${#temporals.format(video.createdAt, 'yyyy-MM-dd HH:mm')}">2025-01-01</span>
+                                    <span class="ms-3">
+                                        <i class="fas fa-eye me-1"></i><span th:text="${video.views}">0</span> 次观看
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 大标题 -->
+                    <div class="content-section">
+                        <h1 class="display-6 mb-0" th:text="${video.title}">视频标题</h1>
+                    </div>
+
+                    <!-- 3. 视频描述文本信息 -->
+                    <div class="content-section" th:if="${video.description != null and !#strings.isEmpty(video.description)}">
+                        <h5><i class="fas fa-align-left me-2"></i>视频描述</h5>
+                        <p class="mb-0" th:text="${video.description}">视频描述内容</p>
+                    </div>
+
+                    <!-- 4. 富文本内容 (如果有) -->
+                    <div class="content-section" th:if="${videoContentList}">
+                        <h5><i class="fas fa-edit me-2"></i>详细内容</h5>
+                        <div th:each="content : ${videoContentList}" class="content-item mb-3">
+                            <div th:switch="${content.type.toString()}">
+                                <!-- 文字内容 -->
+                                <div th:case="'TEXT'" class="text-content">
+                                    <p th:text="${content.data}">文字内容</p>
+                                </div>
+                                <!-- 富文本内容 -->
+                                <div th:case="'RICH_TEXT'" class="text-content">
+                                    <div th:utext="${content.data}">富文本内容</div>
+                                </div>
+                                <!-- HTML内容 -->
+                                <div th:case="'HTML'" class="text-content">
+                                    <div th:utext="${content.data}">HTML内容</div>
+                                </div>
+                                <!-- 图片内容 -->
+                                <div th:case="'IMAGE'" class="image-content text-center">
+                                    <img th:src="${content.url != null ? content.url : content.data}" alt="内容图片" class="img-fluid rounded">
+                                </div>
+                                <!-- 视频内容 -->
+                                <div th:case="'VIDEO'" class="video-content">
+                                    <video controls class="w-100">
+                                        <source th:src="${content.url != null ? content.url : content.data}" type="video/mp4">
+                                        您的浏览器不支持视频播放。
+                                    </video>
+                                </div>
+                                <!-- 音频内容 -->
+                                <div th:case="'AUDIO'" class="audio-content">
+                                    <audio controls class="w-100">
+                                        <source th:src="${content.url != null ? content.url : content.data}" type="audio/mpeg">
+                                        <source th:src="${content.url != null ? content.url : content.data}" type="audio/wav">
+                                        您的浏览器不支持音频播放。
+                                    </audio>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. 视频播放器 (必不可少) -->
+                    <div class="content-section">
+                        <h5><i class="fas fa-video me-2 text-danger"></i>视频播放</h5>
+                        <div class="ratio ratio-16x9">
+                            <video class="video-player" controls>
+                                <source th:src="${video.url}" type="video/mp4">
+                                <source th:src="${video.filePath}" type="video/mp4">
+                                您的浏览器不支持视频播放。
+                            </video>
+                        </div>
+                        
+                        <!-- 视频操作按钮 -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div sec:authorize="isAuthenticated()">
+                                <button type="button" class="btn btn-sm me-2" id="likeBtn"
+                                        th:classappend="${isLiked ? 'btn-primary' : 'btn-outline-primary'}"
+                                        onclick="toggleLike()">
+                                    <i class="fas fa-thumbs-up me-1"></i>
+                                    <span th:text="${isLiked ? '已喜欢' : '喜欢'}">喜欢</span>
+                                    (<span id="likeCount" th:text="${video.likeCount}">0</span>)
+                                </button>
+                                <button type="button" class="btn btn-sm" id="favoriteBtn"
+                                        th:classappend="${isFavorited ? 'btn-warning' : 'btn-outline-warning'}"
+                                        onclick="toggleFavorite()">
+                                    <i class="fas fa-star me-1"></i>
+                                    <span th:text="${isFavorited ? '已收藏' : '收藏'}">收藏</span>
+                                    (<span id="favoriteCount" th:text="${video.favoriteCount}">0</span>)
+                                </button>
+                            </div>
+                            <div sec:authorize="!isAuthenticated()">
+                                <small class="text-muted">登录后可以喜欢和收藏视频</small>
+                            </div>
+                            <div th:if="${video.category != null}">
+                                <span class="badge bg-secondary" th:text="${video.category.name}">分类</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. 标签 -->
+                    <div class="content-section" th:if="${video.tagsString != null and !#strings.isEmpty(video.tagsString)}">
+                        <h5><i class="fas fa-tags me-2"></i>标签</h5>
+                        <div>
+                            <a th:each="tag : ${#strings.listSplit(video.tagsString, ',')}"
+                               th:href="@{'/search?q=' + ${tag}}"
+                               th:text="${tag}"
+                               class="tag">标签</a>
+                        </div>
+                    </div>
+
+                    <!-- 7. 相关视频 -->
+                    <div class="content-section" th:if="${relatedVideos != null and !relatedVideos.isEmpty()}">
+                        <h5><i class="fas fa-video me-2"></i>相关视频</h5>
+                        <div class="row related-videos">
+                            <div class="col-md-6 col-lg-4 mb-3" th:each="relatedVideo : ${relatedVideos}">
+                                <div class="card h-100">
+                                    <a th:href="@{/video/{id}(id=${relatedVideo.id})}" class="text-decoration-none">
+                                        <img th:src="${relatedVideo.thumbnail}" class="card-img-top" alt="视频缩略图">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title text-dark mb-1" th:text="${relatedVideo.title}">视频标题</h6>
+                                            <small class="text-muted">
+                                                <span th:text="${relatedVideo.user.username}">用户名</span> •
+                                                <span th:text="${relatedVideo.views}">0</span> 次观看
+                                            </small>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+        <!-- 8. 评论功能 -->
+        <div class="row mt-4 justify-content-center">
+            <div class="col-lg-8 col-xl-6">
+                <div class="video-container">
+                    <div class="content-section">
+                        <h5><i class="fas fa-comments me-2"></i>评论 (<span th:text="${comments != null ? comments.size() : 0}">0</span>)</h5>
+                        
+                        <!-- 评论输入框 -->
+                        <div sec:authorize="isAuthenticated()" class="mb-4">
+                            <form th:action="@{'/video/' + ${video.id} + '/comment'}" method="post">
+                                <div class="mb-3">
+                                    <textarea class="form-control" name="content" rows="3" placeholder="写下你的评论..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i>发表评论
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div sec:authorize="!isAuthenticated()" class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <a href="/login">登录</a> 后可以发表评论
+                        </div>
+
+                        <!-- 评论列表 -->
+                        <div th:if="${comments != null and !comments.isEmpty()}">
+                            <div th:each="comment : ${comments}" class="comment-item">
+                                <div class="d-flex">
+                                    <img th:src="${comment.user.avatar != null ? comment.user.avatar : '/uploads/avatars/default.svg'}" 
+                                         alt="用户头像" class="rounded-circle me-3" width="40" height="40">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h6 class="mb-1" th:text="${comment.user.username}">用户名</h6>
+                                            <small class="text-muted" th:text="${#temporals.format(comment.createdAt, 'MM-dd HH:mm')}">时间</small>
+                                        </div>
+                                        <p class="mb-0" th:text="${comment.content}">评论内容</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div th:if="${comments == null or comments.isEmpty()}" class="text-muted text-center py-4">
+                            <i class="fas fa-comment fa-2x mb-2"></i>
+                            <p>还没有评论，快来抢沙发吧！</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 关注功能（旧版本，已被下面的新版本替代）
+        function toggleFollowOld() {
+            const followBtn = document.getElementById('followBtn');
+            const userId = followBtn.getAttribute('data-user-id');
+            const isFollowing = followBtn.textContent.trim() === '已关注';
+
+            fetch('/api/follow/user/' + userId + '/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    followBtn.textContent = data.isFollowing ? '已关注' : '关注';
+                    followBtn.className = data.isFollowing ? 'btn btn-secondary btn-sm me-2' : 'btn btn-primary btn-sm me-2';
+                } else {
+                    alert(data.message || '操作失败');
+                }
+            })
+            .catch(error => {
+                console.error('关注操作失败:', error);
+                alert('操作失败，请重试');
+            });
+        }
+
+
+
+        // 喜欢功能
+        function toggleLike() {
+            const likeBtn = document.getElementById('likeBtn');
+            const likeCount = document.getElementById('likeCount');
+            const videoId = [[${video.id}]];
+            const isLiked = likeBtn.classList.contains('btn-primary');
+
+            fetch('/api/videos/' + videoId + '/like', {
+                method: isLiked ? 'DELETE' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const newCount = parseInt(likeCount.textContent) + (isLiked ? -1 : 1);
+                    likeCount.textContent = newCount;
+
+                    if (isLiked) {
+                        likeBtn.className = 'btn btn-outline-primary btn-sm me-2';
+                        likeBtn.querySelector('span').textContent = '喜欢';
+                    } else {
+                        likeBtn.className = 'btn btn-primary btn-sm me-2';
+                        likeBtn.querySelector('span').textContent = '已喜欢';
+                    }
+                } else {
+                    alert(data.message || '操作失败');
+                }
+            })
+            .catch(error => {
+                console.error('喜欢操作失败:', error);
+                alert('操作失败，请重试');
+            });
+        }
+
+        // 收藏功能
+        function toggleFavorite() {
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            const favoriteCount = document.getElementById('favoriteCount');
+            const videoId = [[${video.id}]];
+            const isFavorited = favoriteBtn.classList.contains('btn-warning');
+
+            fetch('/api/videos/' + videoId + '/favorite', {
+                method: isFavorited ? 'DELETE' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const newCount = parseInt(favoriteCount.textContent) + (isFavorited ? -1 : 1);
+                    favoriteCount.textContent = newCount;
+
+                    if (isFavorited) {
+                        favoriteBtn.className = 'btn btn-outline-warning btn-sm';
+                        favoriteBtn.querySelector('span').textContent = '收藏';
+                    } else {
+                        favoriteBtn.className = 'btn btn-warning btn-sm';
+                        favoriteBtn.querySelector('span').textContent = '已收藏';
+                    }
+                } else {
+                    alert(data.message || '操作失败');
+                }
+            })
+            .catch(error => {
+                console.error('收藏操作失败:', error);
+                alert('操作失败，请重试');
+            });
+        }
+
+        // 增加观看次数
+        fetch(`/api/videos/${[[${video.id}]]}/view`, { method: 'POST' })
+            .catch(err => console.log('观看次数更新失败'));
+
+        // 关注/取消关注功能
+        function toggleFollow(button) {
+            const userId = button.getAttribute('data-user-id');
+            const username = button.getAttribute('data-username');
+
+            if (!userId) {
+                alert('用户信息错误');
+                return;
+            }
+
+            // 禁用按钮防止重复点击
+            button.disabled = true;
+
+            fetch(`/api/follow/user/${userId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新按钮状态
+                    if (data.isFollowing) {
+                        button.textContent = '已关注';
+                        button.className = 'btn btn-secondary btn-sm me-2';
+                        showToast(`已关注 ${username}`, 'success');
+                    } else {
+                        button.textContent = '关注';
+                        button.className = 'btn btn-primary btn-sm me-2';
+                        showToast(`已取消关注 ${username}`, 'info');
+                    }
+                } else {
+                    showToast(data.message || '操作失败', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('关注操作失败:', error);
+                showToast('操作失败，请稍后重试', 'error');
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+        }
+
+
+
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            // 创建提示元素
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(toast);
+
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
+
+        // 绑定关注按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const followBtn = document.getElementById('followBtn');
+            if (followBtn) {
+                // 移除旧的事件监听器，因为我们现在使用onclick
+                followBtn.removeEventListener('click', toggleFollow);
+            }
+        });
+    </script>
+</body>
+</html>
+

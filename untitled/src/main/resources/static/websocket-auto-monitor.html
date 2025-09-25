@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket自动监控系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .status-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.online {
+            background: #28a745;
+        }
+        
+        .status-dot.warning {
+            background: #ffc107;
+        }
+        
+        .status-dot.critical {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            color: #6c757d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .unit {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        
+        .progress-fill.critical {
+            background: linear-gradient(90deg, #dc3545, #e83e8c);
+        }
+        
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .log-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .log-entry {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .log-entry.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .log-entry.warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .log-entry.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .log-entry.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .auto-status {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .auto-status h3 {
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        
+        .auto-status ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .auto-status li {
+            padding: 5px 0;
+            color: #333;
+        }
+        
+        .auto-status li:before {
+            content: "✅ ";
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 WebSocket自动监控系统</h1>
+            <p>实时监控和自动管理WebSocket连接</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot online" id="statusDot"></div>
+                <span id="statusText">系统运行正常</span>
+            </div>
+            <div id="lastUpdate">最后更新: --</div>
+        </div>
+        
+        <div class="main-content">
+            <div class="auto-status">
+                <h3>🤖 自动管理功能</h3>
+                <ul>
+                    <li>每15秒自动清理超时连接</li>
+                    <li>连接数达到800时自动积极清理</li>
+                    <li>连接数达到950时自动紧急清理</li>
+                    <li>最大连接数限制：1000</li>
+                    <li>连接超时时间：2分钟</li>
+                </ul>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>当前连接数</h3>
+                    <div class="value" id="currentConnections">--</div>
+                    <div class="unit">活跃连接</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="connectionProgress"></div>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>最大连接数</h3>
+                    <div class="value" id="maxConnections">1000</div>
+                    <div class="unit">连接上限</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>警告阈值</h3>
+                    <div class="value" id="warningThreshold">800</div>
+                    <div class="unit">触发积极清理</div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>危险阈值</h3>
+                    <div class="value" id="criticalThreshold">950</div>
+                    <div class="unit">触发紧急清理</div>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-primary" onclick="refreshStats()">🔄 刷新状态</button>
+                <button class="btn btn-warning" onclick="manualCleanup()">🧹 手动清理</button>
+                <button class="btn btn-danger" onclick="forceReset()">⚠️ 强制重置</button>
+                <button class="btn btn-primary" onclick="clearLogs()">🗑️ 清空日志</button>
+            </div>
+            
+            <div class="log-container">
+                <div class="log-title">📋 系统日志</div>
+                <div id="logEntries"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statsInterval;
+        let lastStats = {};
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('系统启动', 'info');
+            refreshStats();
+            startAutoRefresh();
+        });
+        
+        // 自动刷新状态
+        function startAutoRefresh() {
+            statsInterval = setInterval(refreshStats, 5000); // 每5秒刷新一次
+        }
+        
+        // 刷新统计信息
+        async function refreshStats() {
+            try {
+                const response = await fetch('/api/health/websocket-stats');
+                const stats = await response.json();
+                
+                updateStatsDisplay(stats);
+                updateStatus(stats);
+                addLog(`状态更新: ${stats.activeConnections}/${stats.maxConnections} 连接`, 'info');
+                
+                lastStats = stats;
+                
+            } catch (error) {
+                addLog(`获取状态失败: ${error.message}`, 'error');
+                updateStatus({ activeConnections: 0, maxConnections: 1000 });
+            }
+        }
+        
+        // 更新统计显示
+        function updateStatsDisplay(stats) {
+            document.getElementById('currentConnections').textContent = stats.activeConnections || 0;
+            document.getElementById('maxConnections').textContent = stats.maxConnections || 1000;
+            document.getElementById('warningThreshold').textContent = stats.warningThreshold || 800;
+            document.getElementById('criticalThreshold').textContent = stats.criticalThreshold || 950;
+            
+            // 更新进度条
+            const progress = (stats.activeConnections / stats.maxConnections) * 100;
+            const progressBar = document.getElementById('connectionProgress');
+            progressBar.style.width = `${progress}%`;
+            
+            // 根据连接数设置进度条颜色
+            progressBar.className = 'progress-fill';
+            if (progress >= 95) {
+                progressBar.classList.add('critical');
+            } else if (progress >= 80) {
+                progressBar.classList.add('warning');
+            }
+            
+            // 更新最后更新时间
+            document.getElementById('lastUpdate').textContent = `最后更新: ${stats.lastUpdate || new Date().toLocaleString()}`;
+        }
+        
+        // 更新状态指示器
+        function updateStatus(stats) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            const progress = (stats.activeConnections / stats.maxConnections) * 100;
+            
+            statusDot.className = 'status-dot';
+            if (progress >= 95) {
+                statusDot.classList.add('critical');
+                statusText.textContent = '系统危险 - 连接数过高';
+            } else if (progress >= 80) {
+                statusDot.classList.add('warning');
+                statusText.textContent = '系统警告 - 连接数较高';
+            } else {
+                statusDot.classList.add('online');
+                statusText.textContent = '系统运行正常';
+            }
+        }
+        
+        // 手动清理连接
+        async function manualCleanup() {
+            try {
+                addLog('开始手动清理连接...', 'info');
+                
+                const response = await fetch('/api/health/cleanup-connections', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`手动清理完成: ${result.cleanedCount} 个连接被清理`, 'success');
+                } else {
+                    addLog(`手动清理失败: ${result.message}`, 'error');
+                }
+                
+                refreshStats();
+                
+            } catch (error) {
+                addLog(`手动清理失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 强制重置连接
+        async function forceReset() {
+            if (!confirm('⚠️ 确定要强制重置所有WebSocket连接吗？这将断开所有用户的连接！')) {
+                return;
+            }
+            
+            try {
+                addLog('开始强制重置连接...', 'warning');
+                
+                const response = await fetch('/api/health/reset-connections', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    addLog(`强制重置完成: ${result.resetCount} 个连接被重置`, 'success');
+                } else {
+                    addLog(`强制重置失败: ${result.message}`, 'error');
+                }
+                
+                refreshStats();
+                
+            } catch (error) {
+                addLog(`强制重置失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 清空日志
+        function clearLogs() {
+            document.getElementById('logEntries').innerHTML = '';
+            addLog('日志已清空', 'info');
+        }
+        
+        // 添加日志条目
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('logEntries');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 限制日志条目数量
+            const entries = logContainer.children;
+            if (entries.length > 100) {
+                logContainer.removeChild(entries[0]);
+            }
+        }
+        
+        // 页面卸载时清理定时器
+        window.addEventListener('beforeunload', function() {
+            if (statsInterval) {
+                clearInterval(statsInterval);
+            }
+        });
+    </script>
+</body>
+</html> 

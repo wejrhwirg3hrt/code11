@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成就系统测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-trophy me-2"></i>成就系统测试</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>手动触发成就检查</h5>
+                                <button class="btn btn-primary mb-3" onclick="triggerAchievements()">
+                                    <i class="fas fa-trophy me-2"></i>触发成就检查
+                                </button>
+                                
+                                <h5>同步用户统计</h5>
+                                <button class="btn btn-success mb-3" onclick="syncUserStats()">
+                                    <i class="fas fa-sync me-2"></i>同步统计数据
+                                </button>
+                                
+                                <h5>检查成就进度</h5>
+                                <button class="btn btn-info mb-3" onclick="checkAchievementProgress()">
+                                    <i class="fas fa-chart-line me-2"></i>查看成就进度
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>测试结果</h5>
+                                <div id="testResults" class="border p-3" style="min-height: 200px; background-color: #f8f9fa;">
+                                    点击左侧按钮开始测试...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h5>快速导航</h5>
+                                <a href="/stats" class="btn btn-outline-primary me-2">
+                                    <i class="fas fa-chart-bar me-1"></i>统计页面
+                                </a>
+                                <a href="/achievements" class="btn btn-outline-warning me-2">
+                                    <i class="fas fa-trophy me-1"></i>成就页面
+                                </a>
+                                <a href="/profile" class="btn btn-outline-info me-2">
+                                    <i class="fas fa-user me-1"></i>个人资料
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary">
+                                    <i class="fas fa-home me-1"></i>首页
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function logResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'success' ? 'text-success' : 
+                              type === 'error' ? 'text-danger' : 
+                              type === 'warning' ? 'text-warning' : 'text-info';
+            
+            resultsDiv.innerHTML += `
+                <div class="${colorClass}">
+                    <small>[${timestamp}]</small> ${message}
+                </div>
+            `;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function triggerAchievements() {
+            logResult('开始触发成就检查...', 'info');
+            
+            try {
+                const response = await fetch('/api/trigger-achievements', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    logResult(`✅ 成就检查成功！`, 'success');
+                    logResult(`总成就数: ${data.totalAchievements}`, 'success');
+                    logResult(`已解锁: ${data.unlockedAchievements}`, 'success');
+                    logResult(`完成率: ${data.completionRate.toFixed(1)}%`, 'success');
+                } else {
+                    logResult(`❌ 成就检查失败: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                logResult(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function syncUserStats() {
+            logResult('开始同步用户统计数据...', 'info');
+            
+            try {
+                const response = await fetch('/api/user-stats/sync', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    logResult(`✅ 统计数据同步成功！`, 'success');
+                    logResult(`${data.message}`, 'success');
+                } else {
+                    logResult(`❌ 同步失败: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                logResult(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkAchievementProgress() {
+            logResult('获取成就进度信息...', 'info');
+            
+            try {
+                const response = await fetch('/api/achievements/current-user', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const progress = data.progressInfo;
+                    logResult(`✅ 成就进度获取成功！`, 'success');
+                    logResult(`总成就: ${progress.totalAchievements}`, 'info');
+                    logResult(`已解锁: ${progress.unlockedAchievements}`, 'info');
+                    logResult(`完成率: ${progress.completionRate.toFixed(1)}%`, 'info');
+                    logResult(`总积分: ${progress.totalPoints}`, 'info');
+                } else {
+                    logResult(`❌ 获取失败: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                logResult(`❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时显示欢迎信息
+        document.addEventListener('DOMContentLoaded', function() {
+            logResult('🎯 成就系统测试页面已加载', 'success');
+            logResult('请点击左侧按钮进行测试', 'info');
+        });
+    </script>
+</body>
+</html>

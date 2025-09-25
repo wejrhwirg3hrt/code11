@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜索结果 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .search-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem 0;
+        }
+
+        .search-toolbar {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: none;
+        }
+
+        .search-info h5 {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .search-actions .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .search-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-group .btn.active {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        /* 水平筛选条件栏样式 */
+        .filter-bar {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: none;
+        }
+
+        .filter-btn {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 14px;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+            color: #495057;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: white;
+        }
+
+        .search-results {
+            margin-top: 2rem;
+        }
+
+        .search-stats h5 {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .view-controls .btn {
+            border-radius: 8px;
+        }
+
+        /* 列表视图样式 */
+        .video-list-view .video-card {
+            display: flex;
+            flex-direction: row;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .video-list-view .video-thumbnail {
+            width: 200px;
+            height: 120px;
+            flex-shrink: 0;
+        }
+
+        .video-list-view .video-info {
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .video-list-view .video-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .video-list-view .video-description {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .video-list-view .video-meta {
+            margin-top: auto;
+        }
+
+        /* 网格视图样式 */
+        .video-grid-view .video-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-width: 100%;
+        }
+
+        .video-grid-view .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .video-grid-view .video-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .search-box {
+            background: rgba(255,255,255,0.98);
+            border-radius: 50px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .search-box input {
+            color: #333;
+        }
+
+        .search-box input::placeholder {
+            color: #555;
+            font-weight: 600;
+            opacity: 1;
+            font-size: 15px;
+        }
+        
+        .filter-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: none;
+        }
+        
+
+        
+        .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        
+        .gradient-btn {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .stats-badge {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .filter-btn {
+            border: 2px solid #e9ecef;
+            background: white;
+            color: #6c757d;
+            border-radius: 25px;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        /* 优化视频卡片样式 */
+        .video-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border: none;
+        }
+
+        .video-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+
+        .video-thumbnail {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+            transition: transform 0.3s ease;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .video-card:hover .video-thumbnail {
+            transform: scale(1.05);
+        }
+
+        .video-status-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+        }
+
+        .video-stats-overlay {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .stats-item {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-card:hover .video-overlay {
+            opacity: 1;
+        }
+
+        .play-button {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        .video-title {
+            font-weight: 600;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.8em;
+        }
+
+        .video-description {
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.8em;
+        }
+
+        .creator-avatar {
+            font-size: 1.2rem;
+        }
+
+        .video-tags .badge {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+        }
+
+        .gradient-btn.btn-sm {
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 20px;
+        }
+
+        /* 推荐视频样式 */
+        .recommended-item {
+            position: relative;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            padding: 8px;
+        }
+
+        .recommended-item:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: translateX(5px);
+        }
+
+        .recommended-thumbnail {
+            position: relative;
+            width: 80px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .recommended-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .recommended-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .recommended-item:hover .recommended-overlay {
+            opacity: 1;
+        }
+
+        .recommended-overlay i {
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .recommended-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.3;
+            color: #333;
+        }
+
+        .recommended-info {
+            min-width: 0;
+        }
+
+        .recommended-stats {
+            font-size: 0.8rem;
+        }
+
+        .stretched-link::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            content: "";
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+
+            <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+                <div sec:authorize="isAuthenticated()" class="d-flex flex-row align-items-center">
+                    <a class="nav-link me-3" href="/upload">
+                        <i class="fas fa-upload me-1"></i>上传
+                    </a>
+                    <a class="nav-link me-3" href="/profile">
+                        <i class="fas fa-user me-1"></i>我的主页
+                    </a>
+                    <a class="nav-link me-3" href="/chat?type=private">
+                        <i class="fas fa-envelope me-1"></i>私信
+                    </a>
+                    <a class="nav-link me-3 notification-bell" href="/notifications">
+                        <i class="fas fa-bell me-1"></i>通知
+                        <span class="badge bg-danger notification-badge" style="display: none;">0</span>
+                    </a>
+                    <span class="navbar-text me-3">
+                        <i class="fas fa-user me-1"></i><span sec:authentication="name"></span>
+                    </span>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button class="btn btn-outline-light btn-sm" type="submit">退出</button>
+                    </form>
+                </div>
+
+                <div sec:authorize="!isAuthenticated()" class="d-flex flex-row align-items-center">
+                    <a class="nav-link me-3" href="/login">
+                        <i class="fas fa-sign-in-alt me-1"></i>登录
+                    </a>
+                    <a class="nav-link" href="/register">
+                        <i class="fas fa-user-plus me-1"></i>注册
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 搜索头部 -->
+    <section class="search-header">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <h1 class="text-center mb-4">搜索视频</h1>
+                    <div class="search-box">
+                        <form action="/search" method="get" class="d-flex position-relative">
+                            <div class="search-input-container position-relative flex-grow-1">
+                                <input type="text"
+                                       id="searchInput"
+                                       name="q"
+                                       class="form-control border-0 bg-transparent"
+                                       th:value="${query}"
+                                       placeholder="搜索视频、用户或标签..."
+                                       style="outline: none; box-shadow: none;"
+                                       autocomplete="off">
+                                <!-- 搜索建议下拉框 -->
+                                <div id="searchSuggestions" class="search-suggestions-dropdown"></div>
+                            </div>
+                            <button type="submit" class="btn gradient-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 现代化搜索工具栏 -->
+    <div class="container mt-4">
+        <div class="search-toolbar mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="search-info">
+                        <h5 class="mb-1">
+                            <span th:if="${query != null and !#strings.isEmpty(query)}">
+                                搜索 "<span class="text-primary" th:text="${query}">关键词</span>" 的结果
+                            </span>
+                            <span th:if="${query == null or #strings.isEmpty(query)}">
+                                全部视频
+                            </span>
+                        </h5>
+                        <small class="text-muted">
+                            共找到 <span class="fw-bold text-primary" th:text="${totalResults}">0</span> 个结果
+                        </small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="search-actions d-flex justify-content-end gap-2">
+                        <!-- 视图切换按钮 -->
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" id="gridView" onclick="switchView('grid')">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="listView" onclick="switchView('list')">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+
+                        <!-- 快速排序按钮 -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-sort me-1"></i>排序
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="quickSort('latest')">
+                                    <i class="fas fa-clock me-2"></i>最新发布
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="quickSort('popular')">
+                                    <i class="fas fa-fire me-2"></i>最受欢迎
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="quickSort('views')">
+                                    <i class="fas fa-eye me-2"></i>最多观看
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="quickSort('likes')">
+                                    <i class="fas fa-heart me-2"></i>最多点赞
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="quickSort('popular_4weeks')">
+                                    <i class="fas fa-chart-line me-2"></i>4周最热
+                                </a></li>
+                            </ul>
+                        </div>
+
+                        <!-- 筛选器切换按钮 -->
+                        <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                            <i class="fas fa-filter me-1"></i>筛选器
+                        </button>
+
+                        <!-- 清除筛选按钮 -->
+                        <button class="btn btn-outline-danger" type="button" onclick="clearAllFilters()" th:if="${query != null or currentCategory != null or currentSort != 'latest'}">
+                            <i class="fas fa-times me-1"></i>清除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 水平筛选条件栏 -->
+        <div class="filter-bar mb-4">
+            <div class="filter-card p-3">
+                <div class="row align-items-center">
+                    <!-- 分类筛选 -->
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="d-flex align-items-center">
+                            <h6 class="fw-bold mb-0 me-3">分类:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="filter-btn" th:classappend="${currentCategory == null or currentCategory == '' ? 'active' : ''}"
+                                        onclick="applyFilter('category', '')">全部</button>
+                                <button th:each="cat : ${categories}"
+                                        class="filter-btn"
+                                        th:classappend="${currentCategory == cat.name ? 'active' : ''}"
+                                        th:data-category="${cat.name}"
+                                        onclick="applyFilter('category', this.dataset.category)"
+                                        th:text="${cat.name}">分类</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 排序方式 -->
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center">
+                            <h6 class="fw-bold mb-0 me-3">排序:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="filter-btn"
+                                        th:classappend="${currentSort == 'latest' or currentSort == null ? 'active' : ''}"
+                                        onclick="applyFilter('sort', 'latest')">
+                                    <i class="fas fa-clock me-1"></i>最新
+                                </button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentSort == 'views' ? 'active' : ''}"
+                                        onclick="applyFilter('sort', 'views')">
+                                    <i class="fas fa-eye me-1"></i>观看
+                                </button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentSort == 'likes' ? 'active' : ''}"
+                                        onclick="applyFilter('sort', 'likes')">
+                                    <i class="fas fa-heart me-1"></i>点赞
+                                </button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentSort == 'popular' ? 'active' : ''}"
+                                        onclick="applyFilter('sort', 'popular')">
+                                    <i class="fas fa-fire me-1"></i>热门
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二行：标签搜索和高级筛选 -->
+                <div class="row align-items-center mt-3">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="d-flex align-items-center">
+                            <h6 class="fw-bold mb-0 me-3">标签:</h6>
+                            <div class="input-group" style="max-width: 300px;">
+                                <input type="text"
+                                       id="tagInput"
+                                       class="form-control form-control-sm"
+                                       placeholder="输入标签..."
+                                       th:value="${currentTags}">
+                                <button class="btn btn-outline-primary btn-sm" type="button" onclick="searchByTags()">
+                                    <i class="fas fa-tag"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center justify-content-md-end">
+                            <button class="btn btn-outline-secondary btn-sm me-2" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+                                <i class="fas fa-filter me-1"></i>高级筛选
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 高级筛选折叠区域 -->
+                <div class="collapse mt-3" id="advancedFilters">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <h6 class="fw-bold mb-2">发布时间</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="filter-btn"
+                                        th:classappend="${currentTimeFilter == null or currentTimeFilter == '' ? 'active' : ''}"
+                                        onclick="applyFilter('timeFilter', '')">全部</button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentTimeFilter == 'today' ? 'active' : ''}"
+                                        onclick="applyFilter('timeFilter', 'today')">今天</button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentTimeFilter == 'week' ? 'active' : ''}"
+                                        onclick="applyFilter('timeFilter', 'week')">本周</button>
+                                <button class="filter-btn"
+                                        th:classappend="${currentTimeFilter == 'month' ? 'active' : ''}"
+                                        onclick="applyFilter('timeFilter', 'month')">本月</button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <h6 class="fw-bold mb-2">最低观看数</h6>
+                            <input type="number" class="form-control form-control-sm" placeholder="如: 1000" id="minViewsInput">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <h6 class="fw-bold mb-2">最低点赞数</h6>
+                            <input type="number" class="form-control form-control-sm" placeholder="如: 100" id="minLikesInput">
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+        <!-- 搜索结果区域 -->
+        <div class="search-results">
+            <!-- 结果统计和视图切换 -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="search-stats">
+                    <h5 class="mb-0">
+                        <span th:if="${keyword != null and !#strings.isEmpty(keyword)}">
+                            搜索 "<span th:text="${keyword}"></span>" 的结果
+                        </span>
+                        <span th:unless="${keyword != null and !#strings.isEmpty(keyword)}">
+                            全部视频
+                        </span>
+                    </h5>
+                    <small class="text-muted">共找到 <span th:text="${totalResults}">0</span> 个结果</small>
+                </div>
+                <div class="view-controls">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" id="gridViewBtn" onclick="switchView('grid')">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="listViewBtn" onclick="switchView('list')">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+                <!-- 视频列表 - 网格视图 -->
+                <div id="videoGridView" class="video-grid-view">
+                    <div class="row g-4">
+                        <div th:each="video : ${videos}" class="col-xxl-2 col-xl-3 col-lg-4 col-md-6 mb-4">
+                            <div class="video-card h-100">
+                            <div class="position-relative">
+                                <img th:src="${video.thumbnail != null and !#strings.isEmpty(video.thumbnail) ? video.thumbnail : (video.thumbnailPath != null and !#strings.isEmpty(video.thumbnailPath) ? video.thumbnailPath : '/images/default-thumbnail.jpg')}"
+                                     class="video-thumbnail"
+                                     alt="视频缩略图"
+                                     onerror="this.src='/images/default-thumbnail.jpg'">
+
+                                <!-- 视频状态标签 -->
+                                <div class="video-status-badge" th:if="${video.status != null and video.status.name() != 'APPROVED'}">
+                                    <span th:switch="${video.status.name()}" class="badge">
+                                        <span th:case="'PENDING'" class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>待审核
+                                        </span>
+                                        <span th:case="'REJECTED'" class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>已拒绝
+                                        </span>
+                                        <span th:case="'BANNED'" class="badge bg-dark">
+                                            <i class="fas fa-ban me-1"></i>已封禁
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <!-- 视频统计信息 -->
+                                <div class="video-stats-overlay">
+                                    <div class="stats-item">
+                                        <i class="fas fa-eye"></i>
+                                        <span th:text="${video.views != null ? video.views : 0}">0</span>
+                                    </div>
+                                    <div class="stats-item" th:if="${video.favoriteCount != null and video.favoriteCount > 0}">
+                                        <i class="fas fa-heart"></i>
+                                        <span th:text="${video.favoriteCount}">0</span>
+                                    </div>
+                                </div>
+
+                                <!-- 播放按钮覆盖层 -->
+                                <div class="video-overlay">
+                                    <div class="play-button">
+                                        <i class="fas fa-play"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="video-info p-3">
+                                <h6 class="video-title mb-2" th:text="${video.title}" th:title="${video.title}">视频标题</h6>
+                                <p class="video-description text-muted small mb-3"
+                                   th:text="${#strings.abbreviate(video.description, 80)}"
+                                   th:title="${video.description}">视频描述...</p>
+
+                                <div class="video-meta d-flex justify-content-between align-items-center mb-2">
+                                    <div class="creator-info d-flex align-items-center">
+                                        <div class="creator-avatar me-2">
+                                            <img th:if="${video.user != null and video.user.avatar != null and !#strings.isEmpty(video.user.avatar)}"
+                                                 th:src="${video.user.avatar}"
+                                                 class="rounded-circle"
+                                                 style="width: 24px; height: 24px; object-fit: cover;"
+                                                 th:alt="${video.user.username}"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                                            <i class="fas fa-user-circle text-muted"
+                                               th:style="${video.user != null and video.user.avatar != null and !#strings.isEmpty(video.user.avatar) ? 'display: none;' : ''}"></i>
+                                        </div>
+                                        <small class="text-muted"
+                                               th:text="${video.user != null ? (video.user.nickname != null and !#strings.isEmpty(video.user.nickname) ? video.user.nickname : video.user.username) : '匿名用户'}">用户名</small>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        <span th:text="${#temporals.format(video.createdAt, 'MM-dd')}">发布时间</span>
+                                    </small>
+                                </div>
+
+                                <div class="video-actions d-flex justify-content-between align-items-center">
+                                    <div class="video-tags" th:if="${video.tagsString != null and !#strings.isEmpty(video.tagsString)}">
+                                        <span th:each="tag, iterStat : ${#strings.arraySplit(video.tagsString, ',')}"
+                                              th:if="${iterStat.index < 2}"
+                                              class="badge bg-light text-dark me-1"
+                                              th:text="${#strings.trim(tag)}">标签</span>
+                                    </div>
+                                    <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-sm gradient-btn">
+                                        <i class="fas fa-play me-1"></i>观看
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 视频列表 - 列表视图 -->
+                <div id="videoListView" class="video-list-view d-none">
+                    <div th:each="video : ${videos}" class="mb-3">
+                        <div class="video-card">
+                            <div class="position-relative">
+                                <img th:src="${video.thumbnail != null and !#strings.isEmpty(video.thumbnail) ? video.thumbnail : (video.thumbnailPath != null and !#strings.isEmpty(video.thumbnailPath) ? video.thumbnailPath : '/images/default-thumbnail.jpg')}"
+                                     class="video-thumbnail"
+                                     alt="视频缩略图"
+                                     onerror="this.src='/images/default-thumbnail.jpg'">
+                                <div class="video-overlay">
+                                    <div class="play-button">
+                                        <i class="fas fa-play"></i>
+                                    </div>
+                                </div>
+                                <div class="video-duration" th:if="${video.duration}">
+                                    <span th:text="${video.duration}">00:00</span>
+                                </div>
+                            </div>
+                            <div class="video-info">
+                                <h6 class="video-title mb-2">
+                                    <a th:href="@{/video/{id}(id=${video.id})}"
+                                       class="text-decoration-none text-dark"
+                                       th:text="${video.title}">视频标题</a>
+                                </h6>
+                                <p class="video-description text-muted mb-2" th:text="${video.description}">视频描述</p>
+                                <div class="video-meta d-flex justify-content-between align-items-center">
+                                    <div class="video-stats">
+                                        <small class="text-muted me-3">
+                                            <i class="fas fa-eye me-1"></i>
+                                            <span th:text="${#numbers.formatInteger(video.viewCount != null ? video.viewCount : 0, 0, 'COMMA')}">0</span>
+                                        </small>
+                                        <small class="text-muted me-3">
+                                            <i class="fas fa-heart me-1"></i>
+                                            <span th:text="${#numbers.formatInteger(video.likeCount != null ? video.likeCount : 0, 0, 'COMMA')}">0</span>
+                                        </small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user me-1"></i>
+                                            <span th:text="${video.user != null ? (video.user.nickname != null and !#strings.isEmpty(video.user.nickname) ? video.user.nickname : video.user.username) : '匿名用户'}">用户名</span>
+                                        </small>
+                                    </div>
+                                    <div class="video-actions">
+                                        <a th:href="@{/video/{id}(id=${video.id})}" class="btn btn-sm gradient-btn">
+                                            <i class="fas fa-play me-1"></i>观看
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 无结果提示 -->
+                <div th:if="${#lists.isEmpty(videos)}" class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">没有找到相关视频</h4>
+                    <p class="text-muted">尝试使用其他关键词或调整筛选条件</p>
+                    <a href="/" class="gradient-btn text-decoration-none">
+                        <i class="fas fa-home me-2"></i>返回首页
+                    </a>
+                </div>
+
+                <!-- 现代化分页组件 -->
+                <div th:if="${!#lists.isEmpty(videos)}" class="pagination-container mt-5 mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <!-- 分页信息 -->
+                        <div class="pagination-info">
+                            <span class="text-muted">
+                                显示第 <strong th:text="${currentPage * size + 1}">1</strong> -
+                                <strong th:text="${currentPage * size + #lists.size(videos)}">12</strong> 条，
+                                共 <strong th:text="${totalResults}">0</strong> 条结果
+                            </span>
+                        </div>
+
+                        <!-- 分页导航 -->
+                        <nav aria-label="搜索结果分页">
+                            <ul class="pagination pagination-modern mb-0">
+                                <!-- 上一页 -->
+                                <li class="page-item" th:classappend="${currentPage == 0 ? 'disabled' : ''}">
+                                    <a class="page-link page-prev"
+                                       th:href="${currentPage > 0 ? '?page=' + (currentPage - 1) + '&size=' + size + (keyword != null ? '&q=' + keyword : '') + (currentCategory != null ? '&category=' + currentCategory : '') + (currentSort != null ? '&sort=' + currentSort : '') : '#'}"
+                                       aria-label="上一页">
+                                        <i class="fas fa-chevron-left"></i>
+                                        <span class="d-none d-sm-inline ms-1">上一页</span>
+                                    </a>
+                                </li>
+
+                                <!-- 页码 -->
+                                <th:block th:each="pageNum : ${#numbers.sequence(startPage, endPage)}">
+                                    <li class="page-item" th:classappend="${pageNum == currentPage ? 'active' : ''}">
+                                        <a class="page-link"
+                                           th:href="'?page=' + ${pageNum} + '&size=' + ${size} + ${keyword != null ? '&q=' + keyword : ''} + ${currentCategory != null ? '&category=' + currentCategory : ''} + ${currentSort != null ? '&sort=' + currentSort : ''}"
+                                           th:text="${pageNum + 1}">1</a>
+                                    </li>
+                                </th:block>
+
+                                <!-- 省略号 -->
+                                <li class="page-item disabled" th:if="${endPage < totalPages - 1}">
+                                    <span class="page-link">...</span>
+                                </li>
+
+                                <!-- 最后一页 -->
+                                <li class="page-item" th:if="${endPage < totalPages - 1}">
+                                    <a class="page-link"
+                                       th:href="'?page=' + ${totalPages - 1} + '&size=' + ${size} + ${keyword != null ? '&q=' + keyword : ''} + ${currentCategory != null ? '&category=' + currentCategory : ''} + ${currentSort != null ? '&sort=' + currentSort : ''}"
+                                       th:text="${totalPages}">最后</a>
+                                </li>
+
+                                <!-- 下一页 -->
+                                <li class="page-item" th:classappend="${currentPage >= totalPages - 1 ? 'disabled' : ''}">
+                                    <a class="page-link page-next"
+                                       th:href="${currentPage < totalPages - 1 ? '?page=' + (currentPage + 1) + '&size=' + size + (keyword != null ? '&q=' + keyword : '') + (currentCategory != null ? '&category=' + currentCategory : '') + (currentSort != null ? '&sort=' + currentSort : '') : '#'}"
+                                       aria-label="下一页">
+                                        <span class="d-none d-sm-inline me-1">下一页</span>
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+
+                        <!-- 每页显示数量选择 -->
+                        <div class="page-size-selector">
+                            <select class="form-select form-select-sm" onchange="changePageSize(this.value)" style="width: auto;">
+                                <option th:value="12" th:selected="${size == 12}">12条/页</option>
+                                <option th:value="24" th:selected="${size == 24}">24条/页</option>
+                                <option th:value="48" th:selected="${size == 48}">48条/页</option>
+                                <option th:value="96" th:selected="${size == 96}">96条/页</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 应用筛选条件
+        function applyFilter(filterType, filterValue) {
+            const url = new URL(window.location);
+
+            // 设置筛选参数
+            if (filterValue === '' || filterValue === null) {
+                url.searchParams.delete(filterType);
+            } else {
+                url.searchParams.set(filterType, filterValue);
+            }
+
+            // 重置页码
+            url.searchParams.delete('page');
+
+            // 跳转到新URL
+            window.location.href = url.toString();
+        }
+
+        // 标签搜索功能
+        function searchByTags() {
+            const tagInput = document.getElementById('tagInput');
+            const tags = tagInput.value.trim();
+
+            if (tags) {
+                const url = new URL(window.location);
+                url.searchParams.set('tags', tags);
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            }
+        }
+
+        // 标签输入框回车搜索
+        document.addEventListener('DOMContentLoaded', function() {
+            const tagInput = document.getElementById('tagInput');
+            if (tagInput) {
+                tagInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        searchByTags();
+                    }
+                });
+            }
+        });
+
+        // 视图切换功能
+        function switchView(viewType) {
+            const gridView = document.getElementById('videoGridView');
+            const listView = document.getElementById('videoListView');
+            const gridBtn = document.getElementById('gridView');
+            const listBtn = document.getElementById('listView');
+
+            if (viewType === 'grid') {
+                gridView.classList.remove('d-none');
+                listView.classList.add('d-none');
+                gridBtn.classList.add('active');
+                listBtn.classList.remove('active');
+                localStorage.setItem('videoViewType', 'grid');
+            } else {
+                gridView.classList.add('d-none');
+                listView.classList.remove('d-none');
+                listBtn.classList.add('active');
+                gridBtn.classList.remove('active');
+                localStorage.setItem('videoViewType', 'list');
+            }
+        }
+
+        // 快速排序功能
+        function quickSort(sortType) {
+            applyFilter('sort', sortType);
+        }
+
+        // 清除所有筛选
+        function clearAllFilters() {
+            const url = new URL(window.location.origin + window.location.pathname);
+            window.location.href = url.toString();
+        }
+
+        // 页面加载时恢复视图类型
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedViewType = localStorage.getItem('videoViewType') || 'grid';
+            switchView(savedViewType);
+        });
+
+        // 搜索结果高亮
+        function highlightSearchResults() {
+            const query = new URLSearchParams(window.location.search).get('q');
+            if (!query) return;
+
+            const keywords = query.toLowerCase().split(' ').filter(k => k.length > 0);
+
+            document.querySelectorAll('.video-title, .video-description').forEach(element => {
+                let html = element.innerHTML;
+
+                keywords.forEach(keyword => {
+                    const regex = new RegExp(`(${keyword})`, 'gi');
+                    html = html.replace(regex, '<mark class="search-highlight">$1</mark>');
+                });
+
+                element.innerHTML = html;
+            });
+        }
+
+        // 搜索建议功能
+        let searchTimeout;
+        let currentSuggestionIndex = -1;
+        let suggestions = [];
+
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDropdown = document.getElementById('searchSuggestions');
+
+        if (searchInput && suggestionsDropdown) {
+            // 输入事件监听
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
+
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    hideSuggestions();
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    fetchSearchSuggestions(query);
+                }, 300);
+            });
+
+            // 键盘事件监听
+            searchInput.addEventListener('keydown', function(e) {
+                if (!suggestionsDropdown.style.display || suggestionsDropdown.style.display === 'none') {
+                    return;
+                }
+
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+                        updateSuggestionSelection();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+                        updateSuggestionSelection();
+                        break;
+                    case 'Enter':
+                        if (currentSuggestionIndex >= 0) {
+                            e.preventDefault();
+                            selectSuggestion(suggestions[currentSuggestionIndex]);
+                        }
+                        break;
+                    case 'Escape':
+                        hideSuggestions();
+                        break;
+                }
+            });
+
+            // 点击外部隐藏建议
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !suggestionsDropdown.contains(e.target)) {
+                    hideSuggestions();
+                }
+            });
+        }
+
+        // 获取搜索建议
+        function fetchSearchSuggestions(query) {
+            fetch(`/api/search/suggestions-enhanced?q=${encodeURIComponent(query)}&limit=8`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.suggestions) {
+                        suggestions = data.suggestions;
+                        displaySuggestions(suggestions);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取搜索建议失败:', error);
+                });
+        }
+
+        // 显示搜索建议
+        function displaySuggestions(suggestions) {
+            if (suggestions.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            let html = '';
+            suggestions.forEach((suggestion, index) => {
+                html += `
+                    <div class="search-suggestion-item" onclick="selectSuggestion('${suggestion}')">
+                        <span class="search-suggestion-text">${suggestion}</span>
+                        <span class="search-suggestion-type">搜索</span>
+                    </div>
+                `;
+            });
+
+            suggestionsDropdown.innerHTML = html;
+            suggestionsDropdown.style.display = 'block';
+            currentSuggestionIndex = -1;
+        }
+
+        // 隐藏搜索建议
+        function hideSuggestions() {
+            suggestionsDropdown.style.display = 'none';
+            currentSuggestionIndex = -1;
+        }
+
+        // 更新建议选择状态
+        function updateSuggestionSelection() {
+            const items = suggestionsDropdown.querySelectorAll('.search-suggestion-item');
+            items.forEach((item, index) => {
+                if (index === currentSuggestionIndex) {
+                    item.classList.add('active');
+                    searchInput.value = suggestions[index];
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // 选择建议
+        function selectSuggestion(suggestion) {
+            searchInput.value = suggestion;
+            hideSuggestions();
+            // 自动提交搜索
+            searchInput.closest('form').submit();
+        }
+
+        // 改变每页显示数量
+        function changePageSize(newSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('size', newSize);
+            url.searchParams.set('page', '0'); // 重置到第一页
+            window.location.href = url.toString();
+        }
+
+        // 跳转到指定页面
+        function goToPage(pageNum) {
+            const url = new URL(window.location);
+            url.searchParams.set('page', pageNum);
+            window.location.href = url.toString();
+        }
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            highlightSearchResults();
+
+            // 添加键盘导航支持
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'ArrowLeft') {
+                        // Ctrl + 左箭头：上一页
+                        const prevBtn = document.querySelector('.page-prev');
+                        if (prevBtn && !prevBtn.closest('.page-item').classList.contains('disabled')) {
+                            e.preventDefault();
+                            prevBtn.click();
+                        }
+                    } else if (e.key === 'ArrowRight') {
+                        // Ctrl + 右箭头：下一页
+                        const nextBtn = document.querySelector('.page-next');
+                        if (nextBtn && !nextBtn.closest('.page-item').classList.contains('disabled')) {
+                            e.preventDefault();
+                            nextBtn.click();
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .search-highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        /* 搜索建议样式 */
+        .search-suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-suggestion-item:hover,
+        .search-suggestion-item.active {
+            background-color: #f8f9fa;
+        }
+
+        .search-suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-suggestion-text {
+            flex-grow: 1;
+            font-size: 0.9rem;
+        }
+
+        .search-suggestion-type {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+
+        .search-input-container {
+            position: relative;
+        }
+
+        /* 现代化分页样式 - 紧凑版本 */
+        .pagination-container {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            margin: 1.5rem auto 1rem auto;
+            max-width: 100%;
+        }
+
+        .pagination-modern {
+            gap: 8px;
+        }
+
+        .pagination-modern .page-link {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #6c757d;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            min-width: 44px;
+            text-align: center;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .pagination-modern .page-link:hover {
+            background: #e9ecef;
+            color: #495057;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .pagination-modern .page-item.active .page-link {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .pagination-modern .page-item.disabled .page-link {
+            background: #f8f9fa;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .pagination-modern .page-prev,
+        .pagination-modern .page-next {
+            padding: 12px 20px;
+            font-weight: 600;
+        }
+
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .pagination-info strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .page-size-selector .form-select {
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            padding: 8px 12px;
+            font-size: 14px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .page-size-selector .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            background-color: white;
+        }
+
+        /* 响应式分页 */
+        @media (max-width: 768px) {
+            .pagination-container .d-flex {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .pagination-modern .page-link {
+                padding: 10px 12px;
+                min-width: 40px;
+                font-size: 14px;
+            }
+
+            .pagination-modern {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .pagination-modern .page-link {
+                padding: 8px 10px;
+                min-width: 36px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</body>
+</html>

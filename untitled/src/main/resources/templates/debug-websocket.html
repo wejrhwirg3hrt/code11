@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket调试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { padding: 5px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+        .status { padding: 5px 10px; border-radius: 3px; margin: 5px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔧 WebSocket连接调试</h1>
+    
+    <div class="section">
+        <h3>连接状态</h3>
+        <div id="connectionStatus" class="status info">未连接</div>
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开</button>
+    </div>
+    
+    <div class="section">
+        <h3>用户设置</h3>
+        <input type="text" id="userIdInput" placeholder="用户ID" value="2">
+        <button onclick="joinSignaling()">加入信令服务器</button>
+        <div id="joinStatus" class="status info">未加入</div>
+    </div>
+    
+    <div class="section">
+        <h3>发送测试消息</h3>
+        <input type="text" id="targetUserInput" placeholder="目标用户ID" value="3">
+        <button onclick="sendTestCall()">发送通话邀请</button>
+        <button onclick="sendKeepAlive()">发送保活消息</button>
+    </div>
+    
+    <div class="section">
+        <h3>调试日志</h3>
+        <button onclick="clearLog()">清空日志</button>
+        <div id="debugLog" class="log"></div>
+    </div>
+
+    <!-- WebSocket库 -->
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/stomp.min.js"></script>
+
+    <script>
+        let stompClient = null;
+        let currentUserId = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('debugLog');
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logElement.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').innerHTML = '';
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function connect() {
+            if (stompClient && stompClient.connected) {
+                log('已经连接', 'error');
+                return;
+            }
+
+            log('开始连接WebSocket...');
+            updateStatus('connectionStatus', '连接中...', 'info');
+
+            try {
+                const socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                
+                // 启用调试
+                stompClient.debug = function(str) {
+                    log(`STOMP: ${str}`);
+                };
+
+                stompClient.connect({}, function(frame) {
+                    log('✅ WebSocket连接成功', 'success');
+                    log(`连接帧: ${frame}`, 'success');
+                    updateStatus('connectionStatus', '已连接', 'success');
+                    
+                    // 订阅消息
+                    subscribeMessages();
+                    
+                }, function(error) {
+                    log(`❌ 连接失败: ${error}`, 'error');
+                    updateStatus('connectionStatus', '连接失败', 'error');
+                });
+
+            } catch (error) {
+                log(`❌ 连接异常: ${error.message}`, 'error');
+                updateStatus('connectionStatus', '连接异常', 'error');
+            }
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect();
+                stompClient = null;
+            }
+            updateStatus('connectionStatus', '已断开', 'info');
+            updateStatus('joinStatus', '未加入', 'info');
+            log('连接已断开');
+        }
+
+        function subscribeMessages() {
+            if (!stompClient) return;
+
+            log('开始订阅消息...');
+
+            // 订阅加入成功消息
+            stompClient.subscribe('/user/queue/webrtc/joined', function(message) {
+                const data = JSON.parse(message.body);
+                log(`✅ 收到加入成功消息: ${JSON.stringify(data)}`, 'success');
+                updateStatus('joinStatus', '已加入信令服务器', 'success');
+            });
+
+            // 订阅通话邀请
+            stompClient.subscribe('/user/queue/webrtc/call-invitation', function(message) {
+                const data = JSON.parse(message.body);
+                log(`📞 收到通话邀请(用户队列): ${JSON.stringify(data)}`, 'success');
+            });
+
+            stompClient.subscribe('/topic/webrtc/call-invitation-broadcast', function(message) {
+                const data = JSON.parse(message.body);
+                log(`📞 收到通话邀请(广播): ${JSON.stringify(data)}`, 'success');
+            });
+
+            // 订阅其他消息
+            stompClient.subscribe('/user/queue/webrtc/call-accepted', function(message) {
+                const data = JSON.parse(message.body);
+                log(`✅ 通话被接受: ${JSON.stringify(data)}`, 'success');
+            });
+
+            stompClient.subscribe('/user/queue/webrtc/call-rejected', function(message) {
+                const data = JSON.parse(message.body);
+                log(`❌ 通话被拒绝: ${JSON.stringify(data)}`, 'error');
+            });
+
+            log('✅ 消息订阅完成');
+        }
+
+        function joinSignaling() {
+            if (!stompClient || !stompClient.connected) {
+                log('请先连接WebSocket', 'error');
+                return;
+            }
+
+            currentUserId = document.getElementById('userIdInput').value.trim();
+            if (!currentUserId) {
+                log('请输入用户ID', 'error');
+                return;
+            }
+
+            log(`发送加入信令服务器消息，用户ID: ${currentUserId}`);
+            
+            try {
+                stompClient.send('/app/webrtc/join', {}, JSON.stringify({
+                    userId: currentUserId
+                }));
+                log('✅ 加入消息已发送');
+                updateStatus('joinStatus', '加入中...', 'info');
+            } catch (error) {
+                log(`❌ 发送加入消息失败: ${error.message}`, 'error');
+            }
+        }
+
+        function sendTestCall() {
+            if (!stompClient || !stompClient.connected) {
+                log('请先连接WebSocket', 'error');
+                return;
+            }
+
+            if (!currentUserId) {
+                log('请先加入信令服务器', 'error');
+                return;
+            }
+
+            const targetUserId = document.getElementById('targetUserInput').value.trim();
+            if (!targetUserId) {
+                log('请输入目标用户ID', 'error');
+                return;
+            }
+
+            const callData = {
+                callerId: currentUserId,
+                calleeId: targetUserId,
+                callType: 'video'
+            };
+
+            log(`发送通话邀请: ${JSON.stringify(callData)}`);
+            
+            try {
+                stompClient.send('/app/webrtc/call', {}, JSON.stringify(callData));
+                log('✅ 通话邀请已发送');
+            } catch (error) {
+                log(`❌ 发送通话邀请失败: ${error.message}`, 'error');
+            }
+        }
+
+        function sendKeepAlive() {
+            if (!stompClient || !stompClient.connected) {
+                log('请先连接WebSocket', 'error');
+                return;
+            }
+
+            if (!currentUserId) {
+                log('请先设置用户ID', 'error');
+                return;
+            }
+
+            try {
+                stompClient.send('/app/webrtc/keepalive', {}, JSON.stringify({
+                    userId: currentUserId
+                }));
+                log('✅ 保活消息已发送');
+            } catch (error) {
+                log(`❌ 发送保活消息失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时自动连接
+        window.addEventListener('load', () => {
+            log('页面加载完成');
+        });
+    </script>
+</body>
+</html>

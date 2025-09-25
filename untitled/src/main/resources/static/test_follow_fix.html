@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关注功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>关注功能测试页面</h1>
+    
+    <div class="test-section">
+        <h3>1. 清理重复关注记录</h3>
+        <button onclick="cleanupDuplicates()">清理重复记录</button>
+        <button onclick="checkDuplicates()">检查重复记录</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 测试关注/取消关注功能</h3>
+        <input type="number" id="targetUserId" placeholder="目标用户ID" value="2">
+        <button onclick="testFollow()">测试关注</button>
+        <button onclick="testUnfollow()">测试取消关注</button>
+        <button onclick="checkFollowStatus()">检查关注状态</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 访问清理工具</h3>
+        <a href="/follow/cleanup" target="_blank">打开关注记录清理工具</a>
+    </div>
+    
+    <div class="test-section">
+        <h3>测试日志</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function cleanupDuplicates() {
+            log('开始清理重复关注记录...');
+            fetch('/api/follow/cleanup-duplicates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ ' + data.message, 'success');
+                } else {
+                    log('❌ ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                log('❌ 请求失败: ' + error.message, 'error');
+            });
+        }
+
+        function checkDuplicates() {
+            log('检查重复关注记录...');
+            fetch('/api/follow/check-duplicates', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ ' + data.message, 'success');
+                    if (data.duplicates && data.duplicates.length > 0) {
+                        log('发现重复记录:', 'error');
+                        data.duplicates.forEach(dup => {
+                            log(`  用户 ${dup.followerId} -> 用户 ${dup.followingId}: ${dup.count} 条记录`, 'error');
+                        });
+                    } else {
+                        log('没有发现重复记录', 'success');
+                    }
+                } else {
+                    log('❌ ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                log('❌ 请求失败: ' + error.message, 'error');
+            });
+        }
+
+        function testFollow() {
+            const userId = document.getElementById('targetUserId').value;
+            log(`测试关注用户 ${userId}...`);
+            fetch(`/api/follow/user/${userId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ 关注操作成功: ' + data.message, 'success');
+                } else {
+                    log('❌ 关注操作失败: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                log('❌ 请求失败: ' + error.message, 'error');
+            });
+        }
+
+        function testUnfollow() {
+            const userId = document.getElementById('targetUserId').value;
+            log(`测试取消关注用户 ${userId}...`);
+            fetch(`/api/follow/user/${userId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log('✅ 取消关注操作成功: ' + data.message, 'success');
+                } else {
+                    log('❌ 取消关注操作失败: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                log('❌ 请求失败: ' + error.message, 'error');
+            });
+        }
+
+        function checkFollowStatus() {
+            const userId = document.getElementById('targetUserId').value;
+            log(`检查对用户 ${userId} 的关注状态...`);
+            fetch(`/api/follow/status/${userId}`, {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    log(`✅ 关注状态: 关注=${data.isFollowing}, 互相关注=${data.isMutual}`, 'success');
+                } else {
+                    log('❌ 获取关注状态失败: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                log('❌ 请求失败: ' + error.message, 'error');
+            });
+        }
+
+        // 页面加载时显示欢迎信息
+        window.onload = function() {
+            log('关注功能测试页面已就绪', 'info');
+            log('请先登录，然后进行测试', 'info');
+        };
+    </script>
+</body>
+</html> 

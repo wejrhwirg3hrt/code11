@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户仪表板</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .dashboard-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+        }
+        .level-badge {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-weight: bold;
+        }
+        .progress-custom {
+            height: 8px;
+            border-radius: 10px;
+        }
+        .achievement-item {
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    用户仪表板
+                </h1>
+                <p class="text-muted">欢迎回来，<span th:text="${user.username}">用户</span>！</p>
+            </div>
+        </div>
+
+        <!-- 第一行：等级和成就 -->
+        <div class="row mb-4">
+            <!-- 我的等级 -->
+            <div class="col-md-6">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-star text-warning me-2"></i>
+                            <h5 class="card-title mb-0">我的等级</h5>
+                            <i class="fas fa-chevron-right ms-auto text-muted"></i>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <div class="level-badge d-inline-block mb-2">
+                                <i class="fas fa-crown me-1"></i>
+                                <span id="user-level">1</span>
+                            </div>
+                            <h6 id="level-title" class="text-muted">新手</h6>
+                            <p class="mb-1"><span id="current-exp">10</span>/<span id="next-level-exp">100</span> EXP</p>
+                        </div>
+                        
+                        <div class="progress progress-custom mb-2">
+                            <div id="level-progress" class="progress-bar bg-warning" role="progressbar" style="width: 10%"></div>
+                        </div>
+                        <small class="text-muted">还需 <span id="exp-to-next">90</span> 经验值升级</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近成就 -->
+            <div class="col-md-6">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-trophy text-success me-2"></i>
+                            <h5 class="card-title mb-0">最近成就</h5>
+                            <i class="fas fa-chevron-right ms-auto text-muted"></i>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <i class="fas fa-medal stat-icon text-warning"></i>
+                            <h6 id="achievement-title">首无成就</h6>
+                            <p class="text-muted small" id="achievement-desc">继续努力创作吧！</p>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewAllAchievements()">
+                                查看全部
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第二行：观看趋势和视频状态 -->
+        <div class="row mb-4">
+            <!-- 观看量趋势 -->
+            <div class="col-lg-8">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-chart-line text-primary me-2"></i>
+                            <h5 class="card-title mb-0">观看量趋势</h5>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="watchTrendsChart"></canvas>
+                        </div>
+                        
+                        <div class="row mt-3 text-center">
+                            <div class="col-4">
+                                <div class="text-primary">
+                                    <i class="fas fa-eye"></i>
+                                </div>
+                                <small class="text-muted">观看量</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-danger">
+                                    <i class="fas fa-heart"></i>
+                                </div>
+                                <small class="text-muted">点赞量</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-success">
+                                    <i class="fas fa-comment"></i>
+                                </div>
+                                <small class="text-muted">评论量</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 视频状态分布 -->
+            <div class="col-lg-4">
+                <div class="card dashboard-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-chart-pie text-info me-2"></i>
+                            <h5 class="card-title mb-0">视频状态分布</h5>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="videoStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三行：统计数据 -->
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-video stat-icon text-primary"></i>
+                        <h4 id="total-videos" class="mb-1">0</h4>
+                        <p class="text-muted mb-0">上传视频</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-heart stat-icon text-danger"></i>
+                        <h4 id="total-likes" class="mb-1">0</h4>
+                        <p class="text-muted mb-0">获得点赞</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-comment stat-icon text-success"></i>
+                        <h4 id="total-comments" class="mb-1">0</h4>
+                        <p class="text-muted mb-0">发表评论</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card dashboard-card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-clock stat-icon text-warning"></i>
+                        <h4 id="total-watch-time" class="mb-1">0</h4>
+                        <p class="text-muted mb-0">观看时长(小时)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let watchTrendsChart;
+        let videoStatusChart;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserLevelData();
+            loadUserStats();
+            loadWatchTrends();
+            loadVideoStatus();
+            loadAchievements();
+            
+            // 每30秒刷新一次数据
+            setInterval(function() {
+                loadUserLevelData();
+                loadUserStats();
+            }, 30000);
+        });
+
+        // 加载用户等级数据
+        function loadUserLevelData() {
+            fetch('/dashboard/api/level')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('user-level').textContent = data.level;
+                    document.getElementById('level-title').textContent = data.levelTitle;
+                    document.getElementById('current-exp').textContent = data.experiencePoints;
+                    document.getElementById('next-level-exp').textContent = data.nextLevelExp;
+                    document.getElementById('exp-to-next').textContent = data.expToNext;
+                    
+                    const progressBar = document.getElementById('level-progress');
+                    progressBar.style.width = data.levelProgress + '%';
+                    progressBar.setAttribute('aria-valuenow', data.levelProgress);
+                })
+                .catch(error => console.error('加载等级数据失败:', error));
+        }
+
+        // 加载用户统计数据
+        function loadUserStats() {
+            fetch('/dashboard/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-videos').textContent = data.totalVideosUploaded;
+                    document.getElementById('total-likes').textContent = data.totalLikesReceived;
+                    document.getElementById('total-comments').textContent = data.totalCommentsMade;
+                    document.getElementById('total-watch-time').textContent = data.totalWatchTimeHours;
+                })
+                .catch(error => console.error('加载统计数据失败:', error));
+        }
+
+        // 加载观看趋势图
+        function loadWatchTrends() {
+            fetch('/dashboard/api/watch-trends')
+                .then(response => response.json())
+                .then(data => {
+                    const ctx = document.getElementById('watchTrendsChart').getContext('2d');
+                    
+                    if (watchTrendsChart) {
+                        watchTrendsChart.destroy();
+                    }
+                    
+                    watchTrendsChart = new Chart(ctx, {
+                        type: 'line',
+                        data: data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('加载观看趋势失败:', error));
+        }
+
+        // 加载视频状态分布图
+        function loadVideoStatus() {
+            fetch('/dashboard/api/video-status')
+                .then(response => response.json())
+                .then(data => {
+                    const ctx = document.getElementById('videoStatusChart').getContext('2d');
+                    
+                    if (videoStatusChart) {
+                        videoStatusChart.destroy();
+                    }
+                    
+                    videoStatusChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: data.data.map(item => item.name),
+                            datasets: [{
+                                data: data.data.map(item => item.value),
+                                backgroundColor: data.data.map(item => item.color),
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('加载视频状态失败:', error));
+        }
+
+        // 加载成就数据
+        function loadAchievements() {
+            fetch('/dashboard/api/achievements')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.recent && data.recent.length > 0) {
+                        const latest = data.recent[0];
+                        document.getElementById('achievement-title').textContent = latest.name;
+                        document.getElementById('achievement-desc').textContent = latest.description;
+                    }
+                })
+                .catch(error => console.error('加载成就数据失败:', error));
+        }
+
+        // 查看所有成就
+        function viewAllAchievements() {
+            // 这里可以跳转到成就页面或显示模态框
+            alert('查看所有成就功能开发中...');
+        }
+    </script>
+</body>
+</html>

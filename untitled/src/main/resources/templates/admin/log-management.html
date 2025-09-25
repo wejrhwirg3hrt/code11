@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志管理 - 管理员后台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .log-card {
+            transition: all 0.3s ease;
+        }
+        .log-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .action-btn {
+            min-width: 120px;
+        }
+        .file-size {
+            font-family: monospace;
+        }
+        .status-badge {
+            font-size: 0.8em;
+        }
+        .progress-bar-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <!-- 页面标题 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">
+                        <i class="bi bi-journal-text text-primary"></i>
+                        日志管理
+                    </h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="/admin/dashboard">仪表板</a></li>
+                            <li class="breadcrumb-item active">日志管理</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计信息卡片 -->
+        <div class="row mb-4" th:if="${logStats != null and logStats.logDirectoryExists}">
+            <div class="col-md-3">
+                <div class="card log-card border-primary">
+                    <div class="card-body text-center">
+                        <i class="bi bi-files text-primary" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2 mb-1" th:text="${logStats.totalFiles}">0</h4>
+                        <p class="text-muted mb-0">日志文件总数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card log-card border-success">
+                    <div class="card-body text-center">
+                        <i class="bi bi-hdd text-success" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2 mb-1" th:text="${#numbers.formatDecimal(logStats.totalSizeMB, 1, 2)}">0.0</h4>
+                        <p class="text-muted mb-0">总占用空间 (MB)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card log-card border-info">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock text-info" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2 mb-1" th:text="${#temporals.format(logStats.timestamp, 'HH:mm')}">--:--</h4>
+                        <p class="text-muted mb-0">最后更新时间</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card log-card border-warning">
+                    <div class="card-body text-center">
+                        <i class="bi bi-folder text-warning" style="font-size: 2rem;"></i>
+                        <h4 class="mt-2 mb-1" th:text="${logStats.logDirectory}">logs</h4>
+                        <p class="text-muted mb-0">日志目录</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-gear text-primary"></i>
+                            日志清理操作
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-danger w-100 action-btn" onclick="clearAllLogs()">
+                                    <i class="bi bi-trash"></i>
+                                    一键清除所有日志
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-warning w-100 action-btn" onclick="retainLogs(1)">
+                                    <i class="bi bi-calendar-day"></i>
+                                    保留1天日志
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-info w-100 action-btn" onclick="retainLogs(5)">
+                                    <i class="bi bi-calendar-week"></i>
+                                    保留5天日志
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-success w-100 action-btn" onclick="retainLogs(30)">
+                                    <i class="bi bi-calendar-month"></i>
+                                    保留30天日志
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button class="btn btn-outline-primary" onclick="refreshStatistics()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                    刷新统计信息
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志文件列表 -->
+        <div class="row" th:if="${logStats != null and logStats.logDirectoryExists and logStats.logFiles != null and !logStats.logFiles.isEmpty()}">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-ul text-primary"></i>
+                            日志文件详情
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>文件名</th>
+                                        <th>大小</th>
+                                        <th>创建时间</th>
+                                        <th>路径</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="file : ${logStats.logFiles}">
+                                        <td>
+                                            <i class="bi bi-file-text text-primary"></i>
+                                            <span th:text="${file.fileName}">file.log</span>
+                                        </td>
+                                        <td>
+                                            <span class="file-size" th:text="${#numbers.formatDecimal(file.sizeMB, 1, 2) + ' MB'}">0.0 MB</span>
+                                        </td>
+                                        <td>
+                                            <span th:text="${#temporals.format(file.createdDate, 'yyyy-MM-dd HH:mm:ss')}">2024-01-01 00:00:00</span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted" th:text="${file.path}">/path/to/file</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 无日志文件提示 -->
+        <div class="row" th:if="${logStats == null or !logStats.logDirectoryExists or logStats.logFiles == null or logStats.logFiles.isEmpty()}">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3 text-muted">暂无日志文件</h5>
+                        <p class="text-muted">当前没有找到任何日志文件</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认对话框 -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认操作</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage">确定要执行此操作吗？</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirmBtn">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果提示 -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="resultToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="bi bi-info-circle text-primary me-2"></i>
+                <strong class="me-auto">操作结果</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                操作完成
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 显示确认对话框
+        function showConfirm(message, callback) {
+            document.getElementById('confirmMessage').textContent = message;
+            document.getElementById('confirmBtn').onclick = function() {
+                callback();
+                bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            };
+            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+        }
+
+        // 显示结果提示
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('resultToast');
+            const toastMessage = document.getElementById('toastMessage');
+            const header = toast.querySelector('.toast-header i');
+            
+            toastMessage.textContent = message;
+            
+            if (isSuccess) {
+                header.className = 'bi bi-check-circle text-success me-2';
+            } else {
+                header.className = 'bi bi-exclamation-triangle text-danger me-2';
+            }
+            
+            new bootstrap.Toast(toast).show();
+        }
+
+        // 执行API请求
+        async function executeLogOperation(url, operationName) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`${operationName}成功！${result.message}`, true);
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showToast(`${operationName}失败：${result.message}`, false);
+                }
+            } catch (error) {
+                showToast(`${operationName}失败：${error.message}`, false);
+            }
+        }
+
+        // 一键清除所有日志
+        function clearAllLogs() {
+            showConfirm('确定要删除所有日志文件吗？此操作不可恢复！', () => {
+                executeLogOperation('/admin/logs/clear-all', '清除所有日志');
+            });
+        }
+
+        // 保留指定天数的日志
+        function retainLogs(days) {
+            const dayText = days === 1 ? '1天' : days === 5 ? '5天' : '30天';
+            showConfirm(`确定要保留最近${dayText}的日志文件吗？`, () => {
+                let url;
+                switch(days) {
+                    case 1:
+                        url = '/admin/logs/retain-1-day';
+                        break;
+                    case 5:
+                        url = '/admin/logs/retain-5-days';
+                        break;
+                    case 30:
+                        url = '/admin/logs/retain-30-days';
+                        break;
+                }
+                executeLogOperation(url, `保留${dayText}日志`);
+            });
+        }
+
+        // 刷新统计信息
+        async function refreshStatistics() {
+            try {
+                const response = await fetch('/admin/logs/statistics');
+                const stats = await response.json();
+                
+                if (stats.logDirectoryExists) {
+                    // 更新页面数据
+                    document.querySelector('h4').textContent = stats.totalFiles;
+                    document.querySelectorAll('h4')[1].textContent = stats.totalSizeMB.toFixed(1);
+                    document.querySelectorAll('h4')[2].textContent = new Date(stats.timestamp).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+                    
+                    showToast('统计信息已刷新', true);
+                } else {
+                    showToast('日志目录不存在', false);
+                }
+            } catch (error) {
+                showToast('刷新统计信息失败：' + error.message, false);
+            }
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 可以在这里添加页面初始化逻辑
+        });
+    </script>
+</body>
+</html> 

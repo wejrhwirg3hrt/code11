@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库状态测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .user-list {
+            margin-top: 20px;
+        }
+        .user-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 数据库状态测试</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div>
+            <button onclick="checkStatus()">检查数据库状态</button>
+            <button onclick="fixDatabase()">修复数据库</button>
+        </div>
+        
+        <div id="results" class="user-list"></div>
+    </div>
+
+    <script>
+        async function checkStatus() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.className = 'status';
+            statusDiv.textContent = '正在检查数据库状态...';
+            
+            try {
+                const response = await fetch('/api/database/status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✅ ${data.message}`;
+                    
+                    let html = `
+                        <h3>数据库状态信息</h3>
+                        <p><strong>总用户数:</strong> ${data.totalUsers}</p>
+                        <p><strong>重复ID数量:</strong> ${data.duplicateIds}</p>
+                        <p><strong>是否有重复:</strong> ${data.hasDuplicates ? '是' : '否'}</p>
+                    `;
+                    
+                    if (data.users && data.users.length > 0) {
+                        html += '<h4>前10个用户:</h4>';
+                        data.users.forEach(user => {
+                            html += `
+                                <div class="user-item">
+                                    <strong>ID:</strong> ${user.id} | 
+                                    <strong>用户名:</strong> ${user.username} | 
+                                    <strong>邮箱:</strong> ${user.email} | 
+                                    <strong>创建时间:</strong> ${user.createdAt}
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ ${data.message}`;
+                    resultsDiv.innerHTML = '';
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 请求失败: ${error.message}`;
+                resultsDiv.innerHTML = '';
+            }
+        }
+        
+        async function fixDatabase() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            
+            statusDiv.className = 'status';
+            statusDiv.textContent = '正在修复数据库...';
+            
+            try {
+                const response = await fetch('/api/database/fix', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✅ ${data.message}`;
+                    
+                    let html = `
+                        <h3>修复结果</h3>
+                        <p><strong>总用户数:</strong> ${data.totalUsers}</p>
+                        <p><strong>重复ID数量:</strong> ${data.duplicateIds}</p>
+                        <p><strong>是否有重复:</strong> ${data.hasDuplicates ? '是' : '否'}</p>
+                    `;
+                    
+                    resultsDiv.innerHTML = html;
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = `❌ ${data.message}`;
+                    resultsDiv.innerHTML = '';
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ 修复失败: ${error.message}`;
+                resultsDiv.innerHTML = '';
+            }
+        }
+        
+        // 页面加载时自动检查状态
+        window.onload = function() {
+            checkStatus();
+        };
+    </script>
+</body>
+</html> 

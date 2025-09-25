@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>私密相册 - 安全存储你的珍贵回忆</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .album-header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .create-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .album-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .album-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+
+        .album-cover {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .lock-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .create-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .create-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .navbar-custom {
+            background: rgba(0,0,0,0.1) !important;
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: white !important;
+        }
+
+        .no-albums {
+            text-align: center;
+            color: white;
+            padding: 3rem;
+        }
+
+        .no-albums i {
+            font-size: 4rem;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-lock me-2"></i>私密相册
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link" href="/private-album/create">
+                    <i class="fas fa-plus me-1"></i>创建相册
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 私密相册头部 -->
+        <div class="album-header">
+            <h1><i class="fas fa-lock me-3"></i>私密相册</h1>
+            <p class="mb-0">安全存储你的珍贵回忆，密码保护，只有你能看到</p>
+        </div>
+
+        <!-- 创建相册区域 -->
+        <div class="create-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-2">
+                        <i class="fas fa-plus-circle me-2 text-primary"></i>创建新的私密相册
+                    </h5>
+                    <p class="text-muted mb-0">为你的照片创建一个安全的私密空间</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/private-album/create" class="create-btn">
+                        <i class="fas fa-plus me-2"></i>创建相册
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 相册列表 -->
+        <div th:if="${albums != null and !albums.empty}">
+            <h3 class="text-white mb-4">
+                <i class="fas fa-folder me-2"></i>我的私密相册
+                <span class="badge bg-light text-dark ms-2" th:text="${albums.size()}">0</span>
+            </h3>
+            
+            <div class="album-grid">
+                <div th:each="album : ${albums}" class="album-card" th:onclick="'openAlbum(' + ${album.id} + ')'">
+                    <!-- 相册封面 -->
+                    <div class="album-cover">
+                        <i class="fas fa-images"></i>
+                        <div class="lock-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+
+                    <!-- 相册信息 -->
+                    <div class="album-info">
+                        <h5 th:text="${album.albumName}">相册名称</h5>
+                        <p class="text-muted" th:text="${album.description}">相册描述</p>
+                        
+                        <div class="d-flex justify-content-between text-muted small">
+                            <span>
+                                <i class="fas fa-calendar me-1"></i>
+                                <span th:text="${#temporals.format(album.createdTime, 'yyyy-MM-dd')}">创建时间</span>
+                            </span>
+                            <button class="btn btn-outline-danger btn-sm" th:onclick="'deleteAlbum(' + ${album.id} + ')'" onclick="event.stopPropagation()">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 无相册提示 -->
+        <div th:if="${albums == null or albums.empty}" class="no-albums">
+            <i class="fas fa-lock"></i>
+            <h3>还没有私密相册</h3>
+            <p>创建你的第一个私密相册，安全存储珍贵的照片回忆</p>
+            <a href="/private-album/create" class="create-btn">
+                <i class="fas fa-plus me-2"></i>创建相册
+            </a>
+        </div>
+    </div>
+
+    <!-- 密码输入模态框 -->
+    <div class="modal fade" id="passwordModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-lock me-2"></i>输入相册密码
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label for="albumPassword" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="albumPassword" 
+                                   placeholder="请输入相册密码" required>
+                        </div>
+                        <input type="hidden" id="selectedAlbumId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="verifyPassword()">
+                        <i class="fas fa-unlock me-1"></i>打开相册
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let passwordModal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            passwordModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+        });
+
+        // 打开相册
+        function openAlbum(albumId) {
+            document.getElementById('selectedAlbumId').value = albumId;
+            document.getElementById('albumPassword').value = '';
+            passwordModal.show();
+        }
+
+        // 验证密码
+        function verifyPassword() {
+            const albumId = document.getElementById('selectedAlbumId').value;
+            const password = document.getElementById('albumPassword').value;
+
+            if (!password) {
+                alert('请输入密码');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('password', password);
+
+            fetch(`/private-album/${albumId}/verify`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = `/private-album/${albumId}`;
+                } else {
+                    throw new Error('密码错误');
+                }
+            })
+            .catch(error => {
+                alert('密码错误，请重试');
+                document.getElementById('albumPassword').value = '';
+            });
+        }
+
+        // 删除相册
+        function deleteAlbum(albumId) {
+            if (confirm('确定要删除这个相册吗？删除后无法恢复！')) {
+                fetch(`/private-album/delete/${albumId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('相册删除成功');
+                        location.reload();
+                    } else {
+                        alert('删除失败：' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('删除失败');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天布局测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/chat.css" rel="stylesheet">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .messages-container {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .test-controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h2>聊天消息布局测试</h2>
+        <p>测试发送方消息在右边，接收方消息在左边</p>
+        
+        <div class="messages-container">
+            <div id="messagesList" class="messages-list">
+                <!-- 消息将在这里显示 -->
+            </div>
+        </div>
+        
+        <div class="test-controls">
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-primary" onclick="addSentMessage()">添加发送消息</button>
+                    <button class="btn btn-secondary" onclick="addReceivedMessage()">添加接收消息</button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-warning" onclick="clearMessages()">清空消息</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 模拟当前用户
+        window.currentUser = {
+            id: 1,
+            username: 'testuser'
+        };
+
+        let messageCounter = 1;
+
+        // 添加发送的消息
+        function addSentMessage() {
+            const message = {
+                id: messageCounter++,
+                senderId: 1,
+                senderName: 'testuser',
+                messageType: 'text',
+                content: '这是我发送的消息 ' + messageCounter,
+                timestamp: new Date().toISOString()
+            };
+            addMessageToUI(message);
+        }
+
+        // 添加接收的消息
+        function addReceivedMessage() {
+            const message = {
+                id: messageCounter++,
+                senderId: 2,
+                senderName: 'otheruser',
+                messageType: 'text',
+                content: '这是对方发送的消息 ' + messageCounter,
+                timestamp: new Date().toISOString()
+            };
+            addMessageToUI(message);
+        }
+
+        // 清空消息
+        function clearMessages() {
+            document.getElementById('messagesList').innerHTML = '';
+            messageCounter = 1;
+        }
+
+        // 添加消息到UI的函数（从chat.js复制）
+        function addMessageToUI(message) {
+            const messagesList = document.getElementById('messagesList');
+            if (!messagesList) return;
+
+            // 如果是空状态，先清空
+            if (messagesList.querySelector('.text-center')) {
+                messagesList.innerHTML = '';
+            }
+
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message-item';
+
+            // 判断是否是当前用户发送的消息
+            const isCurrentUser = window.currentUser && (
+                message.senderId === window.currentUser.id ||
+                message.senderName === window.currentUser.username
+            );
+
+            if (isCurrentUser) {
+                messageElement.classList.add('sent');
+            } else {
+                messageElement.classList.add('received');
+            }
+
+            let messageContent = '';
+
+            // 根据消息类型渲染不同的内容
+            switch (message.messageType || message.type) {
+                case 'text':
+                    messageContent = `
+                        <div class="message-content">
+                            <div class="message-text">${escapeHtml(message.content || '')}</div>
+                            <div class="message-time">${formatTime(message.timestamp)}</div>
+                        </div>
+                    `;
+                    break;
+                default:
+                    messageContent = `
+                        <div class="message-content">
+                            <div class="message-text">${escapeHtml(message.content || '')}</div>
+                            <div class="message-time">${formatTime(message.timestamp)}</div>
+                        </div>
+                    `;
+            }
+
+            messageElement.innerHTML = messageContent;
+            messagesList.appendChild(messageElement);
+            
+            // 滚动到底部
+            scrollToBottom();
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 格式化时间
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+
+            let date;
+            if (typeof timestamp === 'string') {
+                date = new Date(timestamp);
+            } else {
+                date = new Date(timestamp);
+            }
+
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+
+            const now = new Date();
+            const diff = now.getTime() - date.getTime();
+            const minutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (minutes < 1) {
+                return '刚刚';
+            } else if (minutes < 60) {
+                return `${minutes}分钟前`;
+            } else if (hours < 24) {
+                return `${hours}小时前`;
+            } else if (days < 7) {
+                return `${days}天前`;
+            } else {
+                return date.toLocaleDateString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+
+        // 页面加载时添加一些示例消息
+        document.addEventListener('DOMContentLoaded', function() {
+            addReceivedMessage();
+            addSentMessage();
+            addReceivedMessage();
+            addSentMessage();
+        });
+    </script>
+</body>
+</html>

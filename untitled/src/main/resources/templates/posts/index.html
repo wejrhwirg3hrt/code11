@@ -1,0 +1,416 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        /* Hero区域样式 */
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        /* 导航按钮样式 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            padding: 12px 24px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .moment-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .moment-header {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .moment-content {
+            padding: 15px;
+        }
+        .moment-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .moment-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .moment-actions {
+            padding: 10px 15px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .like-btn {
+            border: none;
+            background: none;
+            color: #666;
+            cursor: pointer;
+        }
+        .like-btn.liked {
+            color: #e74c3c;
+        }
+        .publish-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            border: none;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .search-box {
+            background: #fff;
+            border-radius: 25px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">视频网站</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link active" href="/posts">动态</a>
+                <a class="nav-link" href="/music">音乐</a>
+                <a class="nav-link" href="/chat" th:if="${currentUser}" style="position: relative;">
+                    <i class="fas fa-comments me-1"></i>聊天
+                    <span class="badge bg-danger ms-1" id="chatUnreadBadge" style="display: none; font-size: 0.6rem;">0</span>
+                </a>
+                <div th:if="${currentUser}" class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <span th:text="${currentUser.username}">用户</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><a class="dropdown-item" href="/posts/my">我的动态</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+                <div th:unless="${currentUser}">
+                    <a class="nav-link" href="/login">登录</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero区域 -->
+    <div class="hero-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-8 offset-md-2 text-center">
+                    <h1 class="hero-title">发现精彩动态</h1>
+                    <p class="hero-subtitle">分享生活点滴，发现美好时光</p>
+
+                    <!-- 导航按钮 -->
+                    <div class="action-buttons">
+                        <a href="/posts/publish" class="action-btn">
+                            <i class="fas fa-plus"></i>
+                            发布动态
+                        </a>
+                        <a href="/posts/my" class="action-btn" th:if="${currentUser}">
+                            <i class="fas fa-user"></i>
+                            我的动态
+                        </a>
+                        <a href="#" class="action-btn" onclick="toggleSearch()">
+                            <i class="fas fa-search"></i>
+                            搜索动态
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <!-- 搜索框 (默认隐藏) -->
+                <div class="search-box" id="searchBox" style="display: none;">
+                    <form action="/posts/search" method="get" class="d-flex">
+                        <input type="text" class="form-control border-0" name="q"
+                               placeholder="搜索动态内容..." style="background: transparent;">
+                        <button class="btn btn-primary ms-2" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <h2 class="mb-4">动态广场</h2>
+                
+                <!-- 动态列表 -->
+                <div th:if="${momentsPage.hasContent()}">
+                    <div th:each="moment : ${momentsPage.content}" class="moment-card">
+                        <div class="moment-header">
+                            <div class="d-flex align-items-center">
+                                <!-- 根据用户ID决定跳转目标：如果是当前用户跳转到个人资料页，否则跳转到用户主页 -->
+                                <a th:if="${#authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == moment.user?.username}" 
+                                   th:href="@{/profile}" class="text-decoration-none">
+                                    <img th:src="${moment.user?.avatar ?: '/uploads/avatars/default.svg'}"
+                                         class="user-avatar me-3" alt="用户头像" style="cursor: pointer;">
+                                </a>
+                                <a th:if="${#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != moment.user?.username}" 
+                                   th:href="@{'/user/' + ${moment.userId}}" class="text-decoration-none">
+                                    <img th:src="${moment.user?.avatar ?: '/uploads/avatars/default.svg'}"
+                                         class="user-avatar me-3" alt="用户头像" style="cursor: pointer;">
+                                </a>
+                                <div>
+                                    <a th:if="${#authentication.principal != 'anonymousUser' and #strings.toString(#authentication.principal.username) != '' and #authentication.principal.username == moment.user?.username}" 
+                                       th:href="@{/profile}" class="text-decoration-none">
+                                        <h6 class="mb-0 text-dark" th:text="${moment.user?.username ?: '未知用户'}">用户名</h6>
+                                    </a>
+                                    <a th:if="${#authentication.principal == 'anonymousUser' or #strings.toString(#authentication.principal.username) == '' or #authentication.principal.username != moment.user?.username}" 
+                                       th:href="@{'/user/' + ${moment.userId}}" class="text-decoration-none">
+                                        <h6 class="mb-0 text-dark" th:text="${moment.user?.username ?: '未知用户'}">用户名</h6>
+                                    </a>
+                                    <small class="text-muted" th:text="${#temporals.format(moment.createTime, 'yyyy-MM-dd HH:mm')}">时间</small>
+                                    <span th:if="${moment.location}" class="text-muted ms-2">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span th:text="${moment.location}">位置</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="moment-content">
+                            <p th:text="${moment.content}">动态内容</p>
+                            
+                            <!-- 图片展示 -->
+                            <div th:if="${moment.images}" class="moment-images">
+                                <div th:each="image : ${moment.imageList}" th:if="${image != null and !image.isEmpty()}">
+                                    <img th:src="@{'/' + ${image}}"
+                                         class="moment-image"
+                                         alt="动态图片"
+                                         onclick="showImageModal(this.src)">
+                                </div>
+                            </div>
+                            
+                            <div th:if="${moment.mood}" class="mt-2">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-smile"></i>
+                                    <span th:text="${moment.mood}">心情</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="moment-actions">
+                            <div>
+                                <button th:if="${currentUser}"
+                                        class="like-btn"
+                                        th:classappend="${likedStatus != null and likedStatus[moment.id]} ? 'liked' : ''"
+                                        th:onclick="'likeMoment(' + ${moment.id} + ')'"
+                                        th:id="'like-btn-' + ${moment.id}">
+                                    <i class="fas fa-heart"></i>
+                                    <span th:id="'like-count-' + ${moment.id}" th:text="${moment.likeCount}">0</span>
+                                </button>
+                                <span th:unless="${currentUser}" class="text-muted">
+                                    <i class="fas fa-heart"></i>
+                                    <span th:text="${moment.likeCount}">0</span>
+                                </span>
+
+                                <a th:href="@{'/posts/' + ${moment.id}}" class="btn btn-link text-muted">
+                                    <i class="fas fa-comment"></i>
+                                    <span th:text="${moment.commentCount}">0</span>
+                                </a>
+                            </div>
+
+                            <small class="text-muted" th:text="${#temporals.format(moment.createTime, 'MM-dd HH:mm')}">时间</small>
+                        </div>
+
+                        <!-- 点赞用户显示 -->
+                        <div th:if="${likesInfo[moment.id] != null and !likesInfo[moment.id].isEmpty()}" class="likes-info px-3 pb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-heart text-danger"></i>
+                                <span th:each="like, iterStat : ${likesInfo[moment.id]}">
+                                    <a th:href="@{'/user/' + ${like.userId}}" class="text-decoration-none text-primary" th:text="${like.user?.username ?: '用户'}">用户</a><span th:if="${!iterStat.last}">, </span>
+                                </span>
+                                <span th:if="${moment.likeCount > 3}">等 <span th:text="${moment.likeCount}">0</span> 人点赞</span>
+                                <span th:if="${moment.likeCount <= 3 and moment.likeCount > 0}">点了赞</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div th:unless="${momentsPage.hasContent()}" class="text-center py-5">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">暂无动态</h5>
+                    <p class="text-muted">快来发布第一条动态吧！</p>
+                </div>
+                
+                <!-- 分页 -->
+                <nav th:if="${momentsPage.totalPages > 1}" aria-label="动态分页">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${momentsPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/posts(page=${momentsPage.number - 1})}">上一页</a>
+                        </li>
+                        
+                        <li th:each="i : ${#numbers.sequence(0, momentsPage.totalPages - 1)}" 
+                            class="page-item" 
+                            th:classappend="${i == momentsPage.number} ? 'active'">
+                            <a class="page-link" th:href="@{/posts(page=${i})}" th:text="${i + 1}">1</a>
+                        </li>
+                        
+                        <li class="page-item" th:classappend="${momentsPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/posts(page=${momentsPage.number + 1})}">下一页</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发布按钮 -->
+    <button th:if="${currentUser}" class="publish-btn" onclick="location.href='/posts/publish'">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- 图片模态框 -->
+    <div class="modal fade" id="imageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <img id="modalImage" src="" class="w-100" alt="图片">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 切换搜索框显示/隐藏
+        function toggleSearch() {
+            const searchBox = document.getElementById('searchBox');
+            if (searchBox.style.display === 'none') {
+                searchBox.style.display = 'block';
+                searchBox.querySelector('input').focus();
+            } else {
+                searchBox.style.display = 'none';
+            }
+        }
+        function likeMoment(momentId) {
+            fetch('/posts/' + momentId + '/like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.text())
+            .then(data => {
+                const result = JSON.parse(data);
+                if (result.success) {
+                    const likeBtn = document.getElementById('like-btn-' + momentId);
+                    const likeCount = document.getElementById('like-count-' + momentId);
+                    
+                    if (result.liked) {
+                        likeBtn.classList.add('liked');
+                    } else {
+                        likeBtn.classList.remove('liked');
+                    }
+                    
+                    likeCount.textContent = result.likeCount;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function showImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            new bootstrap.Modal(document.getElementById('imageModal')).show();
+        }
+
+        // 检查未读消息数量
+        function checkUnreadMessages() {
+            fetch('/api/chat/unread-count')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.count > 0) {
+                    const chatBadge = document.getElementById('chatUnreadBadge');
+                    if (chatBadge) {
+                        chatBadge.textContent = data.count > 99 ? '99+' : data.count;
+                        chatBadge.style.display = 'inline';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('获取未读消息数量失败:', error);
+            });
+        }
+
+        // 页面加载完成后检查未读消息
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUnreadMessages();
+            // 定期检查未读消息数量
+            setInterval(checkUnreadMessages, 30000);
+        });
+    </script>
+</body>
+</html>
+

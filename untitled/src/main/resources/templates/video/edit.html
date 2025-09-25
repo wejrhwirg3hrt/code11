@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑视频</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/smart-pet.css" rel="stylesheet">
+    <style>
+        /* 缩略图预览悬浮效果 - 增强版 */
+        .thumbnail-preview-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+            max-width: 100%;
+            height: 250px;
+        }
+        
+        .thumbnail-preview-container:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            border: 3px solid #007bff;
+        }
+        
+        .thumbnail-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+        }
+        
+        .thumbnail-preview-container:hover .thumbnail-preview {
+            transform: scale(1.1);
+            filter: brightness(1.2) contrast(1.1) saturate(1.2);
+            border-color: #007bff;
+        }
+        
+        .thumbnail-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(0, 86, 179, 0.1));
+            color: #007bff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: all 0.4s ease;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        
+        .thumbnail-preview-container:hover .thumbnail-overlay {
+            opacity: 1;
+        }
+        
+        .thumbnail-overlay span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+            letter-spacing: 0.5px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        /* 表单字段样式优化 */
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        /* 可选字段标识 */
+        .optional-field {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        
+        .optional-field::after {
+            content: "（可选）";
+            color: #28a745;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-video me-2"></i>视频网站
+        </a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <h2>编辑视频</h2>
+
+    <div class="row">
+        <div class="col-md-8">
+            <form th:action="@{/video/{id}/edit(id=${video.id})}" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="title" class="form-label">视频标题</label>
+                    <input type="text" class="form-control" id="title" name="title"
+                           th:value="${video.title}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label">视频描述</label>
+                    <textarea class="form-control" id="description" name="description"
+                              rows="3" th:text="${video.description}"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="tags" class="form-label optional-field">标签</label>
+                    <input type="text" class="form-control" id="tags" name="tags"
+                           th:value="${video.tagsString}" placeholder="输入标签，用逗号分隔">
+                    <small class="text-muted">例如：游戏,娱乐,教程</small>
+                </div>
+
+                <!-- 主视频文件上传（可选） -->
+                <div class="mb-3">
+                    <label for="videoFile" class="form-label optional-field">更换主视频文件</label>
+                    <input type="file" class="form-control" id="videoFile" name="videoFile" accept="video/*">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        如果不选择新文件，将保持当前视频不变
+                    </small>
+                    <div class="mt-2 p-2 bg-light rounded">
+                        <strong>当前视频：</strong>
+                        <span th:text="${video.url}" class="text-primary"></span>
+                    </div>
+                </div>
+
+                <!-- 或者输入视频URL -->
+                <div class="mb-3">
+                    <label for="url" class="form-label optional-field">输入视频URL</label>
+                    <input type="text" class="form-control" id="url" name="url"
+                           th:value="${video.url}" placeholder="https://example.com/video.mp4（可选）">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        如果上传了新视频文件，此URL将被忽略。留空则保持当前URL不变。
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="thumbnailFile" class="form-label optional-field">更换缩略图</label>
+                    <input type="file" class="form-control" id="thumbnailFile" name="thumbnailFile"
+                           accept="image/*" onchange="previewThumbnail(this)">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        如果不选择新图片，将保持当前缩略图不变
+                    </small>
+                    <div class="mt-2 p-2 bg-light rounded">
+                        <strong>当前缩略图：</strong>
+                        <span th:text="${video.thumbnail}" class="text-primary"></span>
+                    </div>
+                </div>
+
+                <!-- 视频状态 -->
+                <div class="mb-3">
+                    <label for="status" class="form-label">视频状态</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="PENDING" th:selected="${video.status.name() == 'PENDING'}">待审核</option>
+                        <option value="APPROVED" th:selected="${video.status.name() == 'APPROVED'}">已发布</option>
+                        <option value="REJECTED" th:selected="${video.status.name() == 'REJECTED'}">已拒绝</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>保存修改
+                </button>
+                <a href="/profile" class="btn btn-secondary">取消</a>
+            </form>
+        </div>
+
+        <div class="col-md-4">
+            <h5>预览</h5>
+            <div class="mb-3">
+                <div class="thumbnail-preview-container">
+                    <img id="thumbnailPreview" th:src="${video.thumbnail}" 
+                         class="img-fluid thumbnail-preview" 
+                         alt="缩略图预览">
+                    <div class="thumbnail-overlay">
+                        <span>点击放大预览</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewThumbnail(input) {
+        const preview = document.getElementById('thumbnailPreview');
+        const container = preview.parentElement;
+        
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                // 添加加载动画效果
+                container.style.opacity = '0.7';
+                setTimeout(() => {
+                    container.style.opacity = '1';
+                }, 200);
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    // 页面加载完成后的初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 禁用表单的HTML5验证，让所有字段真正可选
+        const form = document.querySelector('form');
+        if (form) {
+            form.setAttribute('novalidate', 'novalidate');
+        }
+        
+        // 为所有可选字段添加视觉提示
+        const optionalFields = document.querySelectorAll('.optional-field');
+        optionalFields.forEach(field => {
+            field.style.position = 'relative';
+        });
+        
+        // 为缩略图预览添加点击放大功能
+        const thumbnailPreview = document.getElementById('thumbnailPreview');
+        if (thumbnailPreview) {
+            thumbnailPreview.style.cursor = 'pointer';
+            thumbnailPreview.title = '点击查看大图';
+        }
+        
+        // 添加表单提交前的验证逻辑
+        form.addEventListener('submit', function(e) {
+            // 如果用户没有上传新视频文件，且URL字段为空，则清空URL字段
+            const videoFile = document.getElementById('videoFile');
+            const urlField = document.getElementById('url');
+            
+            if ((!videoFile.files || videoFile.files.length === 0) && 
+                (!urlField.value || urlField.value.trim() === '')) {
+                // 用户没有提供新的视频文件或URL，这是允许的
+                console.log('用户选择保持当前视频不变');
+            }
+        });
+    });
+</script>
+<script src="/js/pet-themes.js"></script>
+<script src="/js/smart-pet.js"></script>
+</body>
+</html>

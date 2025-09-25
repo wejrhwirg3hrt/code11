@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地理定位功能测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .location-card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            background: #f8f9fa;
+        }
+        .coordinate-input {
+            margin: 10px 0;
+        }
+        .result-section {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">
+            <i class="fas fa-map-marker-alt text-primary"></i>
+            地理定位功能测试
+        </h1>
+        
+        <!-- 当前位置获取 -->
+        <div class="location-card">
+            <h3><i class="fas fa-crosshairs"></i> 获取当前位置</h3>
+            <p class="text-muted">点击按钮获取您的当前地理位置</p>
+            <button class="btn btn-primary" id="getCurrentLocation">
+                <i class="fas fa-location-arrow"></i> 获取当前位置
+            </button>
+            <div id="currentLocationResult" class="result-section" style="display: none;">
+                <h5>当前位置信息：</h5>
+                <div id="currentLocationDetails"></div>
+            </div>
+        </div>
+        
+        <!-- 坐标测试 -->
+        <div class="location-card">
+            <h3><i class="fas fa-globe"></i> 坐标测试</h3>
+            <p class="text-muted">输入经纬度坐标测试地址解析功能</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">纬度 (Latitude):</label>
+                    <input type="number" class="form-control" id="testLat" step="0.000001" placeholder="例如: 39.9042">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">经度 (Longitude):</label>
+                    <input type="number" class="form-control" id="testLng" step="0.000001" placeholder="例如: 116.4074">
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <button class="btn btn-success" id="testCoordinates">
+                    <i class="fas fa-search"></i> 解析地址
+                </button>
+                <button class="btn btn-secondary" id="loadPresets">
+                    <i class="fas fa-list"></i> 加载预设坐标
+                </button>
+            </div>
+            
+            <div id="testResult" class="result-section" style="display: none;">
+                <h5>解析结果：</h5>
+                <div id="testLocationDetails"></div>
+            </div>
+        </div>
+        
+        <!-- 预设城市坐标 -->
+        <div class="location-card">
+            <h3><i class="fas fa-city"></i> 预设城市坐标</h3>
+            <p class="text-muted">点击城市名称快速测试</p>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="39.9042" data-lng="116.4074">北京</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="31.2304" data-lng="121.4737">上海</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="22.5431" data-lng="114.0579">深圳</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="23.1291" data-lng="113.2644">广州</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="30.5728" data-lng="104.0668">成都</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="32.0603" data-lng="118.7969">南京</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="30.2741" data-lng="120.1551">杭州</button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" data-lat="36.0671" data-lng="120.3826">青岛</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 返回链接 -->
+        <div class="text-center mt-4">
+            <a href="/posts/publish" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回发布动态
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 获取当前位置
+        document.getElementById('getCurrentLocation').addEventListener('click', function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+            
+            if (!navigator.geolocation) {
+                alert('您的浏览器不支持地理定位功能');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-location-arrow"></i> 获取当前位置';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // 调用API解析地址
+                    fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            displayLocationResult(data, 'currentLocationDetails');
+                            document.getElementById('currentLocationResult').style.display = 'block';
+                            
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-location-arrow"></i> 获取当前位置';
+                        })
+                        .catch(error => {
+                            console.error('地址解析失败:', error);
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-location-arrow"></i> 获取当前位置';
+                        });
+                },
+                function(error) {
+                    let errorMsg = '定位失败';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = '用户拒绝了地理定位请求';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = '位置信息不可用';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = '定位请求超时';
+                            break;
+                    }
+                    alert(errorMsg);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-location-arrow"></i> 获取当前位置';
+                }
+            );
+        });
+        
+        // 测试坐标
+        document.getElementById('testCoordinates').addEventListener('click', function() {
+            const lat = parseFloat(document.getElementById('testLat').value);
+            const lng = parseFloat(document.getElementById('testLng').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('请输入有效的经纬度坐标');
+                return;
+            }
+            
+            fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayLocationResult(data, 'testLocationDetails');
+                    document.getElementById('testResult').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('地址解析失败:', error);
+                    alert('地址解析失败');
+                });
+        });
+        
+        // 预设城市按钮
+        document.querySelectorAll('[data-lat][data-lng]').forEach(button => {
+            button.addEventListener('click', function() {
+                const lat = parseFloat(this.dataset.lat);
+                const lng = parseFloat(this.dataset.lng);
+                
+                document.getElementById('testLat').value = lat;
+                document.getElementById('testLng').value = lng;
+                
+                // 自动解析
+                fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayLocationResult(data, 'testLocationDetails');
+                        document.getElementById('testResult').style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('地址解析失败:', error);
+                    });
+            });
+        });
+        
+        // 显示位置结果
+        function displayLocationResult(data, containerId) {
+            const container = document.getElementById(containerId);
+            
+            if (data.success) {
+                const components = data.addressComponents;
+                let html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-map-marker-alt text-primary"></i> 完整地址</h6>
+                            <p class="fw-bold">${data.address}</p>
+                            
+                            <h6><i class="fas fa-globe text-info"></i> 地址组件</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>🌍 国家:</strong> ${components.country || '未知'}</li>
+                                <li><strong>🏛️ 省份:</strong> ${components.province || '未知'}</li>
+                                <li><strong>🏙️ 城市:</strong> ${components.city || '未知'}</li>
+                                <li><strong>🏘️ 区县:</strong> ${components.district || '未知'}</li>
+                                <li><strong>🛣️ 街道:</strong> ${components.street || '未知'}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-crosshairs text-success"></i> 坐标信息</h6>
+                            <p><strong>纬度:</strong> ${data.latitude.toFixed(6)}°</p>
+                            <p><strong>经度:</strong> ${data.longitude.toFixed(6)}°</p>
+                            
+                            <h6><i class="fas fa-layer-group text-warning"></i> 地址级别选择</h6>
+                            <div class="btn-group-vertical w-100">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('${components.province} ${components.city}')">
+                                    城市级别: ${components.province} ${components.city}
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('${components.city} ${components.district}')">
+                                    区县级别: ${components.city} ${components.district}
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('${data.address}')">
+                                    完整地址: ${data.address}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `<div class="alert alert-danger">解析失败: ${data.error}</div>`;
+            }
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('已复制到剪贴板: ' + text);
+            });
+        }
+    </script>
+</body>
+</html>

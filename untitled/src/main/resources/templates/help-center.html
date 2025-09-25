@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帮助中心 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .help-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 2rem auto;
+            max-width: 1200px;
+            overflow: hidden;
+        }
+
+        .help-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .help-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .help-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .help-nav {
+            background: var(--light-color);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .help-nav .nav-link {
+            color: var(--dark-color);
+            font-weight: 500;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .help-nav .nav-link:hover,
+        .help-nav .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .help-content {
+            padding: 2rem;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .faq-question {
+            background: var(--light-color);
+            padding: 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .faq-answer {
+            padding: 1.25rem;
+            display: none;
+            border-top: 1px solid #e9ecef;
+            line-height: 1.6;
+        }
+
+        .faq-answer.show {
+            display: block;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .contact-card {
+            background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .search-box input {
+            border-radius: 25px;
+            padding: 1rem 3rem 1rem 1.5rem;
+            border: 2px solid #e9ecef;
+            font-size: 1.1rem;
+        }
+
+        .search-box .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .help-header h1 {
+                font-size: 2rem;
+            }
+            
+            .help-content {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="help-container">
+            <!-- 帮助中心头部 -->
+            <div class="help-header">
+                <h1><i class="fas fa-question-circle me-3"></i>帮助中心</h1>
+                <p>我们在这里为您提供全面的帮助和支持</p>
+            </div>
+
+            <!-- 导航栏 -->
+            <div class="help-nav">
+                <ul class="nav nav-pills justify-content-center">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#faq" data-section="faq">
+                            <i class="fas fa-question me-2"></i>常见问题
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#guide" data-section="guide">
+                            <i class="fas fa-book me-2"></i>使用指南
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features" data-section="features">
+                            <i class="fas fa-star me-2"></i>功能介绍
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact" data-section="contact">
+                            <i class="fas fa-envelope me-2"></i>联系我们
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 帮助内容 -->
+            <div class="help-content">
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <input type="text" class="form-control" placeholder="搜索帮助内容..." id="helpSearch">
+                    <button class="search-btn" onclick="searchHelp()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+
+                <!-- 常见问题 -->
+                <div id="faq-section" class="content-section">
+                    <h2 class="mb-4"><i class="fas fa-question-circle text-primary me-2"></i>常见问题</h2>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFaq(this)">
+                            <span>如何注册账户？</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>注册账户非常简单：</p>
+                            <ol>
+                                <li>点击页面右上角的"注册"按钮</li>
+                                <li>填写用户名、邮箱和密码</li>
+                                <li>点击"注册"完成账户创建</li>
+                                <li>验证邮箱（如果需要）</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFaq(this)">
+                            <span>如何上传视频？</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>上传视频的步骤：</p>
+                            <ol>
+                                <li>登录您的账户</li>
+                                <li>点击"上传"按钮</li>
+                                <li>选择要上传的视频文件</li>
+                                <li>填写视频标题、描述和标签</li>
+                                <li>选择视频分类</li>
+                                <li>点击"发布"完成上传</li>
+                            </ol>
+                            <p><strong>注意：</strong>支持的视频格式包括MP4、AVI、MOV等，文件大小不超过500MB。</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFaq(this)">
+                            <span>如何关注其他用户？</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>关注用户的方法：</p>
+                            <ol>
+                                <li>访问用户的个人主页</li>
+                                <li>点击"关注"按钮</li>
+                                <li>关注成功后，您将收到该用户的最新动态</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="toggleFaq(this)">
+                            <span>忘记密码怎么办？</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            <p>重置密码的步骤：</p>
+                            <ol>
+                                <li>在登录页面点击"忘记密码"</li>
+                                <li>输入您的注册邮箱</li>
+                                <li>查收邮件中的重置链接</li>
+                                <li>点击链接设置新密码</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 使用指南 -->
+                <div id="guide-section" class="content-section" style="display: none;">
+                    <h2 class="mb-4"><i class="fas fa-book text-primary me-2"></i>使用指南</h2>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-play-circle feature-icon"></i>
+                                <h4>观看视频</h4>
+                                <p>浏览首页推荐视频，使用搜索功能找到感兴趣的内容，支持高清播放和弹幕互动。</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-upload feature-icon"></i>
+                                <h4>上传内容</h4>
+                                <p>分享您的创意视频，支持多种格式，添加详细描述和标签，让更多人发现您的作品。</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-users feature-icon"></i>
+                                <h4>社交互动</h4>
+                                <p>关注喜欢的创作者，点赞评论视频，与其他用户建立联系，分享观看体验。</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-cog feature-icon"></i>
+                                <h4>个人设置</h4>
+                                <p>自定义个人资料，管理隐私设置，查看观看历史，设置通知偏好。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能介绍 -->
+                <div id="features-section" class="content-section" style="display: none;">
+                    <h2 class="mb-4"><i class="fas fa-star text-primary me-2"></i>功能介绍</h2>
+                    
+                    <div class="row">
+                        <div class="col-lg-4 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-search feature-icon text-info"></i>
+                                <h4>智能搜索</h4>
+                                <p>强大的搜索功能，支持关键词、标签、用户名搜索，智能推荐相关内容。</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-comments feature-icon text-success"></i>
+                                <h4>实时弹幕</h4>
+                                <p>观看视频时发送弹幕，与其他观众实时互动，分享观看感受。</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="feature-card">
+                                <i class="fas fa-heart feature-icon text-danger"></i>
+                                <h4>收藏点赞</h4>
+                                <p>收藏喜欢的视频，为优质内容点赞，建立个人视频库。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 联系我们 -->
+                <div id="contact-section" class="content-section" style="display: none;">
+                    <h2 class="mb-4"><i class="fas fa-envelope text-primary me-2"></i>联系我们</h2>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="contact-card">
+                                <h3><i class="fas fa-headset me-2"></i>客服支持</h3>
+                                <p class="mb-4">如果您有任何问题或建议，请随时联系我们的客服团队。</p>
+                                
+                                <div class="row text-start">
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-envelope me-2"></i>邮箱支持</h5>
+                                        <p>support@videosite.com</p>
+                                        <p>工作时间：周一至周五 9:00-18:00</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-phone me-2"></i>电话支持</h5>
+                                        <p>400-123-4567</p>
+                                        <p>7x24小时在线服务</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="feature-card">
+                                <i class="fas fa-question-circle feature-icon text-warning"></i>
+                                <h4>在线帮助</h4>
+                                <p>访问我们的在线帮助文档，查找常见问题的解决方案。</p>
+                                <button class="btn btn-primary mt-3" onclick="showSection('faq')">
+                                    查看FAQ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 返回首页按钮 -->
+    <div class="position-fixed bottom-0 end-0 p-3">
+        <a href="/" class="btn btn-primary btn-lg rounded-circle">
+            <i class="fas fa-home"></i>
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 切换FAQ答案显示
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const icon = element.querySelector('i');
+            
+            if (answer.classList.contains('show')) {
+                answer.classList.remove('show');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                answer.classList.add('show');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
+
+        // 显示指定部分
+        function showSection(sectionName) {
+            // 隐藏所有部分
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // 移除所有导航链接的active类
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // 显示指定部分
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+            
+            // 激活对应的导航链接
+            const targetNav = document.querySelector(`[data-section="${sectionName}"]`);
+            if (targetNav) {
+                targetNav.classList.add('active');
+            }
+        }
+
+        // 搜索帮助内容
+        function searchHelp() {
+            const searchTerm = document.getElementById('helpSearch').value.toLowerCase();
+            if (!searchTerm) return;
+            
+            // 简单的搜索实现
+            const faqItems = document.querySelectorAll('.faq-item');
+            let found = false;
+            
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question span').textContent.toLowerCase();
+                const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+                
+                if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                    item.style.display = 'block';
+                    item.style.backgroundColor = '#fff3cd';
+                    found = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            if (found) {
+                showSection('faq');
+            } else {
+                alert('未找到相关内容，请尝试其他关键词。');
+            }
+        }
+
+        // 导航点击事件
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                });
+            });
+            
+            // 搜索框回车事件
+            document.getElementById('helpSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchHelp();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

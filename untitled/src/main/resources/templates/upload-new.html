@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传视频 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .upload-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .content-block {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+        .progress-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频网站
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/profile" sec:authorize="isAuthenticated()">个人中心</a>
+                <a class="nav-link" href="/logout" sec:authorize="isAuthenticated()">退出</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="upload-container">
+                    <div class="bg-primary text-white p-4 text-center">
+                        <h2><i class="fas fa-upload me-2"></i>发布新视频</h2>
+                        <p class="mb-0">按照以下顺序填写视频信息</p>
+                    </div>
+                    
+                    <div class="p-4">
+                        <!-- 成功消息 -->
+                        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span th:text="${success}"></span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <!-- 错误消息 -->
+                        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span th:text="${error}"></span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+
+                        <form id="uploadForm" th:action="@{/upload}" method="post" enctype="multipart/form-data">
+                            <!-- 1. 用户个人信息区域 -->
+                            <div class="mb-4 p-3 bg-light rounded">
+                                <h5><i class="fas fa-user me-2"></i>发布者信息</h5>
+                                <div class="d-flex align-items-center">
+                                    <img src="/uploads/avatars/default.svg" alt="头像" class="rounded-circle me-3" width="50" height="50">
+                                    <div>
+                                        <h6 class="mb-0" sec:authentication="name">用户名</h6>
+                                        <small class="text-muted">正在发布新视频</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. 大标题 -->
+                            <div class="mb-4">
+                                <label for="title" class="form-label fs-5"><i class="fas fa-heading me-2"></i>视频标题 *</label>
+                                <input type="text" class="form-control form-control-lg" id="title" name="title" required maxlength="100" placeholder="输入吸引人的视频标题">
+                            </div>
+
+                            <!-- 3. 视频描述文本信息 -->
+                            <div class="mb-4">
+                                <label for="description" class="form-label fs-5"><i class="fas fa-align-left me-2"></i>视频描述</label>
+                                <textarea class="form-control" id="description" name="description" rows="4" maxlength="500" placeholder="简单描述视频内容，让观众了解视频的主要内容"></textarea>
+                            </div>
+
+                            <!-- 4. 富文本内容 (文字、图片、音频) -->
+                            <div class="mb-4">
+                                <label class="form-label fs-5"><i class="fas fa-edit me-2"></i>详细内容 (支持文字、图片、音频)</label>
+                                <div class="border rounded p-3">
+                                    <!-- 内容块管理 -->
+                                    <div class="mb-3">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('TEXT')">
+                                                <i class="fas fa-font"></i> 添加文字
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('IMAGE')">
+                                                <i class="fas fa-image"></i> 添加图片
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addContentBlock('AUDIO')">
+                                                <i class="fas fa-music"></i> 添加音频
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="contentBlocks">
+                                        <div class="text-muted text-center py-3">
+                                            <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                                            <p>点击上方按钮添加内容块</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5. 视频文件 (必不可少) -->
+                            <div class="mb-4">
+                                <label class="form-label fs-5"><i class="fas fa-video me-2 text-danger"></i>主视频文件 * (必不可少)</label>
+                                <input type="file" class="form-control form-control-lg" id="videoFile" name="videoFile" accept="video/*" required>
+                                <div class="form-text">支持 MP4, AVI, MOV 格式，最大 500MB</div>
+
+                                <!-- 上传进度条 -->
+                                <div id="uploadProgress" class="mt-3" style="display: none;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-muted">上传进度</span>
+                                        <span id="progressText" class="text-muted">0%</span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small id="uploadSpeed" class="text-muted"></small>
+                                        <small id="uploadETA" class="text-muted float-end"></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 缩略图上传 -->
+                            <div class="mb-4">
+                                <label class="form-label"><i class="fas fa-image me-2"></i>视频缩略图 (可选)</label>
+                                <input type="file" class="form-control" id="thumbnailFile" name="thumbnailFile" accept="image/*">
+                                <div class="form-text">支持 JPG, PNG 格式，如不上传将自动生成</div>
+                            </div>
+
+                            <!-- 6. 标签 -->
+                            <div class="mb-4">
+                                <label class="form-label fs-5"><i class="fas fa-tags me-2"></i>标签</label>
+                                <input type="text" class="form-control" id="selectedTags" name="selectedTags" placeholder="用逗号分隔多个标签，如：搞笑,娱乐,生活">
+                                <div class="form-text">用逗号分隔多个标签，帮助其他用户发现你的视频</div>
+                            </div>
+
+                            <!-- 分类 -->
+                            <div class="mb-4">
+                                <label for="category" class="form-label"><i class="fas fa-folder me-2"></i>分类 *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">请选择分类</option>
+                                    <option value="娱乐">娱乐</option>
+                                    <option value="教育">教育</option>
+                                    <option value="科技">科技</option>
+                                    <option value="音乐">音乐</option>
+                                    <option value="体育">体育</option>
+                                    <option value="游戏">游戏</option>
+                                    <option value="生活">生活</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-upload me-2"></i>发布视频
+                                </button>
+                                <div class="progress-container mt-3">
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small class="text-muted">上传进度</small>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let blockCounter = 0;
+
+        // 添加内容块
+        function addContentBlock(type) {
+            blockCounter++;
+            const blockId = `block_${blockCounter}`;
+            const contentBlocks = document.getElementById('contentBlocks');
+            
+            let blockHtml = '';
+            
+            switch(type) {
+                case 'TEXT':
+                    blockHtml = `
+                        <div class="content-block" data-id="${blockId}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><i class="fas fa-font me-2"></i>文字内容</label>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeContentBlock('${blockId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <textarea class="form-control" name="contentText" rows="3" placeholder="输入文字内容..."></textarea>
+                            <input type="hidden" name="contentTypes" value="TEXT">
+                        </div>
+                    `;
+                    break;
+                case 'IMAGE':
+                    blockHtml = `
+                        <div class="content-block" data-id="${blockId}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><i class="fas fa-image me-2"></i>图片</label>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeContentBlock('${blockId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <input type="file" class="form-control" name="contentFile" accept="image/*">
+                            <input type="hidden" name="contentTypes" value="IMAGE">
+                            <div class="form-text">支持 JPG, PNG, GIF 格式</div>
+                        </div>
+                    `;
+                    break;
+                case 'AUDIO':
+                    blockHtml = `
+                        <div class="content-block" data-id="${blockId}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><i class="fas fa-music me-2"></i>音频</label>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeContentBlock('${blockId}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <input type="file" class="form-control" name="contentFile" accept="audio/*">
+                            <input type="hidden" name="contentTypes" value="AUDIO">
+                            <div class="form-text">支持 MP3, WAV, AAC 格式</div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            contentBlocks.insertAdjacentHTML('beforeend', blockHtml);
+            
+            // 如果是第一个内容块，移除提示信息
+            const emptyMessage = contentBlocks.querySelector('.text-muted.text-center');
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
+        }
+
+        // 移除内容块
+        function removeContentBlock(blockId) {
+            const block = document.querySelector(`[data-id="${blockId}"]`);
+            if (block) {
+                block.remove();
+            }
+            
+            // 如果没有内容块了，显示提示信息
+            const contentBlocks = document.getElementById('contentBlocks');
+            if (contentBlocks.children.length === 0) {
+                contentBlocks.innerHTML = `
+                    <div class="text-muted text-center py-3">
+                        <i class="fas fa-plus-circle fa-2x mb-2"></i>
+                        <p>点击上方按钮添加内容块</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 表单提交处理
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // 阻止默认提交
+
+            console.log('=== 表单提交开始 ===');
+
+            const videoFile = document.getElementById('videoFile');
+            const title = document.getElementById('title');
+            const category = document.getElementById('category');
+
+            console.log('视频文件:', videoFile.files.length > 0 ? videoFile.files[0].name : '无');
+            console.log('标题:', title.value);
+            console.log('分类:', category.value);
+
+            // 验证必填字段
+            if (!videoFile.files || videoFile.files.length === 0) {
+                alert('请选择视频文件！');
+                return false;
+            }
+
+            if (!title.value.trim()) {
+                alert('请输入视频标题！');
+                return false;
+            }
+
+            if (!category.value) {
+                alert('请选择分类！');
+                return false;
+            }
+
+            // 检查文件大小 (500MB = 524288000 bytes)
+            const maxSize = 524288000;
+            if (videoFile.files[0].size > maxSize) {
+                alert('视频文件大小不能超过500MB！');
+                return false;
+            }
+
+            // 开始上传
+            uploadWithProgress();
+        });
+
+        // 带进度的上传函数
+        function uploadWithProgress() {
+            const form = document.getElementById('uploadForm');
+            const formData = new FormData(form);
+
+            // 显示进度条
+            const progressContainer = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const uploadSpeed = document.getElementById('uploadSpeed');
+            const uploadETA = document.getElementById('uploadETA');
+
+            progressContainer.style.display = 'block';
+
+            // 禁用提交按钮
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>上传中...';
+
+            // 上传开始时间
+            const startTime = Date.now();
+
+            // 创建XMLHttpRequest
+            const xhr = new XMLHttpRequest();
+
+            // 监听上传进度
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+
+                    // 更新进度条
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.setAttribute('aria-valuenow', percentComplete);
+                    progressText.textContent = percentComplete + '%';
+
+                    // 计算上传速度
+                    const elapsed = (Date.now() - startTime) / 1000; // 秒
+                    const speed = e.loaded / elapsed; // 字节/秒
+                    const speedMB = (speed / (1024 * 1024)).toFixed(2); // MB/s
+                    uploadSpeed.textContent = `上传速度: ${speedMB} MB/s`;
+
+                    // 计算剩余时间
+                    if (speed > 0) {
+                        const remaining = (e.total - e.loaded) / speed; // 秒
+                        const minutes = Math.floor(remaining / 60);
+                        const seconds = Math.floor(remaining % 60);
+                        uploadETA.textContent = `剩余时间: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }
+            });
+
+            // 监听上传完成
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    // 上传成功
+                    progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    progressBar.classList.add('bg-success');
+                    progressText.textContent = '100% - 上传完成';
+                    uploadSpeed.textContent = '上传完成';
+                    uploadETA.textContent = '';
+
+                    // 显示成功消息并跳转
+                    setTimeout(() => {
+                        alert('视频上传成功！');
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    // 上传失败
+                    progressBar.classList.add('bg-danger');
+                    progressText.textContent = '上传失败';
+                    uploadSpeed.textContent = '上传失败';
+                    uploadETA.textContent = '';
+
+                    // 重新启用提交按钮
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>发布视频';
+
+                    alert('上传失败，请重试！');
+                }
+            });
+
+            // 监听上传错误
+            xhr.addEventListener('error', function() {
+                progressBar.classList.add('bg-danger');
+                progressText.textContent = '上传错误';
+                uploadSpeed.textContent = '网络错误';
+                uploadETA.textContent = '';
+
+                // 重新启用提交按钮
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload me-2"></i>发布视频';
+
+                alert('网络错误，请检查网络连接后重试！');
+            });
+
+            // 发送请求
+            xhr.open('POST', '/upload');
+            xhr.send(formData);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简化WebRTC调试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .log-area {
+            height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status-connected { color: green; font-weight: bold; }
+        .status-disconnected { color: red; font-weight: bold; }
+        .status-connecting { color: orange; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🔧 简化WebRTC调试</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>用户A (ID: 2)</h5>
+                        <span id="statusA" class="status-disconnected">未连接</span>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary" onclick="connectUserA()">连接</button>
+                        <button class="btn btn-success" onclick="callUserB()">呼叫用户B</button>
+                        <button class="btn btn-danger" onclick="disconnectUserA()">断开</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>用户B (ID: 3)</h5>
+                        <span id="statusB" class="status-disconnected">未连接</span>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary" onclick="connectUserB()">连接</button>
+                        <button class="btn btn-success" onclick="callUserA()">呼叫用户A</button>
+                        <button class="btn btn-danger" onclick="disconnectUserB()">断开</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h5>调试日志</h5>
+            <button class="btn btn-warning btn-sm" onclick="clearLog()">清空日志</button>
+            <div id="logArea" class="log-area mt-2"></div>
+        </div>
+    </div>
+
+    <!-- 来电弹窗 -->
+    <div class="modal fade" id="callModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📞 来电</h5>
+                </div>
+                <div class="modal-body">
+                    <p id="callerInfo">来电信息</p>
+                    <p id="callTypeInfo">通话类型</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="acceptCall()">接听</button>
+                    <button type="button" class="btn btn-danger" onclick="rejectCall()">拒绝</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入必要的库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/sockjs.min.js"></script>
+    <script src="/js/stomp.min.js"></script>
+
+    <script>
+        let clientA = null;
+        let clientB = null;
+        let callModal = null;
+        let currentCallData = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            callModal = new bootstrap.Modal(document.getElementById('callModal'));
+            log('页面加载完成，Modal初始化完成');
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logArea = document.getElementById('logArea');
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logArea.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('logArea').innerHTML = '';
+        }
+
+        function updateStatus(user, status) {
+            const element = document.getElementById(`status${user}`);
+            element.textContent = status;
+            element.className = status === '已连接' ? 'status-connected' : 
+                               status === '连接中...' ? 'status-connecting' : 'status-disconnected';
+        }
+
+        // 连接用户A
+        function connectUserA() {
+            if (clientA && clientA.connected) {
+                log('用户A已经连接', 'error');
+                return;
+            }
+
+            updateStatus('A', '连接中...');
+            log('用户A开始连接WebSocket...');
+
+            try {
+                const socket = new SockJS('/ws');
+                clientA = Stomp.over(socket);
+                
+                clientA.debug = function(str) {
+                    log(`用户A STOMP: ${str}`);
+                };
+
+                clientA.connect({}, function(frame) {
+                    log('✅ 用户A连接成功', 'success');
+                    updateStatus('A', '已连接');
+                    
+                    // 订阅消息
+                    subscribeUserAMessages();
+                    
+                    // 发送加入消息
+                    setTimeout(() => {
+                        clientA.send('/app/webrtc/join', {}, JSON.stringify({
+                            userId: '2'
+                        }));
+                        log('用户A发送加入消息');
+                    }, 500);
+                    
+                }, function(error) {
+                    log(`❌ 用户A连接失败: ${error}`, 'error');
+                    updateStatus('A', '连接失败');
+                });
+
+            } catch (error) {
+                log(`❌ 用户A连接异常: ${error.message}`, 'error');
+                updateStatus('A', '连接异常');
+            }
+        }
+
+        // 连接用户B
+        function connectUserB() {
+            if (clientB && clientB.connected) {
+                log('用户B已经连接', 'error');
+                return;
+            }
+
+            updateStatus('B', '连接中...');
+            log('用户B开始连接WebSocket...');
+
+            try {
+                const socket = new SockJS('/ws');
+                clientB = Stomp.over(socket);
+                
+                clientB.debug = function(str) {
+                    log(`用户B STOMP: ${str}`);
+                };
+
+                clientB.connect({}, function(frame) {
+                    log('✅ 用户B连接成功', 'success');
+                    updateStatus('B', '已连接');
+                    
+                    // 订阅消息
+                    subscribeUserBMessages();
+                    
+                    // 发送加入消息
+                    setTimeout(() => {
+                        clientB.send('/app/webrtc/join', {}, JSON.stringify({
+                            userId: '3'
+                        }));
+                        log('用户B发送加入消息');
+                    }, 500);
+                    
+                }, function(error) {
+                    log(`❌ 用户B连接失败: ${error}`, 'error');
+                    updateStatus('B', '连接失败');
+                });
+
+            } catch (error) {
+                log(`❌ 用户B连接异常: ${error.message}`, 'error');
+                updateStatus('B', '连接异常');
+            }
+        }
+
+        // 订阅用户A消息
+        function subscribeUserAMessages() {
+            // 订阅通话邀请
+            clientA.subscribe('/user/queue/webrtc/call-invitation', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户A收到通话邀请(用户队列): ' + JSON.stringify(data), 'success');
+                showCallModal(data, 'A');
+            });
+
+            clientA.subscribe('/topic/webrtc/call-invitation/2', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户A收到通话邀请(广播频道): ' + JSON.stringify(data), 'success');
+                showCallModal(data, 'A');
+            });
+
+            clientA.subscribe('/topic/webrtc/call-invitation-broadcast', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户A收到通话邀请(强制广播): ' + JSON.stringify(data), 'success');
+                if (data.calleeId === '2') {
+                    showCallModal(data, 'A');
+                }
+            });
+
+            // 订阅加入成功消息
+            clientA.subscribe('/user/queue/webrtc/joined', function(message) {
+                const data = JSON.parse(message.body);
+                log('✅ 用户A加入成功: ' + JSON.stringify(data), 'success');
+            });
+
+            log('✅ 用户A消息订阅完成');
+        }
+
+        // 订阅用户B消息
+        function subscribeUserBMessages() {
+            // 订阅通话邀请
+            clientB.subscribe('/user/queue/webrtc/call-invitation', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户B收到通话邀请(用户队列): ' + JSON.stringify(data), 'success');
+                showCallModal(data, 'B');
+            });
+
+            clientB.subscribe('/topic/webrtc/call-invitation/3', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户B收到通话邀请(广播频道): ' + JSON.stringify(data), 'success');
+                showCallModal(data, 'B');
+            });
+
+            clientB.subscribe('/topic/webrtc/call-invitation-broadcast', function(message) {
+                const data = JSON.parse(message.body);
+                log('📞 用户B收到通话邀请(强制广播): ' + JSON.stringify(data), 'success');
+                if (data.calleeId === '3') {
+                    showCallModal(data, 'B');
+                }
+            });
+
+            // 订阅加入成功消息
+            clientB.subscribe('/user/queue/webrtc/joined', function(message) {
+                const data = JSON.parse(message.body);
+                log('✅ 用户B加入成功: ' + JSON.stringify(data), 'success');
+            });
+
+            log('✅ 用户B消息订阅完成');
+        }
+
+        // 显示来电弹窗
+        function showCallModal(data, receiverUser) {
+            log(`🔔 显示来电弹窗，接收者: 用户${receiverUser}`, 'success');
+            currentCallData = data;
+            currentCallData.receiverUser = receiverUser;
+
+            document.getElementById('callerInfo').textContent = `来自用户${data.callerId}的通话邀请`;
+            document.getElementById('callTypeInfo').textContent = data.callType === 'video' ? '视频通话' : '语音通话';
+
+            try {
+                callModal.show();
+                log('✅ 弹窗显示成功', 'success');
+            } catch (error) {
+                log(`❌ 弹窗显示失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 用户A呼叫用户B
+        function callUserB() {
+            if (!clientA || !clientA.connected) {
+                log('❌ 用户A未连接', 'error');
+                return;
+            }
+
+            const callData = {
+                callerId: '2',
+                calleeId: '3',
+                callType: 'video'
+            };
+
+            log(`📞 用户A发起通话: ${JSON.stringify(callData)}`);
+            
+            try {
+                clientA.send('/app/webrtc/call', {}, JSON.stringify(callData));
+                log('✅ 通话邀请已发送', 'success');
+            } catch (error) {
+                log(`❌ 发送通话邀请失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 用户B呼叫用户A
+        function callUserA() {
+            if (!clientB || !clientB.connected) {
+                log('❌ 用户B未连接', 'error');
+                return;
+            }
+
+            const callData = {
+                callerId: '3',
+                calleeId: '2',
+                callType: 'video'
+            };
+
+            log(`📞 用户B发起通话: ${JSON.stringify(callData)}`);
+            
+            try {
+                clientB.send('/app/webrtc/call', {}, JSON.stringify(callData));
+                log('✅ 通话邀请已发送', 'success');
+            } catch (error) {
+                log(`❌ 发送通话邀请失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 接听通话
+        function acceptCall() {
+            if (!currentCallData) return;
+
+            log(`✅ 用户${currentCallData.receiverUser}接受通话`, 'success');
+            callModal.hide();
+            currentCallData = null;
+        }
+
+        // 拒绝通话
+        function rejectCall() {
+            if (!currentCallData) return;
+
+            log(`❌ 用户${currentCallData.receiverUser}拒绝通话`, 'error');
+            callModal.hide();
+            currentCallData = null;
+        }
+
+        // 断开连接
+        function disconnectUserA() {
+            if (clientA) {
+                clientA.disconnect();
+                clientA = null;
+            }
+            updateStatus('A', '已断开');
+            log('用户A连接已断开');
+        }
+
+        function disconnectUserB() {
+            if (clientB) {
+                clientB.disconnect();
+                clientB = null;
+            }
+            updateStatus('B', '已断开');
+            log('用户B连接已断开');
+        }
+    </script>
+</body>
+</html>

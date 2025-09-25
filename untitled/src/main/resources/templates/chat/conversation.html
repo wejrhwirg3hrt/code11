@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天会话 - 视频分享平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/chat.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-video me-2"></i>视频分享平台
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>首页
+                </a>
+                <a class="nav-link active" href="/chat">
+                    <i class="fas fa-comments me-1"></i>聊天
+                    <span class="badge bg-danger ms-1" id="totalUnreadCount" style="display: none;">0</span>
+                </a>
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <img th:src="${currentUser.avatar}" alt="头像" class="rounded-circle me-1" width="24" height="24">
+                        <span th:text="${currentUser.username}">用户名</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/profile">个人资料</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout">退出登录</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 聊天界面 -->
+    <div class="container-fluid chat-container">
+        <div class="row h-100">
+            <!-- 会话列表 -->
+            <div class="col-md-4 col-lg-3 chat-sidebar">
+                <div class="chat-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>聊天
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" placeholder="搜索会话..." id="searchInput">
+                    </div>
+                </div>
+
+                <!-- 会话列表 -->
+                <div class="conversation-list" id="conversationList">
+                    <!-- 会话项将通过JavaScript动态加载 -->
+                </div>
+            </div>
+
+            <!-- 聊天区域 -->
+            <div class="col-md-8 col-lg-9 chat-main">
+                <!-- 聊天头部 -->
+                <div class="chat-header">
+                    <div class="d-flex align-items-center">
+                        <img src="/images/default-avatar.png" alt="头像" class="rounded-circle me-3" width="40" height="40" id="chatAvatar">
+                        <div>
+                            <h6 class="mb-0" id="chatTitle">聊天对象</h6>
+                            <small class="text-muted" id="chatStatus">在线</small>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="btn btn-sm btn-outline-secondary me-2" title="视频通话" onclick="alert('视频通话按钮被点击！')" id="videoCallBtn">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary me-2" title="语音通话" onclick="alert('语音通话按钮被点击！')" id="audioCallBtn">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-info me-2" title="调试信息" onclick="simpleTest()">
+                            <i class="fas fa-bug"></i>
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="pinConversation()"><i class="fas fa-thumbtack me-2"></i>置顶会话</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="muteConversation()"><i class="fas fa-volume-mute me-2"></i>静音通知</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-warning" href="#" onclick="clearChatMessages()"><i class="fas fa-broom me-2"></i>清空聊天记录</a></li>
+                                <li><a class="dropdown-item text-info" href="#" onclick="unfollowUser()"><i class="fas fa-user-minus me-2"></i>取消关注</a></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteConversation()"><i class="fas fa-trash me-2"></i>删除会话</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 消息区域 -->
+                <div class="messages-container" id="messagesContainer">
+                    <div class="messages-list" id="messagesList">
+                        <!-- 消息将通过JavaScript动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 文件预览区域 -->
+                <div class="file-preview-area" id="filePreviewArea" style="display: none;">
+                    <div class="file-preview-content">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">准备发送的文件：</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="clearFilePreview()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="filePreviewList">
+                            <!-- 文件预览项将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 输入区域 -->
+                <div class="message-input-area">
+                    <div class="input-toolbar">
+                        <button class="btn btn-sm btn-outline-secondary" title="表情" onclick="toggleEmojiPicker()">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="图片" onclick="selectFile('image')">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="文件" onclick="selectFile('file')">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="视频文件" onclick="selectFile('video')">
+                            <i class="fas fa-film"></i>
+                        </button>
+                        <!-- WebRTC通话按钮 -->
+                        <button class="btn btn-sm btn-outline-success" title="语音通话" onclick="startAudioCall()">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" title="视频通话" onclick="startVideoCall()">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <!-- 调试按钮 -->
+                        <button class="btn btn-sm btn-outline-warning" title="调试信息" onclick="debugWebRTC()">
+                            <i class="fas fa-bug"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <textarea class="form-control" id="messageInput" placeholder="输入消息..." rows="1" 
+                                  onkeydown="handleMessageInput(event)" oninput="autoResize(this)"></textarea>
+                        <button class="btn btn-primary" id="sendButton" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表情选择器 -->
+    <div class="emoji-picker" id="emojiPicker" style="display: none;">
+        <div class="emoji-categories">
+            <button class="emoji-category active" data-category="faces">😊</button>
+            <button class="emoji-category" data-category="gestures">👍</button>
+            <button class="emoji-category" data-category="hearts">❤️</button>
+            <button class="emoji-category" data-category="animals">🐱</button>
+        </div>
+        <div class="emoji-grid" id="emojiGrid">
+            <!-- 表情将通过JavaScript动态加载 -->
+        </div>
+    </div>
+
+    <!-- 文件输入 -->
+    <input type="file" id="fileInput" style="display: none;" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar">
+
+    <!-- 文件预览提示 -->
+    <div class="file-upload-tips" style="display: none;">
+        <small class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            最多可选择9个文件，单个文件不超过50MB
+        </small>
+    </div>
+
+    <!-- 通话界面 -->
+    <div id="callInterface" class="call-interface" style="display: none;">
+        <div class="call-overlay">
+            <div class="call-container">
+                <div class="call-header">
+                    <h5 id="callTitle">视频通话</h5>
+                    <span id="callStatus">连接中...</span>
+                    <span id="callTimer">00:00</span>
+                </div>
+
+                <div class="video-container">
+                    <video id="remoteVideo" autoplay playsinline class="remote-video"></video>
+                    <video id="localVideo" autoplay playsinline muted class="local-video"></video>
+                </div>
+
+                <div class="call-controls">
+                    <button class="btn btn-secondary" id="muteBtn" onclick="toggleMute()" title="静音">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="videoBtn" onclick="toggleVideo()" title="关闭摄像头">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="btn btn-danger" id="hangupBtn" onclick="endCall()" title="挂断">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建聊天模态框 -->
+    <div class="modal fade" id="newChatModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">新建聊天</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">搜索用户</label>
+                        <input type="text" class="form-control" id="userSearchInput" placeholder="输入用户名搜索...">
+                    </div>
+                    <div id="userSearchResults" class="user-search-results">
+                        <!-- 搜索结果将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/lib/sockjs.min.js"></script>
+    <script src="/lib/stomp.min.js"></script>
+    <script src="/js/chat.js"></script>
+    <script src="/js/global-call-popup.js"></script>
+    <script src="/js/webrtc-client.js"></script>
+    <script src="/js/chat-webrtc-manager.js"></script>
+    
+    <script>
+        // 简单测试函数
+        function simpleTest() {
+            try {
+                console.log('=== 简单测试开始 ===');
+                alert('JavaScript正常工作！\n\n' +
+                      '当前用户: ' + (window.currentUser ? window.currentUser.username : '未定义') + '\n' +
+                      '会话ID: ' + (window.currentConversationId || '未定义') + '\n' +
+                      'ChatApp: ' + (typeof ChatApp !== 'undefined' ? '已加载' : '未加载') + '\n' +
+                      'ChatApp存在: ' + (!!ChatApp ? '是' : '否'));
+            } catch (error) {
+                alert('JavaScript错误: ' + error.message);
+                console.error('测试错误:', error);
+            }
+        }
+
+        // 初始化聊天页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取当前用户信息和会话ID
+            window.currentUser = {
+                id: [[${currentUser.id}]],
+                username: '[[${currentUser.username}]]',
+                avatar: '[[${currentUser.avatar}]]'
+            };
+            
+            window.currentConversationId = [[${conversationId}]];
+            
+            // 初始化聊天功能
+            if (typeof ChatApp !== 'undefined') {
+                ChatApp.init();
+
+                // 等待ChatApp初始化完成后再加载会话
+                setTimeout(async () => {
+                    await ChatApp.loadConversation(window.currentConversationId);
+                    console.log('会话加载完成，目标用户:', ChatApp.targetUser);
+                }, 1000);
+            } else {
+                console.error('ChatApp未定义');
+            }
+
+            // 延迟初始化WebRTC功能，确保页面完全加载
+            setTimeout(() => {
+                initBasicWebRTC();
+                initWebRTCManager();
+            }, 1000);
+        });
+
+        // 基础WebRTC变量
+        let localStream = null;
+        let isWebRTCReady = false;
+
+        // 基础WebRTC初始化
+        async function initBasicWebRTC() {
+            if (isWebRTCReady) {
+                console.log('WebRTC已就绪');
+                return;
+            }
+
+            console.log('开始基础WebRTC初始化...');
+
+            try {
+                // 获取媒体流
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+                // 显示本地视频
+                const localVideo = document.getElementById('localVideo');
+                if (localVideo) {
+                    localVideo.srcObject = localStream;
+                    localVideo.muted = true;
+                    console.log('本地视频显示成功');
+                }
+
+                isWebRTCReady = true;
+                console.log('基础WebRTC初始化完成');
+
+                // 显示控制按钮
+                const controls = document.getElementById('videoControls');
+                if (controls) {
+                    controls.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('WebRTC初始化失败:', error);
+                alert('无法访问摄像头和麦克风，请检查浏览器权限');
+            }
+        }
+
+        // 注意：实际的通话函数在页面底部定义
+
+        function debugWebRTC() {
+            console.log('=== WebRTC调试信息 ===');
+            console.log('WebRTC就绪状态:', isWebRTCReady);
+            console.log('本地流:', localStream);
+            console.log('本地视频元素:', document.getElementById('localVideo'));
+            console.log('ChatWebRTCManager存在:', !!window.chatWebRTCManager);
+            console.log('ChatWebRTCManager已初始化:', window.chatWebRTCManager?.isInitialized);
+            console.log('WebRTC客户端存在:', !!window.chatWebRTCManager?.webrtcClient);
+            console.log('WebSocket连接状态:', window.chatWebRTCManager?.stompClient?.connected);
+            console.log('当前用户:', window.chatWebRTCManager?.currentUser);
+            console.log('目标用户ID:', getTargetUserId());
+
+            // 显示状态弹窗
+            const status = {
+                webrtcReady: isWebRTCReady,
+                managerExists: !!window.chatWebRTCManager,
+                managerInitialized: window.chatWebRTCManager?.isInitialized,
+                webrtcClient: !!window.chatWebRTCManager?.webrtcClient,
+                websocketConnected: window.chatWebRTCManager?.stompClient?.connected,
+                currentUser: window.chatWebRTCManager?.currentUser?.username,
+                targetUserId: getTargetUserId()
+            };
+
+            alert('WebRTC状态:\n' + JSON.stringify(status, null, 2));
+
+            if (localStream) {
+                console.log('视频轨道:', localStream.getVideoTracks());
+                console.log('音频轨道:', localStream.getAudioTracks());
+            }
+        }
+
+        // 测试视频通话函数
+        function testStartVideoCall() {
+            console.log('=== 测试视频通话 ===');
+            console.log('当前用户:', window.currentUser);
+
+            const targetUserId = getTargetUserId();
+            console.log('目标用户ID:', targetUserId);
+            console.log('WebRTC管理器:', window.chatWebRTCManager);
+            console.log('WebSocket:', window.chatWebSocket);
+            console.log('ChatApp:', ChatApp);
+            console.log('ChatApp.targetUser:', ChatApp?.targetUser);
+
+            if (!targetUserId) {
+                alert('请先选择聊天对象\n\n调试信息:\n' +
+                      '- ChatApp存在: ' + !!ChatApp + '\n' +
+                      '- ChatApp.targetUser: ' + (ChatApp?.targetUser || '无') + '\n' +
+                      '- 当前会话ID: ' + (window.currentConversationId || '无'));
+                return;
+            }
+
+            if (!window.currentUser) {
+                alert('用户未登录');
+                return;
+            }
+
+            console.log('开始发起视频通话...');
+            startVideoCall();
+        }
+
+        // 测试语音通话函数
+        function testStartAudioCall() {
+            console.log('=== 测试语音通话 ===');
+            console.log('当前用户:', window.currentUser);
+
+            const targetUserId = getTargetUserId();
+            console.log('目标用户ID:', targetUserId);
+            console.log('WebRTC管理器:', window.chatWebRTCManager);
+            console.log('WebSocket:', window.chatWebSocket);
+            console.log('ChatApp:', ChatApp);
+            console.log('ChatApp.targetUser:', ChatApp?.targetUser);
+
+            if (!targetUserId) {
+                alert('请先选择聊天对象\n\n调试信息:\n' +
+                      '- ChatApp存在: ' + !!ChatApp + '\n' +
+                      '- ChatApp.targetUser: ' + (ChatApp?.targetUser || '无') + '\n' +
+                      '- 当前会话ID: ' + (window.currentConversationId || '无'));
+                return;
+            }
+
+            if (!window.currentUser) {
+                alert('用户未登录');
+                return;
+            }
+
+            console.log('开始发起语音通话...');
+            startAudioCall();
+        }
+
+        // 显示详细调试信息
+        function showDetailedDebugInfo() {
+            console.log('=== 详细调试信息 ===');
+
+            const debugInfo = {
+                '页面基本信息': {
+                    '当前用户': window.currentUser,
+                    '当前会话ID': window.currentConversationId,
+                    'URL参数': window.location.search
+                },
+                'ChatApp状态': {
+                    'ChatApp存在': !!ChatApp,
+                    'ChatApp初始化': ChatApp ? 'yes' : 'no',
+                    'ChatApp.currentUser': ChatApp?.currentUser,
+                    'ChatApp.currentConversationId': ChatApp?.currentConversationId,
+                    'ChatApp.targetUser': ChatApp?.targetUser,
+                    'ChatApp.conversations长度': ChatApp?.conversations?.length,
+                    'ChatApp.connected': ChatApp?.connected
+                },
+                'WebRTC状态': {
+                    'WebRTC管理器存在': !!window.chatWebRTCManager,
+                    'WebRTC管理器初始化': window.chatWebRTCManager?.isInitialized,
+                    'WebRTC客户端': !!window.chatWebRTCManager?.webrtcClient,
+                    'WebSocket连接': window.chatWebRTCManager?.stompClient?.connected
+                },
+                '目标用户获取': {
+                    'getTargetUserId()结果': getTargetUserId(),
+                    '获取方法测试': testGetTargetUserId()
+                }
+            };
+
+            console.log('调试信息:', debugInfo);
+
+            // 显示格式化的调试信息
+            let debugText = '=== 聊天系统调试信息 ===\n\n';
+
+            for (const [category, data] of Object.entries(debugInfo)) {
+                debugText += `【${category}】\n`;
+                for (const [key, value] of Object.entries(data)) {
+                    debugText += `  ${key}: ${JSON.stringify(value)}\n`;
+                }
+                debugText += '\n';
+            }
+
+            alert(debugText);
+        }
+
+        // 测试获取目标用户ID的各种方法
+        function testGetTargetUserId() {
+            const results = {};
+
+            // 方法1: ChatApp.targetUser
+            if (ChatApp && ChatApp.targetUser && ChatApp.targetUser.id) {
+                results.method1_ChatApp_targetUser = ChatApp.targetUser.id;
+            }
+
+            // 方法2: ChatApp.currentConversation
+            if (ChatApp && ChatApp.currentConversation && ChatApp.currentConversation.participants) {
+                const otherParticipant = ChatApp.currentConversation.participants.find(
+                    p => p.user.id !== window.currentUser.id
+                );
+                if (otherParticipant) {
+                    results.method2_currentConversation = otherParticipant.user.id;
+                }
+            }
+
+            // 方法3: conversations列表
+            const conversationId = window.currentConversationId || ChatApp?.currentConversationId;
+            if (ChatApp && ChatApp.conversations && conversationId) {
+                const conversation = ChatApp.conversations.find(c => c.id === conversationId);
+                if (conversation && conversation.participants) {
+                    const otherParticipant = conversation.participants.find(
+                        p => p.user.id !== window.currentUser.id
+                    );
+                    if (otherParticipant) {
+                        results.method3_conversations_list = otherParticipant.user.id;
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        // WebRTC相关功能
+        let webrtcClient = null;
+        let webrtcStompClient = null;
+        let webrtcManager = null;
+
+        // 初始化WebRTC功能（增强版本）
+        async function initWebRTCForChat() {
+            try {
+                console.log('=== 开始初始化聊天页面WebRTC功能 ===');
+
+                // 1. 强制初始化全局弹窗
+                if (typeof GlobalCallPopup !== 'undefined') {
+                    window.globalCallPopup = new GlobalCallPopup();
+                    console.log('✅ 强制初始化全局弹窗');
+                } else {
+                    console.error('❌ GlobalCallPopup类未找到');
+                }
+
+                // 2. 确保用户信息存在
+                if (!window.currentUser) {
+                    console.log('🔄 用户信息缺失，尝试获取...');
+                    await getCurrentUserForWebRTC();
+                }
+
+                if (!window.currentUser || !window.currentUser.id) {
+                    console.error('❌ 无法获取用户信息，WebRTC初始化失败');
+                    return;
+                }
+
+                console.log('✅ 用户信息确认:', window.currentUser);
+
+                // 3. 强制创建独立WebSocket连接
+                console.log('🔌 创建WebSocket连接...');
+                await createForceWebSocketConnection();
+
+                // 4. 强制订阅消息
+                console.log('📡 订阅WebRTC消息...');
+                forceSubscribeMessages();
+
+                // 5. 初始化WebRTC客户端
+                console.log('🎥 初始化WebRTC客户端...');
+                await initWebRTCClient();
+
+                console.log('=== ✅ 聊天页面WebRTC强制初始化完成 ===');
+
+            } catch (error) {
+                console.error('❌ WebRTC初始化失败:', error);
+                // 重试机制
+                setTimeout(() => {
+                    console.log('🔄 5秒后重试WebRTC初始化...');
+                    initWebRTCForChat();
+                }, 5000);
+            }
+        }
+
+        // 初始化WebRTC客户端
+        async function initWebRTCClient() {
+            try {
+                if (typeof WebRTCClient === 'undefined') {
+                    throw new Error('WebRTCClient类未加载');
+                }
+
+                webrtcClient = new WebRTCClient();
+                webrtcClient.stompClient = webrtcStompClient;
+                webrtcClient.currentUserId = window.currentUser.id.toString();
+
+                // 设置全局变量
+                window.webrtcClient = webrtcClient;
+
+                // 设置事件回调
+                setupWebRTCCallbacks();
+
+                console.log('✅ WebRTC客户端初始化成功');
+            } catch (error) {
+                console.error('❌ WebRTC客户端初始化失败:', error);
+                throw error;
+            }
+        }
+
+        // 强制创建WebSocket连接（增强版）
+        function createForceWebSocketConnection() {
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log('🔥 强制创建WebSocket连接...');
+
+                    // 如果已有连接，先断开
+                    if (webrtcStompClient && webrtcStompClient.connected) {
+                        console.log('🔄 断开现有WebSocket连接...');
+                        webrtcStompClient.disconnect();
+                    }
+
+                    const socket = new SockJS('/ws');
+                    webrtcStompClient = Stomp.over(socket);
+
+                    // 启用调试日志以便排查问题
+                    webrtcStompClient.debug = function(str) {
+                        console.log('STOMP Debug:', str);
+                    };
+
+                    // 设置心跳保持连接
+                    webrtcStompClient.heartbeat.outgoing = 10000;  // 10秒发送心跳
+                    webrtcStompClient.heartbeat.incoming = 10000;  // 10秒接收心跳
+
+                    webrtcStompClient.connect({}, function(frame) {
+                        console.log('✅ 强制WebSocket连接成功: ' + frame);
+                        window.stompClient = webrtcStompClient;
+
+                        // 延迟一下确保连接稳定
+                        setTimeout(() => {
+                            resolve();
+                        }, 500);
+
+                    }, function(error) {
+                        console.error('❌ 强制WebSocket连接失败:', error);
+                        reject(error);
+                    });
+
+                    // 监听连接断开事件
+                    socket.onclose = function(event) {
+                        console.warn('⚠️ WebSocket连接断开:', event);
+                        // 自动重连
+                        setTimeout(() => {
+                            console.log('🔄 尝试重新连接WebSocket...');
+                            createForceWebSocketConnection().catch(console.error);
+                        }, 3000);
+                    };
+
+                } catch (error) {
+                    console.error('❌ 创建WebSocket连接异常:', error);
+                    reject(error);
+                }
+            });
+        }
+
+        // 强制订阅消息（增强版）
+        function forceSubscribeMessages() {
+            if (!webrtcStompClient || !window.currentUser) {
+                console.error('❌ 无法订阅：连接或用户缺失');
+                return;
+            }
+
+            console.log('🔥 强制订阅WebRTC消息...');
+            console.log('当前用户ID:', window.currentUser.id);
+
+            try {
+                // 1. 订阅通话邀请（用户队列）
+                const userQueueSub = webrtcStompClient.subscribe(`/user/queue/webrtc/call-invitation`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('🔔 收到通话邀请(用户队列):', data);
+                    forceShowCallPopup(data);
+                });
+                console.log('✅ 订阅用户队列成功:', userQueueSub.id);
+
+                // 2. 订阅通话邀请（广播频道）
+                const topicSub = webrtcStompClient.subscribe(`/topic/webrtc/call-invitation/${window.currentUser.id}`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('🔔 收到通话邀请(广播频道):', data);
+                    forceShowCallPopup(data);
+                });
+                console.log('✅ 订阅广播频道成功:', topicSub.id);
+
+                // 3. 订阅强制广播频道（新增）
+                const broadcastSub = webrtcStompClient.subscribe(`/topic/webrtc/call-invitation-broadcast`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('🔔 收到通话邀请(强制广播):', data);
+                    // 检查是否是发给当前用户的
+                    if (data.calleeId === window.currentUser.id.toString()) {
+                        forceShowCallPopup(data);
+                    }
+                });
+                console.log('✅ 订阅强制广播频道成功:', broadcastSub.id);
+
+                // 4. 订阅加入成功消息
+                const joinedSub = webrtcStompClient.subscribe(`/user/queue/webrtc/joined`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('✅ 加入信令服务器成功:', data);
+                });
+                console.log('✅ 订阅加入成功消息:', joinedSub.id);
+
+                // 5. 订阅通话接受
+                const acceptSub = webrtcStompClient.subscribe(`/user/queue/webrtc/call-accepted`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('✅ 通话被接受:', data);
+                    if (webrtcClient && webrtcClient.onCallAccepted) {
+                        webrtcClient.onCallAccepted(data);
+                    }
+                });
+                console.log('✅ 订阅通话接受成功:', acceptSub.id);
+
+                // 6. 订阅通话拒绝
+                const rejectSub = webrtcStompClient.subscribe(`/user/queue/webrtc/call-rejected`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('❌ 通话被拒绝:', data);
+                    if (webrtcClient && webrtcClient.onCallRejected) {
+                        webrtcClient.onCallRejected(data);
+                    }
+                });
+                console.log('✅ 订阅通话拒绝成功:', rejectSub.id);
+
+                // 7. 订阅通话结束
+                const endSub = webrtcStompClient.subscribe(`/user/queue/webrtc/call-ended`, function(message) {
+                    const data = JSON.parse(message.body);
+                    console.log('🔚 通话结束:', data);
+                    if (webrtcClient && webrtcClient.onCallEnded) {
+                        webrtcClient.onCallEnded(data);
+                    }
+                });
+                console.log('✅ 订阅通话结束成功:', endSub.id);
+
+                console.log('✅ 所有消息订阅完成，准备发送加入消息...');
+
+                // 延迟发送加入消息，确保订阅完成
+                setTimeout(() => {
+                    webrtcStompClient.send('/app/webrtc/join', {}, JSON.stringify({
+                        userId: window.currentUser.id.toString()
+                    }));
+                    console.log('📤 发送加入消息，用户ID:', window.currentUser.id);
+                }, 500);
+
+            } catch (error) {
+                console.error('❌ 订阅消息失败:', error);
+                throw error;
+            }
+        }
+
+        // 强制显示通话弹窗
+        function forceShowCallPopup(data) {
+            console.log('🚨 强制显示通话弹窗:', data);
+
+            if (window.globalCallPopup) {
+                window.globalCallPopup.show(data);
+                console.log('✅ 弹窗已显示');
+            } else {
+                // 立即创建弹窗
+                if (typeof GlobalCallPopup !== 'undefined') {
+                    window.globalCallPopup = new GlobalCallPopup();
+                    window.globalCallPopup.show(data);
+                    console.log('✅ 临时创建弹窗并显示');
+                } else {
+                    // 最后的备用方案
+                    const accept = confirm(`🔔 收到来自 ${data.callerName} 的${data.callType}通话邀请，是否接听？`);
+                    if (accept) {
+                        acceptCall(data.roomId);
+                    } else {
+                        rejectCall(data.roomId);
+                    }
+                }
+            }
+        }
+
+        // 获取当前用户信息（用于WebRTC）
+        async function getCurrentUserForWebRTC() {
+            try {
+                // 如果已经有用户信息，直接使用
+                if (window.currentUser && window.currentUser.id) {
+                    console.log('使用现有用户信息:', window.currentUser);
+                    return;
+                }
+
+                // 否则从API获取
+                const response = await fetch('/api/chat/user');
+                if (response.ok) {
+                    const userData = await response.json();
+                    window.currentUser = userData;
+                    console.log('从API获取用户信息成功:', userData);
+                } else {
+                    throw new Error('获取用户信息失败');
+                }
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+                throw error;
+            }
+        }
+
+        // 等待聊天WebSocket连接就绪，然后复用它
+        function waitForChatWebSocket() {
+            return new Promise((resolve, reject) => {
+                console.log('等待聊天WebSocket连接就绪...');
+
+                let attempts = 0;
+                const maxAttempts = 20; // 10秒，每500ms检查一次
+
+                // 检查ChatApp是否已连接
+                function checkConnection() {
+                    attempts++;
+                    console.log(`检查连接状态 (${attempts}/${maxAttempts}):`, {
+                        'window.ChatApp': !!window.ChatApp,
+                        'ChatApp.stompClient': !!(window.ChatApp && window.ChatApp.stompClient),
+                        'ChatApp.connected': !!(window.ChatApp && window.ChatApp.connected)
+                    });
+
+                    if (window.ChatApp && window.ChatApp.stompClient) {
+                        console.log('聊天WebSocket已连接，复用连接');
+
+                        // 使用聊天的WebSocket连接
+                        webrtcStompClient = window.ChatApp.stompClient;
+                        window.stompClient = webrtcStompClient;
+
+                        // 立即订阅WebRTC消息
+                        subscribeToWebRTCMessages();
+
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        console.error('等待聊天WebSocket连接超时，尝试独立连接');
+                        // 回退到独立连接
+                        initSimpleWebSocket().then(resolve).catch(reject);
+                    } else {
+                        // 继续等待
+                        setTimeout(checkConnection, 500);
+                    }
+                }
+
+                checkConnection();
+            });
+        }
+
+        // 简单直接的WebSocket连接（备用方案）
+        function initSimpleWebSocket() {
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log('开始连接WebSocket（简单模式）...');
+
+                    const socket = new SockJS('/ws');
+                    webrtcStompClient = Stomp.over(socket);
+
+                    // 禁用调试日志（参考测试页面）
+                    webrtcStompClient.debug = null;
+
+                    webrtcStompClient.connect({}, function(frame) {
+                        console.log('WebSocket连接成功: ' + frame);
+
+                        // 设置全局变量供WebRTCClient使用
+                        window.stompClient = webrtcStompClient;
+
+                        // 立即订阅消息（参考测试页面）
+                        subscribeToWebRTCMessages();
+
+                        resolve();
+                    }, function(error) {
+                        console.error('WebSocket连接失败: ' + error);
+                        reject(new Error('WebSocket连接失败'));
+                    });
+                } catch (error) {
+                    console.error('WebSocket初始化异常: ' + error.message);
+                    reject(error);
+                }
+            });
+        }
+
+        // 原来的复杂WebSocket连接（备用）
+        function initWebRTCWebSocket() {
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log('创建WebRTC专用WebSocket连接...');
+
+                    const socket = new SockJS('/ws');
+                    webrtcStompClient = Stomp.over(socket);
+
+                    // 启用调试日志以便排查问题
+                    webrtcStompClient.debug = function(str) {
+                        console.log('STOMP Debug:', str);
+                    };
+
+                    // 设置强力心跳保持连接
+                    webrtcStompClient.heartbeat.outgoing = 5000;  // 5秒发送心跳
+                    webrtcStompClient.heartbeat.incoming = 5000;  // 5秒接收心跳
+
+                    webrtcStompClient.connect({}, function(frame) {
+                        console.log('WebRTC WebSocket连接成功: ' + frame);
+
+                        // 设置全局变量供WebRTCClient使用
+                        window.stompClient = webrtcStompClient;
+
+                        // 延迟订阅消息，确保连接稳定
+                        setTimeout(() => {
+                            subscribeToWebRTCMessages();
+
+                            // 启动保活机制
+                            startWebRTCKeepAlive();
+
+                            resolve();
+                        }, 1000);
+
+                    }, function(error) {
+                        console.error('WebRTC WebSocket连接失败: ' + error);
+                        reject(new Error('WebRTC WebSocket连接失败'));
+                    });
+
+                    // 监听连接断开事件
+                    socket.onclose = function(event) {
+                        console.warn('WebSocket连接断开:', event);
+                        // 自动重连
+                        setTimeout(() => {
+                            console.log('尝试重新连接WebSocket...');
+                            initWebRTCWebSocket();
+                        }, 3000);
+                    };
+
+                } catch (error) {
+                    console.error('WebRTC WebSocket初始化异常: ' + error.message);
+                    reject(error);
+                }
+            });
+        }
+
+        // WebRTC保活机制
+        function startWebRTCKeepAlive() {
+            // 清除之前的保活定时器
+            if (window.webrtcKeepAliveInterval) {
+                clearInterval(window.webrtcKeepAliveInterval);
+            }
+
+            console.log('启动WebRTC保活机制');
+
+            window.webrtcKeepAliveInterval = setInterval(() => {
+                if (webrtcStompClient && webrtcStompClient.connected && window.currentUser) {
+                    try {
+                        // 发送保活消息
+                        webrtcStompClient.send('/app/webrtc/keepalive', {}, JSON.stringify({
+                            userId: window.currentUser.id,
+                            timestamp: Date.now()
+                        }));
+                        console.log('发送WebRTC保活消息');
+                    } catch (error) {
+                        console.error('发送保活消息失败:', error);
+                        // 如果发送失败，尝试重连
+                        setTimeout(() => {
+                            initWebRTCWebSocket();
+                        }, 1000);
+                    }
+                } else {
+                    console.warn('WebSocket未连接，停止保活并尝试重连');
+                    clearInterval(window.webrtcKeepAliveInterval);
+
+                    // 尝试重连
+                    setTimeout(() => {
+                        initWebRTCWebSocket();
+                    }, 2000);
+                }
+            }, 15000); // 15秒发送一次保活消息
+        }
+
+        // 订阅WebRTC消息（简化版，参考测试页面）
+        function subscribeToWebRTCMessages() {
+            if (!webrtcStompClient || !window.currentUser) {
+                console.error('WebRTC WebSocket未连接或用户信息缺失');
+                return;
+            }
+
+            console.log('开始订阅消息...');
+
+            // 订阅通话邀请（用户队列）
+            webrtcStompClient.subscribe(`/user/queue/webrtc/call-invitation`, function(message) {
+                const data = JSON.parse(message.body);
+                console.log('收到通话邀请(用户队列): ' + JSON.stringify(data));
+                handleCallInvitation(data);
+            });
+
+            // 订阅通话邀请（广播频道）
+            webrtcStompClient.subscribe(`/topic/webrtc/call-invitation/${window.currentUser.id}`, function(message) {
+                const data = JSON.parse(message.body);
+                console.log('收到通话邀请(广播频道): ' + JSON.stringify(data));
+                handleCallInvitation(data);
+            });
+
+            // 订阅通话接受
+            webrtcStompClient.subscribe(`/user/queue/webrtc/call-accepted`, function(message) {
+                const data = JSON.parse(message.body);
+                console.log('通话被接受: ' + JSON.stringify(data));
+                if (webrtcClient && webrtcClient.onCallAccepted) {
+                    webrtcClient.onCallAccepted(data);
+                }
+            });
+
+            // 订阅通话拒绝
+            webrtcStompClient.subscribe(`/user/queue/webrtc/call-rejected`, function(message) {
+                const data = JSON.parse(message.body);
+                console.log('通话被拒绝: ' + JSON.stringify(data));
+                if (webrtcClient && webrtcClient.onCallRejected) {
+                    webrtcClient.onCallRejected(data);
+                }
+            });
+
+            // 订阅通话结束
+            webrtcStompClient.subscribe(`/user/queue/webrtc/call-ended`, function(message) {
+                const data = JSON.parse(message.body);
+                console.log('通话结束: ' + JSON.stringify(data));
+                if (webrtcClient && webrtcClient.onCallEnded) {
+                    webrtcClient.onCallEnded(data);
+                }
+            });
+
+            console.log('消息订阅完成');
+        }
+
+        // 处理来电邀请
+        function handleCallInvitation(data) {
+            console.log('处理来电邀请: ', data);
+            forceShowCallPopup(data);
+        }
+
+        // 接受通话
+        function acceptCall(roomId) {
+            console.log('✅ 接受通话:', roomId);
+
+            // 使用webrtcClient接受通话（这会处理媒体流和WebRTC连接）
+            if (webrtcClient) {
+                webrtcClient.acceptCall(roomId).then(() => {
+                    console.log('✅ WebRTC通话连接建立成功');
+                    // 显示通话界面
+                    showCallInterface('video', {roomId: roomId}, 'connected');
+                }).catch(error => {
+                    console.error('❌ WebRTC通话连接失败:', error);
+                });
+            } else {
+                console.error('❌ webrtcClient未初始化');
+            }
+        }
+
+        // 拒绝通话
+        function rejectCall(roomId) {
+            console.log('❌ 拒绝通话:', roomId);
+
+            // 使用webrtcClient拒绝通话
+            if (webrtcClient) {
+                webrtcClient.rejectCall(roomId);
+                console.log('❌ 已通过webrtcClient拒绝通话');
+            } else if (webrtcStompClient) {
+                // 备用方案：直接发送拒绝消息
+                webrtcStompClient.send('/app/webrtc/reject', {}, JSON.stringify({
+                    roomId: roomId,
+                    calleeId: window.currentUser.id.toString()
+                }));
+                console.log('❌ 已发送拒绝通话消息');
+            }
+        }
+
+        // 设置WebRTC事件回调
+        function setupWebRTCCallbacks() {
+            if (!webrtcClient) return;
+
+            // 通话被接受
+            webrtcClient.onCallAccepted = function(data) {
+                console.log('通话被接受:', data);
+                updateCallStatus('通话已接通');
+
+                // 显示通话界面
+                const callType = webrtcClient.currentCallType || 'video';
+                showCallInterface(callType, data, 'connected');
+            };
+
+            // 通话被拒绝
+            webrtcClient.onCallRejected = function(data) {
+                console.log('通话被拒绝:', data);
+                updateCallStatus('通话被拒绝');
+                resetCallButtons();
+            };
+
+            // 通话结束
+            webrtcClient.onCallEnded = function(data) {
+                console.log('通话结束:', data);
+                updateCallStatus('通话已结束');
+                resetCallButtons();
+            };
+
+            // 远程媒体流
+            webrtcClient.onRemoteStream = function(stream) {
+                console.log('收到远程媒体流');
+
+                // 显示远程视频
+                const remoteVideo = document.getElementById('remoteVideo');
+                if (remoteVideo && stream) {
+                    remoteVideo.srcObject = stream;
+                    console.log('远程视频流已设置');
+                }
+            };
+        }
+
+        // 发起视频通话（增强版）
+        async function startVideoCall() {
+            console.log('🚀 开始发起视频通话');
+
+            // 优先使用WebRTC管理器
+            if (window.chatWebRTCManager && window.chatWebRTCManager.isInitialized) {
+                try {
+                    const targetUserId = getTargetUserId();
+                    if (!targetUserId) {
+                        alert('无法获取聊天对象ID，请确保已选择聊天对象');
+                        return;
+                    }
+
+                    console.log('使用WebRTC管理器发起视频通话');
+                    await window.chatWebRTCManager.initiateCall(targetUserId, 'video');
+                    return;
+                } catch (error) {
+                    console.error('WebRTC管理器发起通话失败:', error);
+                    // 继续使用备用方案
+                }
+            }
+
+            // 备用方案：直接使用WebSocket
+            console.log('使用备用方案发起视频通话');
+
+            // 1. 检查WebSocket连接
+            if (!webrtcStompClient || !webrtcStompClient.connected) {
+                console.error('❌ WebSocket未连接');
+                alert('WebSocket未连接，请刷新页面重试');
+                return;
+            }
+
+            // 2. 检查用户信息
+            if (!window.currentUser || !window.currentUser.id) {
+                console.error('❌ 当前用户信息缺失');
+                alert('用户信息缺失，请重新登录');
+                return;
+            }
+
+            // 3. 获取目标用户ID
+            const targetUserId = getTargetUserId();
+            if (!targetUserId) {
+                console.error('❌ 无法获取聊天对象ID');
+                alert('无法获取聊天对象ID，请确保已选择聊天对象');
+                return;
+            }
+
+            try {
+                console.log('🎥 发起视频通话详情:');
+                console.log('  - 发起者ID:', window.currentUser.id);
+                console.log('  - 接收者ID:', targetUserId);
+                console.log('  - 通话类型: video');
+
+                // 构建通话邀请数据
+                const callData = {
+                    callerId: window.currentUser.id.toString(),
+                    calleeId: targetUserId.toString(),
+                    callType: 'video'
+                };
+
+                console.log('📤 发送通话邀请数据:', callData);
+
+                // 发送通话邀请
+                webrtcStompClient.send('/app/webrtc/call', {}, JSON.stringify(callData));
+
+                console.log('✅ 视频通话邀请已发送');
+                updateCallStatus('视频通话邀请已发送，等待对方响应...');
+
+                // 显示发起通话的状态
+                showCallStatus('正在呼叫...', 'video');
+
+            } catch (error) {
+                console.error('❌ 发起视频通话失败:', error);
+                alert('发起视频通话失败: ' + error.message);
+            }
+        }
+
+        // 发起语音通话（增强版）
+        async function startAudioCall() {
+            console.log('🚀 开始发起语音通话');
+
+            // 优先使用WebRTC管理器
+            if (window.chatWebRTCManager && window.chatWebRTCManager.isInitialized) {
+                try {
+                    const targetUserId = getTargetUserId();
+                    if (!targetUserId) {
+                        alert('无法获取聊天对象ID，请确保已选择聊天对象');
+                        return;
+                    }
+
+                    console.log('使用WebRTC管理器发起语音通话');
+                    await window.chatWebRTCManager.initiateCall(targetUserId, 'audio');
+                    return;
+                } catch (error) {
+                    console.error('WebRTC管理器发起通话失败:', error);
+                    // 继续使用备用方案
+                }
+            }
+
+            // 备用方案：直接使用WebSocket
+            console.log('使用备用方案发起语音通话');
+
+            // 1. 检查WebSocket连接
+            if (!webrtcStompClient || !webrtcStompClient.connected) {
+                console.error('❌ WebSocket未连接');
+                alert('WebSocket未连接，请刷新页面重试');
+                return;
+            }
+
+            // 2. 检查用户信息
+            if (!window.currentUser || !window.currentUser.id) {
+                console.error('❌ 当前用户信息缺失');
+                alert('用户信息缺失，请重新登录');
+                return;
+            }
+
+            // 3. 获取目标用户ID
+            const targetUserId = getTargetUserId();
+            if (!targetUserId) {
+                console.error('❌ 无法获取聊天对象ID');
+                alert('无法获取聊天对象ID，请确保已选择聊天对象');
+                return;
+            }
+
+            try {
+                console.log('📞 发起语音通话详情:');
+                console.log('  - 发起者ID:', window.currentUser.id);
+                console.log('  - 接收者ID:', targetUserId);
+                console.log('  - 通话类型: audio');
+
+                // 构建通话邀请数据
+                const callData = {
+                    callerId: window.currentUser.id.toString(),
+                    calleeId: targetUserId.toString(),
+                    callType: 'audio'
+                };
+
+                console.log('📤 发送通话邀请数据:', callData);
+
+                // 发送通话邀请
+                webrtcStompClient.send('/app/webrtc/call', {}, JSON.stringify(callData));
+
+                console.log('✅ 语音通话邀请已发送');
+                updateCallStatus('语音通话邀请已发送，等待对方响应...');
+
+                // 显示发起通话的状态
+                showCallStatus('正在呼叫...', 'audio');
+
+            } catch (error) {
+                console.error('❌ 发起语音通话失败:', error);
+                alert('发起语音通话失败: ' + error.message);
+            }
+        }
+
+        // 获取聊天对象的用户ID
+        function getTargetUserId() {
+            console.log('开始获取目标用户ID...');
+            console.log('ChatApp:', ChatApp);
+            console.log('ChatApp.targetUser:', ChatApp?.targetUser);
+            console.log('window.currentConversationId:', window.currentConversationId);
+            console.log('ChatApp.currentConversationId:', ChatApp?.currentConversationId);
+
+            // 方法1: 从ChatApp.targetUser获取
+            if (ChatApp && ChatApp.targetUser && ChatApp.targetUser.id) {
+                console.log('从ChatApp.targetUser获取到ID:', ChatApp.targetUser.id);
+                return ChatApp.targetUser.id;
+            }
+
+            // 方法2: 从当前会话的参与者中获取
+            if (ChatApp && ChatApp.currentConversation && ChatApp.currentConversation.participants) {
+                const otherParticipant = ChatApp.currentConversation.participants.find(
+                    p => p.user.id !== window.currentUser.id
+                );
+                if (otherParticipant) {
+                    console.log('从currentConversation.participants获取到ID:', otherParticipant.user.id);
+                    return otherParticipant.user.id;
+                }
+            }
+
+            // 方法3: 从conversations列表中获取
+            const conversationId = window.currentConversationId || ChatApp?.currentConversationId;
+            if (ChatApp && ChatApp.conversations && conversationId) {
+                const conversation = ChatApp.conversations.find(c => c.id === conversationId);
+                console.log('找到的会话:', conversation);
+                if (conversation && conversation.participants) {
+                    const otherParticipant = conversation.participants.find(
+                        p => p.user.id !== window.currentUser.id
+                    );
+                    if (otherParticipant) {
+                        console.log('从conversations列表获取到ID:', otherParticipant.user.id);
+                        // 同时设置targetUser以便下次使用
+                        if (ChatApp) {
+                            ChatApp.targetUser = otherParticipant.user;
+                        }
+                        return otherParticipant.user.id;
+                    }
+                }
+            }
+
+            console.error('无法获取聊天对象ID');
+            console.error('调试信息:', {
+                ChatApp: !!ChatApp,
+                targetUser: ChatApp?.targetUser,
+                currentConversation: ChatApp?.currentConversation,
+                conversations: ChatApp?.conversations?.length,
+                conversationId: conversationId,
+                currentUser: window.currentUser
+            });
+            return null;
+        }
+
+        // 更新通话状态显示
+        function updateCallStatus(message) {
+            // 可以在聊天头部显示通话状态
+            const statusElement = document.getElementById('chatStatus');
+            if (statusElement) {
+                statusElement.textContent = message;
+                statusElement.className = 'text-info';
+            }
+        }
+
+        // 禁用通话按钮
+        function disableCallButtons() {
+            const videoBtn = document.getElementById('videoCallBtn');
+            const audioBtn = document.getElementById('audioCallBtn');
+
+            if (videoBtn) {
+                videoBtn.disabled = true;
+                videoBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+
+            if (audioBtn) {
+                audioBtn.disabled = true;
+                audioBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+        }
+
+        // 重置通话按钮
+        function resetCallButtons() {
+            const videoBtn = document.getElementById('videoCallBtn');
+            const audioBtn = document.getElementById('audioCallBtn');
+
+            if (videoBtn) {
+                videoBtn.disabled = false;
+                videoBtn.innerHTML = '<i class="fas fa-video"></i>';
+            }
+
+            if (audioBtn) {
+                audioBtn.disabled = false;
+                audioBtn.innerHTML = '<i class="fas fa-phone"></i>';
+            }
+
+            // 重置状态显示
+            const statusElement = document.getElementById('chatStatus');
+            if (statusElement) {
+                statusElement.textContent = '在线';
+                statusElement.className = 'text-muted';
+            }
+        }
+
+        // 调试WebRTC状态
+        function debugWebRTC() {
+            const targetUserId = getTargetUserId();
+            const debugInfo = {
+                'WebRTC管理器': !!webrtcManager,
+                'WebRTC管理器初始化': webrtcManager?.isInitialized,
+                'WebRTC客户端': !!webrtcClient,
+                'WebRTC专用WebSocket': webrtcStompClient?.connected,
+                '聊天WebSocket': stompClient?.connected,
+                '全局WebSocket': window.stompClient?.connected,
+                '当前用户': window.currentUser,
+                '当前会话ID': window.currentConversationId,
+                'ChatApp存在': !!ChatApp,
+                'ChatApp目标用户': ChatApp?.targetUser,
+                'ChatApp当前会话': ChatApp?.currentConversation,
+                'ChatApp会话列表长度': ChatApp?.conversations?.length,
+                '获取到的目标用户ID': targetUserId,
+                'GlobalCallPopup': !!window.globalCallPopup,
+                'WebRTCClient类': typeof WebRTCClient,
+                'ChatWebRTCManager类': typeof ChatWebRTCManager,
+                'SockJS': typeof SockJS,
+                'Stomp': typeof Stomp
+            };
+
+            console.log('=== WebRTC调试信息 ===');
+            console.table(debugInfo);
+
+            if (webrtcManager) {
+                console.log('WebRTC管理器详细状态:', webrtcManager.getStatus());
+
+                // 测试消息发送
+                if (webrtcManager.stompClient && window.currentUser) {
+                    console.log('测试发送保活消息...');
+                    webrtcManager.stompClient.send('/app/webrtc/keepalive', {}, JSON.stringify({
+                        userId: window.currentUser.id.toString()
+                    }));
+                }
+            }
+
+            // 额外的详细信息
+            console.log('=== 详细信息 ===');
+            console.log('window.currentUser:', window.currentUser);
+            console.log('ChatApp.targetUser:', ChatApp?.targetUser);
+            console.log('ChatApp.conversations:', ChatApp?.conversations);
+            console.log('webrtcClient:', webrtcClient);
+
+            // 测试WebSocket连接
+            testWebSocketConnection();
+
+            alert('调试信息已输出到控制台，请按F12查看');
+        }
+
+        // 测试WebSocket连接
+        function testWebSocketConnection() {
+            console.log('=== 测试WebSocket连接 ===');
+
+            if (webrtcStompClient && webrtcStompClient.connected) {
+                console.log('发送测试消息到WebRTC信令服务器...');
+
+                try {
+                    // 发送加入信令的消息
+                    webrtcStompClient.send('/app/webrtc/join', {}, JSON.stringify({
+                        userId: window.currentUser.id
+                    }));
+                    console.log('测试消息发送成功');
+                } catch (error) {
+                    console.error('发送测试消息失败:', error);
+                }
+            } else {
+                console.error('WebSocket未连接，无法发送测试消息');
+            }
+        }
+
+        // 通话界面相关函数
+        let callTimer = null;
+        let callStartTime = null;
+        let isMuted = false;
+        let isVideoOff = false;
+
+        // 显示通话界面
+        function showCallInterface(callType, callData, status = 'connecting') {
+            console.log('显示通话界面:', callType, callData, status);
+
+            const callInterface = document.getElementById('callInterface');
+            const callTitle = document.getElementById('callTitle');
+            const callStatus = document.getElementById('callStatus');
+
+            if (callInterface && callTitle && callStatus) {
+                callTitle.textContent = callType === 'video' ? '视频通话' : '语音通话';
+                callStatus.textContent = status === 'connecting' ? '连接中...' :
+                                       status === 'connected' ? '已连接' : '通话中';
+
+                callInterface.style.display = 'block';
+
+                // 如果是语音通话，隐藏视频元素
+                const remoteVideo = document.getElementById('remoteVideo');
+                const localVideo = document.getElementById('localVideo');
+                if (callType === 'audio') {
+                    if (remoteVideo) remoteVideo.style.display = 'none';
+                    if (localVideo) localVideo.style.display = 'none';
+                } else {
+                    if (remoteVideo) remoteVideo.style.display = 'block';
+                    if (localVideo) localVideo.style.display = 'block';
+                }
+
+                // 开始计时
+                if (status === 'connected') {
+                    startCallTimer();
+                }
+            }
+        }
+
+        // 隐藏通话界面
+        function hideCallInterface() {
+            console.log('隐藏通话界面');
+
+            const callInterface = document.getElementById('callInterface');
+            if (callInterface) {
+                callInterface.style.display = 'none';
+            }
+
+            // 停止计时
+            stopCallTimer();
+
+            // 重置状态
+            isMuted = false;
+            isVideoOff = false;
+            updateCallButtons();
+        }
+
+        // 开始通话计时
+        function startCallTimer() {
+            callStartTime = Date.now();
+            callTimer = setInterval(updateCallTimer, 1000);
+        }
+
+        // 停止通话计时
+        function stopCallTimer() {
+            if (callTimer) {
+                clearInterval(callTimer);
+                callTimer = null;
+            }
+            callStartTime = null;
+        }
+
+        // 更新通话计时显示
+        function updateCallTimer() {
+            if (!callStartTime) return;
+
+            const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+
+            const timerElement = document.getElementById('callTimer');
+            if (timerElement) {
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // 切换静音
+        function toggleMute() {
+            isMuted = !isMuted;
+            console.log('切换静音:', isMuted);
+
+            if (webrtcClient && webrtcClient.localStream) {
+                const audioTracks = webrtcClient.localStream.getAudioTracks();
+                audioTracks.forEach(track => {
+                    track.enabled = !isMuted;
+                });
+            }
+
+            updateCallButtons();
+        }
+
+        // 切换视频
+        function toggleVideo() {
+            isVideoOff = !isVideoOff;
+            console.log('切换视频:', isVideoOff);
+
+            if (webrtcClient && webrtcClient.localStream) {
+                const videoTracks = webrtcClient.localStream.getVideoTracks();
+                videoTracks.forEach(track => {
+                    track.enabled = !isVideoOff;
+                });
+            }
+
+            updateCallButtons();
+        }
+
+        // 结束通话
+        function endCall() {
+            console.log('结束通话');
+
+            if (webrtcClient) {
+                webrtcClient.endCall();
+            }
+
+            hideCallInterface();
+        }
+
+        // 显示通话状态
+        function showCallStatus(message, callType) {
+            console.log(`${callType}通话状态:`, message);
+
+            // 创建状态提示
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'call-status-popup position-fixed top-0 start-50 translate-middle-x mt-3';
+            statusDiv.style.zIndex = '9999';
+            statusDiv.innerHTML = `
+                <div class="alert alert-primary alert-dismissible">
+                    <i class="fas fa-${callType === 'video' ? 'video' : 'phone'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            document.body.appendChild(statusDiv);
+
+            // 5秒后自动移除
+            setTimeout(() => {
+                if (statusDiv && statusDiv.parentNode) {
+                    statusDiv.parentNode.removeChild(statusDiv);
+                }
+            }, 5000);
+        }
+
+        // 更新通话按钮状态
+        function updateCallButtons() {
+            const muteBtn = document.getElementById('muteBtn');
+            const videoBtn = document.getElementById('videoBtn');
+
+            if (muteBtn) {
+                const icon = muteBtn.querySelector('i');
+                if (isMuted) {
+                    muteBtn.classList.add('muted');
+                    icon.className = 'fas fa-microphone-slash';
+                } else {
+                    muteBtn.classList.remove('muted');
+                    icon.className = 'fas fa-microphone';
+                }
+            }
+
+            if (videoBtn) {
+                const icon = videoBtn.querySelector('i');
+                if (isVideoOff) {
+                    videoBtn.classList.add('muted');
+                    icon.className = 'fas fa-video-slash';
+                } else {
+                    videoBtn.classList.remove('muted');
+                    icon.className = 'fas fa-video';
+                }
+            }
+        }
+
+        // 初始化WebRTC管理器
+        async function initWebRTCManager() {
+            try {
+                console.log('开始初始化WebRTC管理器...');
+
+                // 检查必要的类是否存在
+                if (typeof ChatWebRTCManager === 'undefined') {
+                    console.error('ChatWebRTCManager类未定义，请检查chat-webrtc-manager.js是否正确加载');
+                    return;
+                }
+
+                // 创建WebRTC管理器实例
+                if (!window.chatWebRTCManager) {
+                    window.chatWebRTCManager = new ChatWebRTCManager();
+                    console.log('WebRTC管理器实例已创建');
+                }
+
+                // 初始化管理器
+                await window.chatWebRTCManager.initialize();
+                console.log('✅ WebRTC管理器初始化成功');
+
+            } catch (error) {
+                console.error('❌ WebRTC管理器初始化失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

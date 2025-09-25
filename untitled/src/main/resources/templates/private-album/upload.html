@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上传照片 - 私密相册</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .upload-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .upload-area {
+            border: 3px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e7f3ff;
+            transform: scale(1.02);
+        }
+        .upload-icon {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        .file-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .preview-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .preview-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .preview-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .preview-remove:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+        .btn-upload {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .progress {
+            height: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 上传页面头部 -->
+    <div class="upload-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2">
+                        <i class="fas fa-cloud-upload-alt me-3"></i>
+                        上传照片到：<span th:text="${album.albumName}">相册名称</span>
+                    </h1>
+                    <p class="mb-0 opacity-75">支持 JPG、PNG、GIF 格式，单次最多上传 10 张照片</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a th:href="@{'/private-album/' + ${album.id}}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>返回相册
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传表单 -->
+    <div class="container mt-4">
+        <!-- 错误提示 -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}">上传失败</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <form th:action="@{'/private-album/' + ${album.id} + '/upload'}" 
+              method="post" 
+              enctype="multipart/form-data" 
+              id="uploadForm">
+            
+            <!-- 文件选择区域 -->
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoFiles').click()">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h4>点击选择照片或拖拽到此处</h4>
+                <p class="text-muted mb-0">支持 JPG、PNG、GIF 格式，单个文件最大 10MB</p>
+                
+                <input type="file" 
+                       id="photoFiles" 
+                       name="photoFiles" 
+                       multiple 
+                       accept="image/*" 
+                       style="display: none;"
+                       onchange="handleFileSelect(this.files)">
+            </div>
+
+            <!-- 文件预览区域 -->
+            <div id="filePreview" class="file-preview"></div>
+
+            <!-- 上传进度 -->
+            <div class="progress" id="uploadProgress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: 0%"></div>
+            </div>
+
+            <!-- 描述输入 -->
+            <div class="mt-4">
+                <label for="description" class="form-label">
+                    <i class="fas fa-comment me-2"></i>照片描述（可选）
+                </label>
+                <textarea class="form-control" 
+                          id="description" 
+                          name="description" 
+                          rows="3" 
+                          placeholder="为这批照片添加一些描述..."></textarea>
+            </div>
+
+            <!-- 上传按钮 -->
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-upload" id="uploadBtn" disabled>
+                    <i class="fas fa-upload me-2"></i>开始上传
+                </button>
+                <button type="button" class="btn btn-outline-secondary ms-2" onclick="clearFiles()">
+                    <i class="fas fa-times me-2"></i>清空选择
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedFiles = [];
+
+        // 处理文件选择
+        function handleFileSelect(files) {
+            selectedFiles = Array.from(files);
+            updatePreview();
+            updateUploadButton();
+        }
+
+        // 更新预览
+        function updatePreview() {
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" alt="${file.name}" class="preview-img">
+                            <button type="button" class="preview-remove" onclick="removeFile(${index})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        `;
+                        preview.appendChild(previewItem);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // 移除文件
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileInput();
+            updatePreview();
+            updateUploadButton();
+        }
+
+        // 清空文件
+        function clearFiles() {
+            selectedFiles = [];
+            document.getElementById('photoFiles').value = '';
+            updatePreview();
+            updateUploadButton();
+        }
+
+        // 更新文件输入
+        function updateFileInput() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            document.getElementById('photoFiles').files = dt.files;
+        }
+
+        // 更新上传按钮状态
+        function updateUploadButton() {
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = selectedFiles.length === 0;
+        }
+
+        // 拖拽功能
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            handleFileSelect(files);
+            
+            // 更新文件输入
+            document.getElementById('photoFiles').files = files;
+        });
+
+        // 表单提交处理
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            if (selectedFiles.length === 0) {
+                e.preventDefault();
+                alert('请选择要上传的照片');
+                return;
+            }
+
+            // 显示进度条
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>上传中...';
+        });
+    </script>
+</body>
+</html>

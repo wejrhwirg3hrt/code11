@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布动态 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .publish-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .image-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .image-preview-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .image-preview img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        .image-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 12px;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+        }
+        .upload-area.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">视频网站</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首页</a>
+                <a class="nav-link" href="/posts">动态</a>
+                <a class="nav-link" href="/music">音乐</a>
+                <a class="nav-link" href="/profile">个人资料</a>
+                <a class="nav-link" href="/logout">退出登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="publish-container">
+            <div class="d-flex align-items-center mb-4">
+                <a href="/posts" class="btn btn-outline-secondary me-3">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </a>
+                <h2 class="mb-0">发布动态</h2>
+            </div>
+
+            <!-- 成功/错误消息 -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                <span th:text="${success}">成功消息</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                <span th:text="${error}">错误消息</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <form action="/posts/publish" method="post" enctype="multipart/form-data">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- 内容输入 -->
+                        <div class="mb-3">
+                            <label for="content" class="form-label">分享你的想法</label>
+                            <textarea class="form-control" id="content" name="content" rows="4" 
+                                    placeholder="写下你想分享的内容..." required></textarea>
+                        </div>
+
+                        <!-- 图片上传 -->
+                        <div class="mb-3">
+                            <label class="form-label">添加图片</label>
+                            <div class="upload-area" onclick="document.getElementById('images').click()">
+                                <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-0">点击或拖拽图片到这里</p>
+                                <small class="text-muted">支持 JPG、PNG、GIF 格式</small>
+                            </div>
+                            <input type="file" id="images" name="images" multiple accept="image/*" style="display: none;">
+                            <div id="imagePreview" class="image-preview"></div>
+                        </div>
+
+                        <!-- 位置 -->
+                        <div class="mb-3">
+                            <label for="location" class="form-label">
+                                <i class="fas fa-map-marker-alt"></i> 位置 (可选)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="location" name="location"
+                                       placeholder="你在哪里？">
+                                <button type="button" class="btn btn-outline-primary" id="getLocationBtn">
+                                    <i class="fas fa-crosshairs"></i> 获取当前位置
+                                </button>
+                            </div>
+                            <small class="text-muted">点击按钮获取当前地理位置，或手动输入位置信息</small>
+
+                            <!-- 位置选择器 -->
+                            <div id="locationSelector" class="mt-2" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">选择显示级别：</label>
+                                        <select class="form-select form-select-sm" id="locationLevel">
+                                            <option value="full">完整地址</option>
+                                            <option value="city">城市级别</option>
+                                            <option value="district">区县级别</option>
+                                            <option value="street">街道级别</option>
+                                            <option value="custom">自定义</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">快速选择：</label>
+                                        <div class="btn-group-vertical w-100" role="group">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="useFullAddress">使用完整地址</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="useCityOnly">仅显示城市</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 心情 -->
+                        <div class="mb-3">
+                            <label for="mood" class="form-label">
+                                <i class="fas fa-smile"></i> 心情 (可选)
+                            </label>
+                            <select class="form-select" id="mood" name="mood">
+                                <option value="">选择心情</option>
+                                <option value="开心">😊 开心</option>
+                                <option value="兴奋">😆 兴奋</option>
+                                <option value="平静">😌 平静</option>
+                                <option value="思考">🤔 思考</option>
+                                <option value="感动">🥺 感动</option>
+                                <option value="惊讶">😲 惊讶</option>
+                                <option value="疲惫">😴 疲惫</option>
+                                <option value="愤怒">😠 愤怒</option>
+                                <option value="悲伤">😢 悲伤</option>
+                            </select>
+                        </div>
+
+                        <!-- 隐私设置 -->
+                        <div class="mb-3">
+                            <label class="form-label">隐私设置</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="isPublic" id="public" value="true" checked>
+                                <label class="form-check-label" for="public">
+                                    <i class="fas fa-globe"></i> 公开 - 所有人可见
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="isPublic" id="private" value="false">
+                                <label class="form-check-label" for="private">
+                                    <i class="fas fa-lock"></i> 私密 - 仅关注者可见
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="history.back()">取消</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> 发布动态
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const imageInput = document.getElementById('images');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadArea = document.querySelector('.upload-area');
+        let selectedFiles = [];
+
+        // 文件选择处理
+        imageInput.addEventListener('change', handleFileSelect);
+
+        // 拖拽上传
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            handleFiles(files);
+        });
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            selectedFiles = [...selectedFiles, ...files];
+            updateImagePreview();
+            updateFileInput();
+        }
+
+        function updateImagePreview() {
+            imagePreview.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const div = document.createElement('div');
+                    div.className = 'image-preview-item';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" alt="预览图片">
+                        <button type="button" class="image-remove" onclick="removeImage(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    imagePreview.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeImage(index) {
+            selectedFiles.splice(index, 1);
+            updateImagePreview();
+            updateFileInput();
+        }
+
+        function updateFileInput() {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            imageInput.files = dt.files;
+        }
+
+        // 地理定位功能
+        document.getElementById('getLocationBtn').addEventListener('click', function() {
+            const btn = this;
+            const locationInput = document.getElementById('location');
+
+            // 检查浏览器是否支持地理定位
+            if (!navigator.geolocation) {
+                alert('您的浏览器不支持地理定位功能');
+                return;
+            }
+
+            // 显示加载状态
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 定位中...';
+
+            // 获取当前位置
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    // 使用逆地理编码获取地址信息
+                    reverseGeocode(lat, lng, function(address) {
+                        locationInput.value = address;
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-crosshairs"></i> 获取当前位置';
+                    });
+                },
+                function(error) {
+                    let errorMsg = '定位失败';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = '用户拒绝了地理定位请求';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = '位置信息不可用';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = '定位请求超时';
+                            break;
+                    }
+                    alert(errorMsg);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-crosshairs"></i> 获取当前位置';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        });
+
+        // 逆地理编码函数
+        function reverseGeocode(lat, lng, callback) {
+            fetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 显示详细的地址信息
+                        displayLocationDetails(data);
+                        callback(data.address);
+                    } else {
+                        callback(`纬度: ${lat.toFixed(6)}, 经度: ${lng.toFixed(6)}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('逆地理编码失败:', error);
+                    callback(`纬度: ${lat.toFixed(6)}, 经度: ${lng.toFixed(6)}`);
+                });
+        }
+
+        // 全局变量存储当前位置数据
+        let currentLocationData = null;
+
+        // 显示详细的位置信息
+        function displayLocationDetails(data) {
+            currentLocationData = data;
+            const components = data.addressComponents;
+
+            if (components) {
+                // 显示位置选择器
+                document.getElementById('locationSelector').style.display = 'block';
+
+                let detailsHtml = '<div class="location-details mt-2 p-2 bg-light rounded"><small>';
+                detailsHtml += '<strong>检测到的位置信息：</strong><br>';
+                if (components.country) detailsHtml += `🌍 国家: ${components.country}<br>`;
+                if (components.province) detailsHtml += `🏛️ 省份: ${components.province}<br>`;
+                if (components.city) detailsHtml += `🏙️ 城市: ${components.city}<br>`;
+                if (components.district) detailsHtml += `🏘️ 区县: ${components.district}<br>`;
+                if (components.street) detailsHtml += `🛣️ 街道: ${components.street}<br>`;
+                detailsHtml += `📍 坐标: ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`;
+                detailsHtml += '</small></div>';
+
+                // 移除之前的详细信息
+                const existingDetails = document.querySelector('.location-details');
+                if (existingDetails) {
+                    existingDetails.remove();
+                }
+
+                // 添加新的详细信息
+                const locationGroup = document.querySelector('.mb-3:has(#location)');
+                locationGroup.insertAdjacentHTML('beforeend', detailsHtml);
+            }
+        }
+
+        // 位置级别选择处理
+        document.getElementById('locationLevel').addEventListener('change', function() {
+            if (!currentLocationData) return;
+
+            const level = this.value;
+            const components = currentLocationData.addressComponents;
+            const locationInput = document.getElementById('location');
+
+            let address = '';
+            switch(level) {
+                case 'full':
+                    address = currentLocationData.address;
+                    break;
+                case 'city':
+                    address = `${components.province || ''} ${components.city || ''}`.trim();
+                    break;
+                case 'district':
+                    address = `${components.city || ''} ${components.district || ''}`.trim();
+                    break;
+                case 'street':
+                    address = `${components.district || ''} ${components.street || ''}`.trim();
+                    break;
+                case 'custom':
+                    // 保持当前输入框的值
+                    return;
+            }
+
+            if (address) {
+                locationInput.value = address;
+            }
+        });
+
+        // 快速选择按钮
+        document.getElementById('useFullAddress').addEventListener('click', function() {
+            if (currentLocationData) {
+                document.getElementById('location').value = currentLocationData.address;
+                document.getElementById('locationLevel').value = 'full';
+            }
+        });
+
+        document.getElementById('useCityOnly').addEventListener('click', function() {
+            if (currentLocationData) {
+                const components = currentLocationData.addressComponents;
+                const cityAddress = `${components.province || ''} ${components.city || ''}`.trim();
+                document.getElementById('location').value = cityAddress;
+                document.getElementById('locationLevel').value = 'city';
+            }
+        });
+
+        // 表单验证
+        document.querySelector('form').addEventListener('submit', (e) => {
+            const content = document.getElementById('content').value.trim();
+            if (!content) {
+                e.preventDefault();
+                alert('请输入动态内容');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

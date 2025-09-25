@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>群聊管理 - 超级管理员</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .admin-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            padding: 30px;
+        }
+
+        .stats-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .search-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .report-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .report-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-resolved {
+            background: #d1edff;
+            color: #0c5460;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .group-info {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/super-admin/dashboard">
+                <i class="fas fa-shield-alt me-2"></i>超级管理员
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/super-admin/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>仪表板
+                </a>
+                <a class="nav-link" href="/">
+                    <i class="fas fa-home me-1"></i>返回首页
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-container">
+            <h1 class="mb-4">
+                <i class="fas fa-users me-2"></i>群聊管理
+            </h1>
+
+            <!-- 统计信息 -->
+            <div class="row mb-4" th:if="${reportStats}">
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number" th:text="${reportStats.totalReports}">0</div>
+                        <div>总举报数</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number" th:text="${reportStats.pendingReports}">0</div>
+                        <div>待处理举报</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number" th:text="${reportStats.resolvedReports}">0</div>
+                        <div>已解决举报</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card">
+                        <div class="stats-number" th:text="${reportStats.rejectedReports}">0</div>
+                        <div>已拒绝举报</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 群聊搜索 -->
+            <div class="search-section">
+                <h5><i class="fas fa-search me-2"></i>群聊搜索</h5>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="groupNumberInput" 
+                                   placeholder="输入10位群号进行搜索">
+                            <button class="btn btn-primary" type="button" onclick="searchGroup()">
+                                <i class="fas fa-search me-2"></i>搜索群聊
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 搜索结果 -->
+                <div id="searchResults" class="mt-3" style="display: none;">
+                    <!-- 搜索结果将在这里显示 -->
+                </div>
+            </div>
+
+            <!-- 待处理举报 -->
+            <div class="mb-4">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>待处理举报</h5>
+                <div id="pendingReports">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <nav aria-label="举报分页" id="reportPagination" style="display: none;">
+                <ul class="pagination justify-content-center">
+                    <!-- 分页将在这里动态生成 -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 处理举报模态框 -->
+    <div class="modal fade" id="handleReportModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">处理举报</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reportDetails">
+                        <!-- 举报详情将在这里显示 -->
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="adminResponse" class="form-label">处理回复</label>
+                        <textarea class="form-control" id="adminResponse" rows="3" 
+                                  placeholder="请输入处理结果和回复..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reportStatus" class="form-label">处理状态</label>
+                        <select class="form-select" id="reportStatus">
+                            <option value="RESOLVED">已解决</option>
+                            <option value="REJECTED">已拒绝</option>
+                            <option value="REVIEWING">审核中</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="submitReportHandle()">提交处理</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 群聊操作模态框 -->
+    <div class="modal fade" id="groupActionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="groupActionTitle">群聊操作</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="groupActionDetails">
+                        <!-- 群聊信息将在这里显示 -->
+                    </div>
+                    <div class="mb-3" id="reasonSection">
+                        <label for="actionReason" class="form-label">操作原因</label>
+                        <textarea class="form-control" id="actionReason" rows="3" 
+                                  placeholder="请输入操作原因..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmActionBtn" onclick="confirmGroupAction()">确认操作</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentReportId = null;
+        let currentGroupId = null;
+        let currentAction = null;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPendingReports();
+        });
+
+        // 搜索群聊
+        function searchGroup() {
+            const groupNumber = document.getElementById('groupNumberInput').value.trim();
+            
+            if (!groupNumber) {
+                alert('请输入群号');
+                return;
+            }
+
+            fetch(`/api/group-reports/search-group?groupNumber=${encodeURIComponent(groupNumber)}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('searchResults');
+                
+                if (data.success) {
+                    displayGroupSearchResult(data.group);
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert alert-warning">${data.message}</div>`;
+                    resultsDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('搜索群聊失败:', error);
+                alert('搜索失败，请稍后重试');
+            });
+        }
+
+        // 显示群聊搜索结果
+        function displayGroupSearchResult(group) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            const statusClass = group.status === 'ACTIVE' ? 'success' : 
+                               group.status === 'SUSPENDED' ? 'warning' : 'danger';
+            
+            resultsDiv.innerHTML = `
+                <div class="group-info">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6><strong>${group.groupName}</strong></h6>
+                            <p class="mb-1">群号: ${group.groupNumber}</p>
+                            <p class="mb-1">群主: ${group.ownerName}</p>
+                            <p class="mb-1">创建时间: ${new Date(group.createdAt).toLocaleString()}</p>
+                            <p class="mb-1">举报次数: <span class="badge bg-warning">${group.reportCount}</span></p>
+                            <p class="mb-0">状态: <span class="badge bg-${statusClass}">${group.status}</span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-buttons">
+                                ${group.status === 'ACTIVE' ? 
+                                    `<button class="btn btn-warning btn-action" onclick="showGroupAction(${group.id}, 'suspend', '${group.groupName}')">
+                                        <i class="fas fa-pause me-1"></i>暂停
+                                    </button>
+                                    <button class="btn btn-danger btn-action" onclick="showGroupAction(${group.id}, 'ban', '${group.groupName}')">
+                                        <i class="fas fa-ban me-1"></i>封禁
+                                    </button>` : 
+                                    `<button class="btn btn-success btn-action" onclick="showGroupAction(${group.id}, 'restore', '${group.groupName}')">
+                                        <i class="fas fa-play me-1"></i>恢复
+                                    </button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${group.reports && group.reports.length > 0 ? `
+                        <hr>
+                        <h6>举报记录:</h6>
+                        <div class="row">
+                            ${group.reports.slice(0, 3).map(report => `
+                                <div class="col-md-4 mb-2">
+                                    <div class="card card-sm">
+                                        <div class="card-body p-2">
+                                            <small class="text-muted">${report.reportType}</small>
+                                            <p class="mb-1 small">${report.reason}</p>
+                                            <span class="status-badge status-${report.status.toLowerCase()}">${report.status}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // 加载待处理举报
+        function loadPendingReports(page = 0) {
+            fetch(`/api/group-reports/pending?page=${page}&size=10`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayPendingReports(data.reports);
+                    updatePagination(data.currentPage, data.totalPages);
+                } else {
+                    document.getElementById('pendingReports').innerHTML = 
+                        `<div class="alert alert-warning">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('加载待处理举报失败:', error);
+                document.getElementById('pendingReports').innerHTML = 
+                    '<div class="alert alert-danger">加载失败，请稍后重试</div>';
+            });
+        }
+
+        // 显示待处理举报
+        function displayPendingReports(reports) {
+            const container = document.getElementById('pendingReports');
+            
+            if (reports.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">暂无待处理举报</div>';
+                return;
+            }
+
+            container.innerHTML = reports.map(report => `
+                <div class="report-item">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6><strong>${report.groupChat.groupName}</strong> (${report.groupChat.groupNumber})</h6>
+                            <p class="mb-1"><strong>举报类型:</strong> ${report.reportType}</p>
+                            <p class="mb-1"><strong>举报原因:</strong> ${report.reason}</p>
+                            <p class="mb-1"><strong>举报人:</strong> ${report.reporter.username}</p>
+                            <p class="mb-0"><strong>举报时间:</strong> ${new Date(report.createdAt).toLocaleString()}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="status-badge status-${report.status.toLowerCase()}">${report.status}</span>
+                            <div class="mt-2">
+                                <button class="btn btn-primary btn-sm" onclick="showHandleReport(${report.id})">
+                                    <i class="fas fa-gavel me-1"></i>处理举报
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 显示处理举报模态框
+        function showHandleReport(reportId) {
+            currentReportId = reportId;
+            const modal = new bootstrap.Modal(document.getElementById('handleReportModal'));
+            modal.show();
+        }
+
+        // 提交举报处理
+        function submitReportHandle() {
+            if (!currentReportId) return;
+
+            const response = document.getElementById('adminResponse').value.trim();
+            const status = document.getElementById('reportStatus').value;
+
+            if (!response) {
+                alert('请输入处理回复');
+                return;
+            }
+
+            fetch(`/api/group-reports/${currentReportId}/handle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    response: response,
+                    status: status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('举报处理成功');
+                    bootstrap.Modal.getInstance(document.getElementById('handleReportModal')).hide();
+                    loadPendingReports();
+                    
+                    // 清空表单
+                    document.getElementById('adminResponse').value = '';
+                    document.getElementById('reportStatus').value = 'RESOLVED';
+                } else {
+                    alert('处理失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('处理举报失败:', error);
+                alert('处理失败，请稍后重试');
+            });
+        }
+
+        // 显示群聊操作模态框
+        function showGroupAction(groupId, action, groupName) {
+            currentGroupId = groupId;
+            currentAction = action;
+
+            const modal = new bootstrap.Modal(document.getElementById('groupActionModal'));
+            const title = document.getElementById('groupActionTitle');
+            const details = document.getElementById('groupActionDetails');
+            const confirmBtn = document.getElementById('confirmActionBtn');
+            const reasonSection = document.getElementById('reasonSection');
+
+            let actionText = '';
+            let btnClass = 'btn-danger';
+            
+            switch (action) {
+                case 'ban':
+                    actionText = '封禁';
+                    btnClass = 'btn-danger';
+                    break;
+                case 'suspend':
+                    actionText = '暂停';
+                    btnClass = 'btn-warning';
+                    break;
+                case 'restore':
+                    actionText = '恢复';
+                    btnClass = 'btn-success';
+                    reasonSection.style.display = 'none';
+                    break;
+            }
+
+            title.textContent = `${actionText}群聊`;
+            details.innerHTML = `<p>确定要${actionText}群聊 <strong>${groupName}</strong> 吗？</p>`;
+            confirmBtn.className = `btn ${btnClass}`;
+            confirmBtn.textContent = `确认${actionText}`;
+
+            modal.show();
+        }
+
+        // 确认群聊操作
+        function confirmGroupAction() {
+            if (!currentGroupId || !currentAction) return;
+
+            const reason = document.getElementById('actionReason').value.trim();
+            
+            if (currentAction !== 'restore' && !reason) {
+                alert('请输入操作原因');
+                return;
+            }
+
+            fetch('/api/group-reports/group-action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    groupId: currentGroupId,
+                    action: currentAction,
+                    reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('groupActionModal')).hide();
+                    
+                    // 清空表单
+                    document.getElementById('actionReason').value = '';
+                    
+                    // 如果当前有搜索结果，重新搜索以更新状态
+                    const groupNumber = document.getElementById('groupNumberInput').value.trim();
+                    if (groupNumber) {
+                        searchGroup();
+                    }
+                } else {
+                    alert('操作失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('群聊操作失败:', error);
+                alert('操作失败，请稍后重试');
+            });
+        }
+
+        // 更新分页
+        function updatePagination(currentPage, totalPages) {
+            const pagination = document.getElementById('reportPagination');
+            
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'block';
+            const ul = pagination.querySelector('ul');
+            ul.innerHTML = '';
+
+            // 上一页
+            if (currentPage > 0) {
+                ul.innerHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="loadPendingReports(${currentPage - 1})">上一页</a>
+                    </li>
+                `;
+            }
+
+            // 页码
+            for (let i = 0; i < totalPages; i++) {
+                ul.innerHTML += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadPendingReports(${i})">${i + 1}</a>
+                    </li>
+                `;
+            }
+
+            // 下一页
+            if (currentPage < totalPages - 1) {
+                ul.innerHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="loadPendingReports(${currentPage + 1})">下一页</a>
+                    </li>
+                `;
+            }
+        }
+
+        // 监听回车键搜索
+        document.getElementById('groupNumberInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchGroup();
+            }
+        });
+    </script>
+</body>
+</html>

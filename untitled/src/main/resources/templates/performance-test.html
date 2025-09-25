@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性能测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-10 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-tachometer-alt me-2"></i>页面性能测试</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>页面加载测试</h5>
+                                <div class="mb-3">
+                                    <button class="btn btn-primary me-2" onclick="testPageLoad('/stats')">
+                                        <i class="fas fa-chart-bar me-1"></i>测试统计页面
+                                    </button>
+                                    <button class="btn btn-success me-2" onclick="testPageLoad('/achievements')">
+                                        <i class="fas fa-trophy me-1"></i>测试成就页面
+                                    </button>
+                                    <button class="btn btn-info me-2" onclick="testPageLoad('/profile')">
+                                        <i class="fas fa-user me-1"></i>测试个人资料
+                                    </button>
+                                </div>
+                                
+                                <h5>API响应测试</h5>
+                                <div class="mb-3">
+                                    <button class="btn btn-warning me-2" onclick="testAPI('/api/statistics/overview')">
+                                        <i class="fas fa-chart-line me-1"></i>统计API
+                                    </button>
+                                    <button class="btn btn-secondary me-2" onclick="testAPI('/api/user-activity/level')">
+                                        <i class="fas fa-level-up-alt me-1"></i>等级API
+                                    </button>
+                                    <button class="btn btn-dark me-2" onclick="testAPI('/api/achievements/current-user')">
+                                        <i class="fas fa-medal me-1"></i>成就API
+                                    </button>
+                                </div>
+                                
+                                <h5>批量测试</h5>
+                                <div class="mb-3">
+                                    <button class="btn btn-danger me-2" onclick="runBatchTest()">
+                                        <i class="fas fa-rocket me-1"></i>运行批量测试
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="clearResults()">
+                                        <i class="fas fa-trash me-1"></i>清空结果
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>测试结果</h5>
+                                <div id="testResults" class="border p-3" style="min-height: 400px; background-color: #f8f9fa; font-family: monospace; font-size: 12px; overflow-y: auto;">
+                                    点击左侧按钮开始性能测试...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h5>性能统计</h5>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h6 class="card-title">平均响应时间</h6>
+                                                <h4 id="avgResponseTime" class="text-primary">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h6 class="card-title">最快响应</h6>
+                                                <h4 id="fastestResponse" class="text-success">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h6 class="card-title">最慢响应</h6>
+                                                <h4 id="slowestResponse" class="text-warning">-</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card text-center">
+                                            <div class="card-body">
+                                                <h6 class="card-title">测试次数</h6>
+                                                <h4 id="testCount" class="text-info">0</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h5>快速导航</h5>
+                                <a href="/stats" class="btn btn-outline-primary me-2" target="_blank">
+                                    <i class="fas fa-chart-bar me-1"></i>统计页面
+                                </a>
+                                <a href="/achievements" class="btn btn-outline-warning me-2" target="_blank">
+                                    <i class="fas fa-trophy me-1"></i>成就页面
+                                </a>
+                                <a href="/achievement-test" class="btn btn-outline-info me-2" target="_blank">
+                                    <i class="fas fa-vial me-1"></i>成就测试
+                                </a>
+                                <a href="/profile" class="btn btn-outline-success me-2" target="_blank">
+                                    <i class="fas fa-user me-1"></i>个人资料
+                                </a>
+                                <a href="/" class="btn btn-outline-secondary" target="_blank">
+                                    <i class="fas fa-home me-1"></i>首页
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let testResults = [];
+        
+        function logResult(message, type = 'info', duration = null) {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'success' ? 'text-success' : 
+                              type === 'error' ? 'text-danger' : 
+                              type === 'warning' ? 'text-warning' : 'text-info';
+            
+            const durationText = duration ? ` (${duration}ms)` : '';
+            
+            resultsDiv.innerHTML += `
+                <div class="${colorClass}">
+                    <small>[${timestamp}]</small> ${message}${durationText}
+                </div>
+            `;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            
+            if (duration) {
+                testResults.push(duration);
+                updateStats();
+            }
+        }
+
+        async function testPageLoad(url) {
+            logResult(`🔄 开始测试页面: ${url}`, 'info');
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+                
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                if (response.ok) {
+                    logResult(`✅ 页面加载成功: ${url}`, 'success', duration);
+                } else {
+                    logResult(`❌ 页面加载失败: ${url} (${response.status})`, 'error', duration);
+                }
+                
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                logResult(`❌ 页面加载错误: ${url} - ${error.message}`, 'error', duration);
+            }
+        }
+
+        async function testAPI(url) {
+            logResult(`🔄 开始测试API: ${url}`, 'info');
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    logResult(`✅ API响应成功: ${url}`, 'success', duration);
+                } else {
+                    logResult(`❌ API响应失败: ${url} (${response.status})`, 'error', duration);
+                }
+                
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                logResult(`❌ API请求错误: ${url} - ${error.message}`, 'error', duration);
+            }
+        }
+
+        async function runBatchTest() {
+            logResult('🚀 开始批量性能测试...', 'warning');
+            
+            const tests = [
+                { type: 'page', url: '/stats' },
+                { type: 'page', url: '/achievements' },
+                { type: 'page', url: '/profile' },
+                { type: 'api', url: '/api/statistics/overview' },
+                { type: 'api', url: '/api/user-activity/level' },
+                { type: 'api', url: '/api/achievements/current-user' }
+            ];
+            
+            for (let i = 0; i < tests.length; i++) {
+                const test = tests[i];
+                logResult(`📊 批量测试 ${i + 1}/${tests.length}: ${test.url}`, 'info');
+                
+                if (test.type === 'page') {
+                    await testPageLoad(test.url);
+                } else {
+                    await testAPI(test.url);
+                }
+                
+                // 短暂延迟避免过快请求
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            logResult('🎉 批量测试完成！', 'success');
+        }
+
+        function updateStats() {
+            if (testResults.length === 0) return;
+            
+            const avg = Math.round(testResults.reduce((a, b) => a + b, 0) / testResults.length);
+            const fastest = Math.min(...testResults);
+            const slowest = Math.max(...testResults);
+            
+            document.getElementById('avgResponseTime').textContent = avg + 'ms';
+            document.getElementById('fastestResponse').textContent = fastest + 'ms';
+            document.getElementById('slowestResponse').textContent = slowest + 'ms';
+            document.getElementById('testCount').textContent = testResults.length;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '测试结果已清空，点击按钮开始新的测试...';
+            testResults = [];
+            updateStats();
+            
+            document.getElementById('avgResponseTime').textContent = '-';
+            document.getElementById('fastestResponse').textContent = '-';
+            document.getElementById('slowestResponse').textContent = '-';
+            document.getElementById('testCount').textContent = '0';
+        }
+
+        // 页面加载时显示欢迎信息
+        document.addEventListener('DOMContentLoaded', function() {
+            logResult('🎯 性能测试工具已加载', 'success');
+            logResult('💡 提示：优化后的统计页面应该加载更快', 'info');
+        });
+    </script>
+</body>
+</html>

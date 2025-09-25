@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>其他用户个人主页演示 - 视频网站</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .demo-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        .demo-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .demo-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .user-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 1rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s;
+        }
+
+        .user-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+
+        .user-card:hover::before {
+            left: 100%;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 4px solid #667eea;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #667eea;
+            margin: 0 auto 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .user-card:hover .user-avatar {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 1.5rem 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .btn-demo {
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            border: none;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-demo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-demo:hover::before {
+            left: 100%;
+        }
+
+        .btn-follow {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .btn-follow:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(79, 172, 254, 0.5);
+            color: white;
+        }
+
+        .btn-message {
+            background: var(--warning-gradient);
+            color: white;
+        }
+
+        .btn-message:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(250, 112, 154, 0.5);
+            color: white;
+        }
+
+        .btn-view {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-view:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5);
+            color: white;
+        }
+
+        .feature-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .feature-1 { background: var(--primary-gradient); }
+        .feature-2 { background: var(--secondary-gradient); }
+        .feature-3 { background: var(--success-gradient); }
+        .feature-4 { background: var(--warning-gradient); }
+
+        .floating-card {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .hover-effect-demo {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem 0;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .hover-effect-demo:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .demo-navigation {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .demo-navigation a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+        }
+
+        .demo-navigation a:hover {
+            background: var(--primary-gradient);
+            color: white;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- 演示头部 -->
+    <section class="demo-header">
+        <div class="container">
+            <h1><i class="fas fa-users me-3"></i>其他用户个人主页演示</h1>
+            <p>体验精美的悬浮效果和交互体验</p>
+        </div>
+    </section>
+
+    <div class="container mt-4">
+        <!-- 导航说明 -->
+        <div class="demo-navigation">
+            <h5><i class="fas fa-info-circle me-2"></i>如何访问其他用户主页：</h5>
+            <p class="mb-2">在真实应用中，您可以通过以下方式访问其他用户的个人主页：</p>
+            <a href="/user/1" target="_blank"><i class="fas fa-external-link-alt me-1"></i>访问用户ID为1的主页</a>
+            <a href="/user/profile/2" target="_blank"><i class="fas fa-external-link-alt me-1"></i>访问用户ID为2的主页</a>
+            <a href="/user/3" target="_blank"><i class="fas fa-external-link-alt me-1"></i>访问用户ID为3的主页</a>
+        </div>
+
+        <!-- 用户卡片演示 -->
+        <div class="row">
+            <div class="col-lg-4 col-md-6">
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h4 class="text-center mb-2">张三</h4>
+                    <p class="text-center text-muted mb-3">热爱分享生活点滴的创作者</p>
+                    
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">15</span>
+                            <span class="stat-label">视频</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">2.3k</span>
+                            <span class="stat-label">观看</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">156</span>
+                            <span class="stat-label">点赞</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-demo btn-follow">
+                            <i class="fas fa-user-plus"></i>关注
+                        </button>
+                        <button class="btn-demo btn-message">
+                            <i class="fas fa-comment"></i>私信
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <h4 class="text-center mb-2">李四</h4>
+                    <p class="text-center text-muted mb-3">专业的技术分享者</p>
+                    
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">28</span>
+                            <span class="stat-label">视频</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">5.7k</span>
+                            <span class="stat-label">观看</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">342</span>
+                            <span class="stat-label">点赞</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-demo btn-follow">
+                            <i class="fas fa-user-check"></i>已关注
+                        </button>
+                        <button class="btn-demo btn-message">
+                            <i class="fas fa-comment"></i>私信
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h4 class="text-center mb-2">王五</h4>
+                    <p class="text-center text-muted mb-3">美食博主，分享美味生活</p>
+                    
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">42</span>
+                            <span class="stat-label">视频</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">12.8k</span>
+                            <span class="stat-label">观看</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">892</span>
+                            <span class="stat-label">点赞</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-demo btn-follow">
+                            <i class="fas fa-heart"></i>互相关注
+                        </button>
+                        <button class="btn-demo btn-message">
+                            <i class="fas fa-comment"></i>私信
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能特性展示 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <h3 class="text-center mb-4"><i class="fas fa-star me-2"></i>个人主页功能特性</h3>
+            </div>
+            
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-section text-center">
+                    <div class="feature-icon feature-1">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5>用户信息展示</h5>
+                    <p class="text-muted">显示用户头像、昵称、个人简介和注册时间</p>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-section text-center">
+                    <div class="feature-icon feature-2">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h5>统计数据</h5>
+                    <p class="text-muted">展示视频数量、观看量、点赞数等统计信息</p>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-section text-center">
+                    <div class="feature-icon feature-3">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <h5>视频管理</h5>
+                    <p class="text-muted">查看用户发布的视频、喜欢的视频和收藏</p>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="feature-section text-center">
+                    <div class="feature-icon feature-4">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h5>社交互动</h5>
+                    <p class="text-muted">关注用户、发送私信、查看关注状态</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 悬浮效果演示 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <h3 class="text-center mb-4"><i class="fas fa-magic me-2"></i>悬浮效果演示</h3>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="hover-effect-demo">
+                    <i class="fas fa-heart fa-2x mb-3"></i>
+                    <h5>关注功能</h5>
+                    <p>点击关注按钮，体验流畅的动画效果</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="hover-effect-demo">
+                    <i class="fas fa-comment fa-2x mb-3"></i>
+                    <h5>私信功能</h5>
+                    <p>发送私信，建立用户间的联系</p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="hover-effect-demo">
+                    <i class="fas fa-play fa-2x mb-3"></i>
+                    <h5>视频播放</h5>
+                    <p>观看用户发布的精彩视频内容</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 实际访问链接 -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="feature-section">
+                    <h4 class="text-center mb-4"><i class="fas fa-link me-2"></i>实际访问链接</h4>
+                    <div class="text-center">
+                        <p class="mb-3">点击下面的链接访问真实的用户个人主页：</p>
+                        <a href="/user/1" class="btn-demo btn-view me-3" target="_blank">
+                            <i class="fas fa-external-link-alt"></i>用户1的主页
+                        </a>
+                        <a href="/user/profile/2" class="btn-demo btn-view me-3" target="_blank">
+                            <i class="fas fa-external-link-alt"></i>用户2的主页
+                        </a>
+                        <a href="/user/3" class="btn-demo btn-view" target="_blank">
+                            <i class="fas fa-external-link-alt"></i>用户3的主页
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 悬浮卡片 -->
+    <div class="floating-card">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            <div>
+                <small class="d-block fw-bold">提示</small>
+                <small class="text-muted">将鼠标悬停在卡片上体验效果</small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 添加一些交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 关注按钮点击效果
+            document.querySelectorAll('.btn-follow').forEach(button => {
+                button.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    const text = this.querySelector('span') || this.lastChild;
+                    
+                    if (this.textContent.includes('关注')) {
+                        icon.className = 'fas fa-user-check';
+                        this.innerHTML = '<i class="fas fa-user-check"></i>已关注';
+                        this.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                    } else if (this.textContent.includes('已关注')) {
+                        icon.className = 'fas fa-user-plus';
+                        this.innerHTML = '<i class="fas fa-user-plus"></i>关注';
+                        this.style.background = 'linear-gradient(135deg, #4facfe, #00f2fe)';
+                    }
+                });
+            });
+
+            // 私信按钮点击效果
+            document.querySelectorAll('.btn-message').forEach(button => {
+                button.addEventListener('click', function() {
+                    alert('私信功能：在真实应用中会打开聊天窗口');
+                });
+            });
+
+            // 统计项点击效果
+            document.querySelectorAll('.stat-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.1)';
+                    setTimeout(() => {
+                        this.style.transform = 'translateY(-5px)';
+                    }, 200);
+                });
+            });
+
+            // 添加页面加载动画
+            const cards = document.querySelectorAll('.user-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(50px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html> 

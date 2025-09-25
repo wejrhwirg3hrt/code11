@@ -1,0 +1,60 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+
+# Logs
+logs/
+*.log
+logback.xml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Application specific
+uploads/
+backups/
+temp/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+application-local.properties
+application-dev.properties
+
+# Test files
+test-*.html
+*.test.sql
+fix_*.sql
+repair-*.ps1
+cleanup-*.ps1
+fix-*.bat
+
+# Documentation
+*.md
+!README.md
+
+# Backup files
+pom-fixed.xml
